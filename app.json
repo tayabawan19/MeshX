@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "MeshX",
+    "slug": "meshx",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MeshX needs access to your photos to send images."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "MeshX needs microphone access to record voice notes."
+        }
+      ]
+    ]
+  }
+}

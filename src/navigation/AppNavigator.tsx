@@ -21,15 +21,20 @@ import { useChatStore } from '../store/useChatStore';
 const Stack = createNativeStackNavigator();
 
 export const AppNavigator: React.FC = () => {
-  const { isAuthenticated, isOnboarded } = useAuthStore();
+  const { isAuthenticated, isOnboarded, checkAuthStatus } = useAuthStore();
   const { setupSocketListeners } = useChatStore();
   const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
       setupSocketListeners();
     }
   }, [isAuthenticated]);
+
 
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;

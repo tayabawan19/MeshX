@@ -22,26 +22,31 @@ interface AuthState {
   setUser: (user: UserProfile | null) => void;
   logout: () => void;
   clearError: () => void;
+  checkAuthStatus: () => Promise<void>;
 }
 
-
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: {
-    id: 'usr_me',
-    name: 'Alex Vance',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-    bio: '⚡ Building the future of real-time communication @MeshX',
-    email: 'alex.vance@meshx.app',
-
-    phone: '+1 (555) 019-2834',
-    isVerified: true,
-    isOnline: true,
-  },
-  isAuthenticated: true,
+  user: null,
+  isAuthenticated: false,
   isLoading: false,
   isOnboarded: true,
   error: null,
   pendingEmail: null,
+
+  checkAuthStatus: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await apiClient.get('/users/me');
+      if (res.data?.user) {
+        set({ user: res.data.user, isAuthenticated: true, isLoading: false });
+      } else {
+        set({ user: null, isAuthenticated: false, isLoading: false });
+      }
+    } catch (err) {
+      set({ user: null, isAuthenticated: false, isLoading: false });
+    }
+  },
+
 
   signup: async ({ name, email, phone, password }) => {
     set({ isLoading: true, error: null });

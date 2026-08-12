@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { Chat, Message, ReplyPreview, UserStatus, CallLog, MessageType, UserProfile } from '../types';
-import { MOCK_CHATS, MOCK_MESSAGES, MOCK_STATUSES, MOCK_CALLS, MOCK_CURRENT_USER_ID, MOCK_USERS } from '../utils/mockData';
 import { triggerHaptic } from '../utils/haptics';
 import { apiClient, getSocket } from '../config/api';
+import { useAuthStore } from './useAuthStore';
+
+
 
 interface ActiveCallState {
   callId: string;
@@ -80,17 +82,19 @@ interface ChatStoreState {
 }
 
 export const useChatStore = create<ChatStoreState>((set, get) => ({
-  chats: MOCK_CHATS,
-  messages: MOCK_MESSAGES,
-  statuses: MOCK_STATUSES,
-  calls: MOCK_CALLS,
+  chats: [],
+  messages: {},
+  statuses: [],
+  calls: [],
   activeChatId: null,
   typingMap: {},
   replyPreview: null,
   searchQuery: '',
   activeCall: null,
   activeMediaViewer: null,
-  contacts: MOCK_USERS,
+  contacts: [],
+  storyGroups: [],
+  myStories: [],
 
   fetchChats: async () => {
     try {
@@ -99,7 +103,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         set({ chats: res.data.chats });
       }
     } catch (err) {
-      console.log('[ChatStore] Using mock chats fallback');
+      console.warn('[FetchChats Error]', err);
     }
   },
 
@@ -115,7 +119,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         }));
       }
     } catch (err) {
-      console.log('[ChatStore] Using mock messages fallback');
+      console.warn('[FetchMessages Error]', err);
     }
   },
 
@@ -126,9 +130,10 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         set({ contacts: res.data.contacts });
       }
     } catch (err) {
-      console.log('[ChatStore] Using mock contacts fallback');
+      console.warn('[FetchContacts Error]', err);
     }
   },
+
 
   setActiveChatId: (chatId) => {
     if (chatId) {
@@ -157,10 +162,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const { activeChatId, replyPreview, messages, chats } = get();
     if (!activeChatId) return;
 
+    const currentUserId = (useAuthStore.getState().user as any)?.id || (useAuthStore.getState().user as any)?._id || 'me';
+
     const newMsg: Message = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       chatId: activeChatId,
-      senderId: MOCK_CURRENT_USER_ID,
+      senderId: currentUserId,
       text: text.trim(),
       type,
       mediaUrl,
@@ -194,7 +201,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           ...c,
           lastMessage: {
             text: type === 'voice' ? '🎙️ Voice note' : type === 'image' ? '📷 Photo' : type === 'document' ? '📄 Document' : text,
-            senderId: MOCK_CURRENT_USER_ID,
+            senderId: currentUserId,
             createdAt: Date.now(),
             timestamp: Date.now(),
             type,
@@ -219,18 +226,20 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     triggerHaptic('selection');
     const socket = getSocket();
     if (socket) {
-      socket.emit('reaction_added', { chatId, messageId, emoji });
+      socket.emit('reaction_add', { chatId, messageId, emoji });
     }
+
+    const currentUserId = (useAuthStore.getState().user as any)?.id || (useAuthStore.getState().user as any)?._id || 'me';
 
     set((state) => {
       const chatMsgs = state.messages[chatId] || [];
       const updatedMsgs = chatMsgs.map((msg) => {
         if (msg.id === messageId || msg._id === messageId) {
           const currentReactions = { ...(msg.reactions as Record<string, string>) };
-          if (currentReactions[MOCK_CURRENT_USER_ID] === emoji) {
-            delete currentReactions[MOCK_CURRENT_USER_ID];
+          if (currentReactions[currentUserId] === emoji) {
+            delete currentReactions[currentUserId];
           } else {
-            currentReactions[MOCK_CURRENT_USER_ID] = emoji;
+            currentReactions[currentUserId] = emoji;
           }
           return { ...msg, reactions: currentReactions };
         }
@@ -245,7 +254,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     });
   },
 
+
   deleteMessage: (chatId, messageId) => {
+
     triggerHaptic('medium');
     set((state) => {
       const chatMsgs = state.messages[chatId] || [];
@@ -318,39 +329,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         return newId;
       }
     } catch (err) {
-      console.log('[ChatStore] Create chat fallback');
+      console.error('[ChatStore] Create chat error:', err);
     }
-
-    const { chats } = get();
-    const existing = chats.find((c) => c.type === 'direct' && (c.participants as string[]).includes(participantUserId));
-    if (existing) return existing.chatId || existing.id || '';
-
-    const user = MOCK_USERS.find((u) => u.userId === participantUserId);
-    const newChatId = `chat_${participantUserId}_${Date.now()}`;
-    const newChat: Chat = {
-      id: newChatId,
-      chatId: newChatId,
-      type: 'direct',
-      participants: [MOCK_CURRENT_USER_ID, participantUserId],
-      participantProfiles: user ? [user] : [],
-      unreadCount: 0,
-      bubbleTheme: {
-        sentGradient: ['#7C3AED', '#3B82F6'],
-        receivedColor: '#1E1E2A',
-      },
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    set({
-      chats: [newChat, ...chats],
-      messages: {
-        ...get().messages,
-        [newChatId]: [],
-      },
-    });
-
-    return newChatId;
+    return '';
   },
 
   createNewGroup: async (groupName, participantIds, groupAvatarUrl) => {
@@ -365,37 +346,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         return newId;
       }
     } catch (err) {
-      console.log('[ChatStore] Create group fallback');
+      console.error('[ChatStore] Create group error:', err);
     }
-
-    const newChatId = `group_${Date.now()}`;
-    const profiles = MOCK_USERS.filter((u) => participantIds.includes(u.userId || ''));
-    const newGroup: Chat = {
-      id: newChatId,
-      chatId: newChatId,
-      type: 'group',
-      groupName,
-      groupAvatarUrl: groupAvatarUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
-      participants: [MOCK_CURRENT_USER_ID, ...participantIds],
-      participantProfiles: profiles,
-      unreadCount: 0,
-      bubbleTheme: {
-        sentGradient: ['#EC4899', '#8B5CF6'],
-        receivedColor: '#29182C',
-      },
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    set({
-      chats: [newGroup, ...get().chats],
-      messages: {
-        ...get().messages,
-        [newChatId]: [],
-      },
-    });
-
-    return newChatId;
+    return '';
   },
 
   muteChat: (chatId) => {
@@ -513,10 +466,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   openMediaViewer: (url, type, title) => set({ activeMediaViewer: { url, type, title } }),
   closeMediaViewer: () => set({ activeMediaViewer: null }),
 
-  storyGroups: [],
-  myStories: [],
-
   fetchStoriesFeed: async () => {
+
     try {
       const res = await apiClient.get('/stories/feed');
       if (res.data?.storyGroups) {
@@ -570,22 +521,24 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   },
 
   markStatusViewed: (statusId) => {
+    const currentUserId = (useAuthStore.getState().user as any)?.id || (useAuthStore.getState().user as any)?._id || 'me';
     set((state) => ({
       statuses: state.statuses.map((st) =>
-        st.id === statusId && !st.viewedBy.includes(MOCK_CURRENT_USER_ID)
-          ? { ...st, viewedBy: [...st.viewedBy, MOCK_CURRENT_USER_ID] }
+        st.id === statusId && !st.viewedBy.includes(currentUserId)
+          ? { ...st, viewedBy: [...st.viewedBy, currentUserId] }
           : st
       ),
     }));
   },
 
-
   addStatus: (mediaUrl, caption) => {
+    const currentUser = useAuthStore.getState().user;
+    const currentUserId = (currentUser as any)?.id || (currentUser as any)?._id || 'me';
     const newStatus: UserStatus = {
       id: `st_${Date.now()}`,
-      userId: MOCK_CURRENT_USER_ID,
-      userName: 'Alex Vance',
-      userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      userId: currentUserId,
+      userName: currentUser?.name || 'User',
+      userAvatar: currentUser?.avatarUrl || '',
       mediaUrl,
       caption,
       createdAt: Date.now(),
@@ -596,6 +549,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       statuses: [newStatus, ...state.statuses],
     }));
   },
+
 
   setupSocketListeners: () => {
     const socket = getSocket();

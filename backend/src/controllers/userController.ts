@@ -3,8 +3,37 @@ import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { sendInviteEmail } from '../services/emailService';
 
+// GET /api/users/me
+export const getCurrentUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const user = await User.findById(currentUserId).select('-passwordHash');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    return res.status(200).json({
+      user: {
+        id: user._id,
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        isVerified: user.isVerified,
+        isOnline: user.isOnline,
+        privacy: user.privacy,
+      },
+    });
+  } catch (error: any) {
+    console.error('Get current user error:', error);
+    return res.status(500).json({ error: 'Internal server error getting user.' });
+  }
+};
+
 // GET /api/users/search?query=
 export const searchUser = async (req: AuthRequest, res: Response) => {
+
   try {
     const query = req.query.query;
     if (!query || typeof query !== 'string') {

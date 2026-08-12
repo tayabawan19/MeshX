@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import {
+  getCurrentUser,
+
   searchUser,
   addContact,
   getContacts,
@@ -20,7 +22,9 @@ const router = Router();
 
 router.use(authenticateToken as any);
 
+router.get('/me', getCurrentUser as any);
 router.get('/search', searchUser as any);
+
 router.post('/add-contact', addContact as any);
 router.get('/contacts', getContacts as any);
 router.post('/invite', inviteUser as any);

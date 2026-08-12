@@ -7,6 +7,7 @@ import {
   updateProfile,
   blockUser,
   unblockUser,
+  updateFcmToken,
 } from '../controllers/userController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -21,5 +22,7 @@ router.post('/invite', inviteUser as any);
 router.put('/profile', updateProfile as any);
 router.post('/block', blockUser as any);
 router.post('/unblock', unblockUser as any);
+router.post('/fcm-token', updateFcmToken as any);
+
 
 export default router;

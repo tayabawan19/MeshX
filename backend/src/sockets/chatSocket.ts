@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import Message from '../models/Message';
 import Chat from '../models/Chat';
 import User from '../models/User';
+import Call from '../models/Call';
+import { sendPushNotification } from '../services/notificationService';
 
 const getJwtSecret = () => process.env.JWT_SECRET || 'everchat_jwt_secret_key_2026_super_secure';
 
@@ -108,7 +110,6 @@ export const setupSocketIO = (io: Server) => {
           status: 'sent',
         });
 
-
         await message.save();
         await message.populate('senderId', '_id name avatarUrl');
         if (replyTo) {
@@ -125,6 +126,32 @@ export const setupSocketIO = (io: Server) => {
         });
 
         io.to(chatId).emit('receive_message', message);
+
+        // FCM Push Notification Trigger for offline / backgrounded recipients
+        const senderUser = await User.findById(userId);
+        const senderName = senderUser?.name || 'Someone';
+
+        let previewText = text || '';
+        if (type === 'image') previewText = '📷 Photo';
+        else if (type === 'voice') previewText = '🎤 Voice message';
+        else if (type === 'document') previewText = '📄 Document';
+        else if (previewText.length > 50) previewText = previewText.slice(0, 50) + '...';
+
+        const recipients = chat.participants.filter((p: any) => p.toString() !== userId);
+        for (const recipientId of recipients) {
+          const rIdStr = recipientId.toString();
+          const isRecipientOnline = onlineUsers.has(rIdStr);
+
+          if (!isRecipientOnline) {
+            const recUser = await User.findById(rIdStr);
+            if (recUser?.fcmToken) {
+              await sendPushNotification(recUser.fcmToken, senderName, previewText, {
+                chatId,
+                type: 'message',
+              });
+            }
+          }
+        }
       } catch (error) {
         console.error('[Socket.io] Error in send_message:', error);
       }
@@ -211,34 +238,107 @@ export const setupSocketIO = (io: Server) => {
       }
     });
 
-    socket.on('reaction_added', async (data: { messageId: string; chatId: string; emoji: string }) => {
+    // Call Signaling Event Handlers
+    socket.on('call_initiate', async (data: { receiverId: string; type: 'voice' | 'video' }) => {
       try {
-        if (!data?.messageId || !data?.chatId || !data?.emoji) return;
+        const { receiverId, type } = data;
+        if (!receiverId) return;
 
-        const message = await Message.findById(data.messageId);
-        if (message) {
-          const existingReactionIndex = message.reactions.findIndex(
-            (r: any) => r.userId.toString() === userId
+        const channelName = `call_${userId}_${receiverId}_${Date.now()}`;
+        const caller = await User.findById(userId);
+        const receiver = await User.findById(receiverId);
+
+        if (!caller || !receiver) return;
+
+        const call = new Call({
+          callerId: userId,
+          receiverId,
+          type: type || 'voice',
+          status: 'ongoing',
+          channelName,
+        });
+
+        await call.save();
+
+        const receiverSocketId = onlineUsers.get(receiverId);
+        const payload = {
+          callId: call._id.toString(),
+          callerId: userId,
+          callerName: caller.name,
+          callerAvatar: caller.avatarUrl,
+          channelName,
+          type: type || 'voice',
+        };
+
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit('incoming_call', payload);
+          console.log(`[Call Signaling] Incoming call emitted to online user ${receiverId}`);
+        } else if (receiver.fcmToken) {
+          await sendPushNotification(
+            receiver.fcmToken,
+            `Incoming ${type} call`,
+            `${caller.name} is calling you...`,
+            {
+              callId: call._id.toString(),
+              type: 'call',
+              channelName,
+            }
           );
-
-          if (existingReactionIndex > -1) {
-            message.reactions[existingReactionIndex].emoji = data.emoji;
-          } else {
-            message.reactions.push({ userId: userId as any, emoji: data.emoji });
-          }
-
-          await message.save();
-          io.to(data.chatId).emit('reaction_updated', {
-            messageId: data.messageId,
-            chatId: data.chatId,
-            reactions: message.reactions,
-          });
         }
       } catch (error) {
-        console.error('[Socket.io] Error in reaction_added:', error);
+        console.error('[Call Signaling Error] call_initiate:', error);
       }
     });
 
+    socket.on('call_accept', async (data: { callId: string }) => {
+      try {
+        const { callId } = data;
+        const call = await Call.findById(callId);
+        if (!call) return;
+
+        const callerSocketId = onlineUsers.get(call.callerId.toString());
+        if (callerSocketId) {
+          io.to(callerSocketId).emit('call_accepted', { callId });
+        }
+      } catch (error) {
+        console.error('[Call Signaling Error] call_accept:', error);
+      }
+    });
+
+    socket.on('call_decline', async (data: { callId: string }) => {
+      try {
+        const { callId } = data;
+        const call = await Call.findByIdAndUpdate(callId, { status: 'declined' }, { new: true });
+        if (!call) return;
+
+        const callerSocketId = onlineUsers.get(call.callerId.toString());
+        if (callerSocketId) {
+          io.to(callerSocketId).emit('call_declined', { callId });
+        }
+      } catch (error) {
+        console.error('[Call Signaling Error] call_decline:', error);
+      }
+    });
+
+    socket.on('call_end', async (data: { callId: string; duration?: number }) => {
+      try {
+        const { callId, duration } = data;
+        const call = await Call.findByIdAndUpdate(
+          callId,
+          { status: 'completed', duration: duration || 0 },
+          { new: true }
+        );
+        if (!call) return;
+
+        const otherUserId = call.callerId.toString() === userId ? call.receiverId.toString() : call.callerId.toString();
+        const otherSocketId = onlineUsers.get(otherUserId);
+        if (otherSocketId) {
+          io.to(otherSocketId).emit('call_ended', { callId, duration: duration || 0 });
+        }
+      } catch (error) {
+        console.error('[Call Signaling Error] call_end:', error);
+      }
+    });
 
     socket.on('disconnect', async () => {
       onlineUsers.delete(userId);

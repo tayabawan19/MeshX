@@ -61,8 +61,12 @@ interface ChatStoreState {
   deleteChat: (chatId: string) => void;
 
   startCall: (peerId: string, peerName: string, peerAvatar: string, type: 'voice' | 'video') => void;
+  acceptCall: () => Promise<void>;
+  declineCall: () => void;
   endCall: () => void;
+  fetchCallHistory: () => Promise<void>;
   toggleMuteCall: () => void;
+
   toggleVideoCall: () => void;
   toggleSpeakerCall: () => void;
   toggleCameraFlip: () => void;
@@ -419,8 +423,24 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }));
   },
 
+  fetchCallHistory: async () => {
+    try {
+      const res = await apiClient.get('/calls');
+      if (res.data?.calls) {
+        set({ calls: res.data.calls });
+      }
+    } catch (err) {
+      console.warn('[FetchCallHistory Error]', err);
+    }
+  },
+
   startCall: (peerId, peerName, peerAvatar, type) => {
     triggerHaptic('medium');
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('call_initiate', { receiverId: peerId, type });
+    }
+
     set({
       activeCall: {
         callId: `call_${Date.now()}`,
@@ -436,43 +456,50 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         durationSeconds: 0,
       },
     });
+  },
 
-    setTimeout(() => {
-      set((state) => {
-        if (!state.activeCall) return state;
-        return {
-          activeCall: {
-            ...state.activeCall,
-            status: 'connected',
-          },
-        };
-      });
-    }, 2000);
+  acceptCall: async () => {
+    const { activeCall } = get();
+    if (!activeCall) return;
+    triggerHaptic('success');
+
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('call_accept', { callId: activeCall.callId });
+    }
+
+    try {
+      await apiClient.post('/calls/token', { channelName: activeCall.callId });
+    } catch (e) {}
+
+    set((state) => ({
+      activeCall: state.activeCall ? { ...state.activeCall, status: 'connected', isIncoming: false } : null,
+    }));
+  },
+
+  declineCall: () => {
+    const { activeCall } = get();
+    if (!activeCall) return;
+    triggerHaptic('error');
+    const socket = getSocket();
+    if (socket) {
+      socket.emit('call_decline', { callId: activeCall.callId });
+    }
+    set({ activeCall: null });
   },
 
   endCall: () => {
     triggerHaptic('heavy');
-    const { activeCall, calls } = get();
+    const { activeCall } = get();
     if (activeCall) {
-      const newCallLog: CallLog = {
-        id: activeCall.callId,
-        callerId: MOCK_CURRENT_USER_ID,
-        callerName: 'Alex Vance',
-        callerAvatar: '',
-        receiverId: 'usr_peer',
-        receiverName: activeCall.peerName,
-        receiverAvatar: activeCall.peerAvatar,
-        type: activeCall.type,
-        status: 'connected',
-        duration: activeCall.durationSeconds || 12,
-        timestamp: Date.now(),
-      };
-      set({
-        calls: [newCallLog, ...calls],
-        activeCall: null,
-      });
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('call_end', { callId: activeCall.callId, duration: activeCall.durationSeconds || 0 });
+      }
     }
+    set({ activeCall: null });
   },
+
 
   toggleMuteCall: () =>
     set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isMuted: !state.activeCall.isMuted } } : state)),
@@ -633,20 +660,47 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     socket.on('message_status_update', handleStatusUpdate);
     socket.on('status_updated', handleStatusUpdate);
 
-    socket.on('reaction_updated', ({ messageId, chatId, reactions }: { messageId: string; chatId: string; reactions: any }) => {
-      set((state) => {
-        const currentMsgs = state.messages[chatId] || [];
-        const updatedMsgs = currentMsgs.map((m) =>
-          m.id === messageId || (m as any)._id === messageId ? { ...m, reactions } : m
-        );
-        return {
-          messages: {
-            ...state.messages,
-            [chatId]: updatedMsgs,
-          },
-        };
+    socket.off('incoming_call');
+    socket.off('call_accepted');
+    socket.off('call_declined');
+    socket.off('call_ended');
+
+    socket.on('incoming_call', (payload: { callId: string; callerId: string; callerName: string; callerAvatar: string; channelName: string; type: 'voice' | 'video' }) => {
+      triggerHaptic('heavy');
+      set({
+        activeCall: {
+          callId: payload.callId,
+          peerName: payload.callerName,
+          peerAvatar: payload.callerAvatar,
+          type: payload.type,
+          isIncoming: true,
+          status: 'calling',
+          isMuted: false,
+          isVideoEnabled: payload.type === 'video',
+          isSpeakerOn: false,
+          isFrontCamera: true,
+          durationSeconds: 0,
+        },
       });
+    });
+
+    socket.on('call_accepted', () => {
+      triggerHaptic('success');
+      set((state) => ({
+        activeCall: state.activeCall ? { ...state.activeCall, status: 'connected', isIncoming: false } : null,
+      }));
+    });
+
+    socket.on('call_declined', () => {
+      triggerHaptic('error');
+      set({ activeCall: null });
+    });
+
+    socket.on('call_ended', () => {
+      triggerHaptic('light');
+      set({ activeCall: null });
     });
   },
 }));
+
 

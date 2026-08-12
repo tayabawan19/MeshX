@@ -259,3 +259,24 @@ export const unblockUser = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: 'Internal server error.' });
   }
 };
+
+// POST /api/users/fcm-token
+export const updateFcmToken = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { fcmToken } = req.body;
+
+    if (!fcmToken) {
+      return res.status(400).json({ error: 'fcmToken is required.' });
+    }
+
+    await User.findByIdAndUpdate(currentUserId, { fcmToken });
+    console.log(`[FCM Token Registered] User ${currentUserId} updated token to ${fcmToken.slice(0, 15)}...`);
+
+    return res.status(200).json({ message: 'FCM token updated successfully.' });
+  } catch (error: any) {
+    console.error('Update FCM token error:', error);
+    return res.status(500).json({ error: 'Internal server error updating FCM token.' });
+  }
+};
+

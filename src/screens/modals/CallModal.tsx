@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mic, MicOff, Video, VideoOff, Volume2, PhoneOff, RefreshCw } from 'lucide-react-native';
+import { Mic, MicOff, Video, VideoOff, Volume2, PhoneOff, Phone, RefreshCw } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
 import { triggerHaptic } from '../../utils/haptics';
 
-export const CallModal: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const {
     activeCall,
+    acceptCall,
+    declineCall,
     endCall,
     toggleMuteCall,
     toggleVideoCall,
@@ -40,9 +42,23 @@ export const CallModal: React.FC<{ navigation: any }> = ({ navigation }) => {
   };
 
   const handleEndCall = () => {
+    triggerHaptic('heavy');
     endCall();
-    navigation.goBack();
+    if (navigation) navigation.goBack();
   };
+
+  const handleAcceptCall = () => {
+    triggerHaptic('success');
+    acceptCall();
+  };
+
+  const handleDeclineCall = () => {
+    triggerHaptic('error');
+    declineCall();
+    if (navigation) navigation.goBack();
+  };
+
+  const isIncoming = activeCall.isIncoming;
 
   return (
     <View style={styles.container}>
@@ -60,14 +76,16 @@ export const CallModal: React.FC<{ navigation: any }> = ({ navigation }) => {
         />
         <Text style={styles.peerName}>{activeCall.peerName}</Text>
         <Text style={styles.callStatus}>
-          {activeCall.status === 'calling'
+          {isIncoming
+            ? `Incoming ${activeCall.type === 'video' ? 'Video' : 'Voice'} Call...`
+            : activeCall.status === 'calling'
             ? 'Calling...'
             : `${activeCall.type === 'video' ? 'Video' : 'Voice'} Call • ${formatTime(seconds)}`}
         </Text>
       </View>
 
-      {/* Video Simulation Canvas */}
-      {activeCall.type === 'video' && activeCall.isVideoEnabled && (
+      {/* Video Canvas Container */}
+      {!isIncoming && activeCall.type === 'video' && activeCall.isVideoEnabled && (
         <View style={styles.videoCanvas}>
           <Image
             source={{ uri: activeCall.peerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb' }}
@@ -79,56 +97,71 @@ export const CallModal: React.FC<{ navigation: any }> = ({ navigation }) => {
         </View>
       )}
 
-      {/* Control Buttons Bar */}
-      <View style={styles.controlsRow}>
-        <TouchableOpacity
-          style={[styles.controlBtn, activeCall.isMuted && styles.controlBtnActive]}
-          onPress={() => {
-            triggerHaptic('selection');
-            toggleMuteCall();
-          }}
-        >
-          {activeCall.isMuted ? <MicOff size={24} color="#ef4444" /> : <Mic size={24} color="#FFFFFF" />}
-        </TouchableOpacity>
+      {/* Incoming Call Accept / Decline Controls */}
+      {isIncoming ? (
+        <View style={styles.incomingControlsRow}>
+          <TouchableOpacity style={styles.declineBtn} onPress={handleDeclineCall}>
+            <PhoneOff size={28} color="#FFFFFF" />
+            <Text style={styles.btnLabel}>Decline</Text>
+          </TouchableOpacity>
 
-        {activeCall.type === 'video' && (
+          <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptCall}>
+            <Phone size={28} color="#FFFFFF" />
+            <Text style={styles.btnLabel}>Accept</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        /* Active Call Controls Bar */
+        <View style={styles.controlsRow}>
           <TouchableOpacity
-            style={[styles.controlBtn, !activeCall.isVideoEnabled && styles.controlBtnActive]}
+            style={[styles.controlBtn, activeCall.isMuted && styles.controlBtnActive]}
             onPress={() => {
               triggerHaptic('selection');
-              toggleVideoCall();
+              toggleMuteCall();
             }}
           >
-            {activeCall.isVideoEnabled ? <Video size={24} color="#FFFFFF" /> : <VideoOff size={24} color="#ef4444" />}
+            {activeCall.isMuted ? <MicOff size={24} color="#ef4444" /> : <Mic size={24} color="#FFFFFF" />}
           </TouchableOpacity>
-        )}
 
-        <TouchableOpacity
-          style={[styles.controlBtn, activeCall.isSpeakerOn && styles.controlBtnActive]}
-          onPress={() => {
-            triggerHaptic('selection');
-            toggleSpeakerCall();
-          }}
-        >
-          <Volume2 size={24} color={activeCall.isSpeakerOn ? '#6366f1' : '#FFFFFF'} />
-        </TouchableOpacity>
+          {activeCall.type === 'video' && (
+            <TouchableOpacity
+              style={[styles.controlBtn, !activeCall.isVideoEnabled && styles.controlBtnActive]}
+              onPress={() => {
+                triggerHaptic('selection');
+                toggleVideoCall();
+              }}
+            >
+              {activeCall.isVideoEnabled ? <Video size={24} color="#FFFFFF" /> : <VideoOff size={24} color="#ef4444" />}
+            </TouchableOpacity>
+          )}
 
-        {activeCall.type === 'video' && (
           <TouchableOpacity
-            style={styles.controlBtn}
+            style={[styles.controlBtn, activeCall.isSpeakerOn && styles.controlBtnActive]}
             onPress={() => {
               triggerHaptic('selection');
-              toggleCameraFlip();
+              toggleSpeakerCall();
             }}
           >
-            <RefreshCw size={22} color="#FFFFFF" />
+            <Volume2 size={24} color={activeCall.isSpeakerOn ? '#6366f1' : '#FFFFFF'} />
           </TouchableOpacity>
-        )}
 
-        <TouchableOpacity style={styles.endCallBtn} onPress={handleEndCall}>
-          <PhoneOff size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+          {activeCall.type === 'video' && (
+            <TouchableOpacity
+              style={styles.controlBtn}
+              onPress={() => {
+                triggerHaptic('selection');
+                toggleCameraFlip();
+              }}
+            >
+              <RefreshCw size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity style={styles.endCallBtn} onPress={handleEndCall}>
+            <PhoneOff size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -143,8 +176,12 @@ const styles = StyleSheet.create({
   videoCanvas: { flex: 1, marginVertical: 24, borderRadius: 24, overflow: 'hidden', backgroundColor: '#1e1b4b' },
   videoOverlay: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   hdBadge: { color: '#10b981', fontSize: 11, fontWeight: '700' },
+  incomingControlsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', marginBottom: 30 },
+  acceptBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  declineBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  btnLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '600', marginTop: 4 },
   controlsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', marginBottom: 10 },
   controlBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   controlBtnActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
-  endCallBtn: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)' },
+  endCallBtn: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#ef4444', justifyContent: 'center', alignItems: 'center' },
 });

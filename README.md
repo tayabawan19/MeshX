@@ -1,10 +1,7 @@
 # ⚡ MeshX — Next-Gen Real-Time Messaging & Calling Platform
 
 <p align="center">
-  <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80" alt="MeshX Banner" width="100%" style="border-radius: 16px;" />
-</p>
 
-<p align="center">
   <a href="https://github.com/tayabawan19/MeshX"><img src="https://img.shields.io/badge/MeshX-v1.0.0-7C3AED?style=for-the-badge&logo=react&logoColor=white" alt="MeshX Version"></a>
   <a href="https://expo.dev"><img src="https://img.shields.io/badge/Expo-SDK%2054-000000?style=for-the-badge&logo=expo&logoColor=white" alt="Expo SDK 54"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-v20-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js"></a>

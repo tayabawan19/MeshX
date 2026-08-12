@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { ColorPalette, darkPalette, lightPalette, BUBBLE_THEMES } from '../theme/colors';
 
-export type ThemeMode = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'system';
 
 interface ThemeState {
   themeMode: ThemeMode;
@@ -23,13 +23,14 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   wallpaper: {},
 
   setThemeMode: (mode: ThemeMode) => {
-    const selected = mode === 'dark' ? darkPalette : lightPalette;
+    const selected = mode === 'light' ? lightPalette : darkPalette;
     set({
       themeMode: mode,
       palette: selected,
       theme: { colors: selected },
     });
   },
+
 
   toggleTheme: () => {
     const nextMode = get().themeMode === 'dark' ? 'light' : 'dark';

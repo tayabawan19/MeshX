@@ -99,6 +99,11 @@ export const setupSocketIO = (io: Server) => {
           }
         }
 
+        let expiresAtDate: Date | undefined;
+        if (chat.disappearingDuration) {
+          expiresAtDate = new Date(Date.now() + chat.disappearingDuration * 1000);
+        }
+
         const message = new Message({
           chatId,
           senderId: userId,
@@ -108,6 +113,7 @@ export const setupSocketIO = (io: Server) => {
           duration: duration || undefined,
           replyTo: replyTo || null,
           status: 'sent',
+          expiresAt: expiresAtDate,
         });
 
         await message.save();
@@ -127,7 +133,7 @@ export const setupSocketIO = (io: Server) => {
 
         io.to(chatId).emit('receive_message', message);
 
-        // FCM Push Notification Trigger for offline / backgrounded recipients
+        // FCM Push Notification Trigger for offline / backgrounded recipients (suppressed if muted)
         const senderUser = await User.findById(userId);
         const senderName = senderUser?.name || 'Someone';
 
@@ -140,9 +146,10 @@ export const setupSocketIO = (io: Server) => {
         const recipients = chat.participants.filter((p: any) => p.toString() !== userId);
         for (const recipientId of recipients) {
           const rIdStr = recipientId.toString();
+          const isMuted = chat.mutedBy?.some((mId: any) => mId.toString() === rIdStr);
           const isRecipientOnline = onlineUsers.has(rIdStr);
 
-          if (!isRecipientOnline) {
+          if (!isRecipientOnline && !isMuted) {
             const recUser = await User.findById(rIdStr);
             if (recUser?.fcmToken) {
               await sendPushNotification(recUser.fcmToken, senderName, previewText, {
@@ -152,6 +159,7 @@ export const setupSocketIO = (io: Server) => {
             }
           }
         }
+
       } catch (error) {
         console.error('[Socket.io] Error in send_message:', error);
       }

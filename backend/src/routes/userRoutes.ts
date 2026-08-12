@@ -5,8 +5,13 @@ import {
   getContacts,
   inviteUser,
   updateProfile,
+  updatePrivacy,
   blockUser,
   unblockUser,
+  blockUserByParam,
+  unblockUserByParam,
+  getBlockedUsers,
+  deleteAccount,
   updateFcmToken,
 } from '../controllers/userController';
 import { authenticateToken } from '../middleware/authMiddleware';
@@ -20,9 +25,14 @@ router.post('/add-contact', addContact as any);
 router.get('/contacts', getContacts as any);
 router.post('/invite', inviteUser as any);
 router.put('/profile', updateProfile as any);
+router.patch('/me', updateProfile as any);
+router.patch('/privacy', updatePrivacy as any);
+router.get('/blocked', getBlockedUsers as any);
 router.post('/block', blockUser as any);
 router.post('/unblock', unblockUser as any);
+router.post('/block/:userId', blockUserByParam as any);
+router.delete('/block/:userId', unblockUserByParam as any);
+router.delete('/me', deleteAccount as any);
 router.post('/fcm-token', updateFcmToken as any);
-
 
 export default router;

@@ -17,11 +17,13 @@ interface AuthState {
   forgotPassword: (email: string) => Promise<boolean>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<boolean>;
   updateProfile: (updated: Partial<UserProfile>) => Promise<boolean>;
+  updateUserProfile: (updated: Partial<UserProfile>) => void;
   setIsOnboarded: (status: boolean) => void;
   setUser: (user: UserProfile | null) => void;
   logout: () => void;
   clearError: () => void;
 }
+
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: {
@@ -154,7 +156,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  updateUserProfile: (updated) =>
+    set((state) => ({
+      user: state.user ? { ...state.user, ...updated } : null,
+    })),
   setIsOnboarded: (isOnboarded) => set({ isOnboarded }),
+
   setUser: (user) => set({ user, isAuthenticated: !!user }),
   logout: () => {
     setAuthTokens(null, null);

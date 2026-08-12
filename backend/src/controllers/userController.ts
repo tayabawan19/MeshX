@@ -260,6 +260,102 @@ export const unblockUser = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// PATCH /api/users/privacy
+export const updatePrivacy = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { lastSeenVisible, readReceiptsEnabled } = req.body;
+
+    const user = await User.findById(currentUserId);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    user.privacy = {
+      lastSeenVisible: lastSeenVisible !== undefined ? lastSeenVisible : user.privacy?.lastSeenVisible ?? true,
+      readReceiptsEnabled: readReceiptsEnabled !== undefined ? readReceiptsEnabled : user.privacy?.readReceiptsEnabled ?? true,
+    };
+
+    await user.save();
+    return res.status(200).json({ message: 'Privacy updated successfully.', privacy: user.privacy });
+  } catch (error: any) {
+    console.error('Update privacy error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+// GET /api/users/blocked
+export const getBlockedUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const user = await User.findById(currentUserId).populate('blockedUsers', '_id name avatarUrl bio');
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    return res.status(200).json({ blockedUsers: user.blockedUsers });
+  } catch (error: any) {
+    console.error('Get blocked users error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+// POST /api/users/block/:userId
+export const blockUserByParam = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { userId } = req.params;
+
+    const currentUser = await User.findById(currentUserId);
+    if (!currentUser) return res.status(404).json({ error: 'User not found.' });
+
+    if (!currentUser.blockedUsers.includes(userId as any)) {
+      currentUser.blockedUsers.push(userId as any);
+      await currentUser.save();
+    }
+
+    return res.status(200).json({ message: 'User blocked successfully.' });
+  } catch (error: any) {
+    console.error('Block user param error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+// DELETE /api/users/block/:userId
+export const unblockUserByParam = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { userId } = req.params;
+
+    const currentUser = await User.findById(currentUserId);
+    if (!currentUser) return res.status(404).json({ error: 'User not found.' });
+
+    currentUser.blockedUsers = currentUser.blockedUsers.filter(
+      (id: any) => id.toString() !== userId
+    );
+    await currentUser.save();
+
+    return res.status(200).json({ message: 'User unblocked successfully.' });
+  } catch (error: any) {
+    console.error('Unblock user param error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+// DELETE /api/users/me
+export const deleteAccount = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const Chat = require('../models/Chat').default;
+    const RefreshToken = require('../models/RefreshToken').default;
+
+    await User.findByIdAndDelete(currentUserId);
+    await Chat.updateMany({ participants: currentUserId }, { $pull: { participants: currentUserId } });
+    await RefreshToken.deleteMany({ userId: currentUserId });
+
+    return res.status(200).json({ message: 'Account deleted successfully.' });
+  } catch (error: any) {
+    console.error('Delete account error:', error);
+    return res.status(500).json({ error: 'Internal server error deleting account.' });
+  }
+};
+
 // POST /api/users/fcm-token
 export const updateFcmToken = async (req: AuthRequest, res: Response) => {
   try {
@@ -279,4 +375,6 @@ export const updateFcmToken = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: 'Internal server error updating FCM token.' });
   }
 };
+
+
 

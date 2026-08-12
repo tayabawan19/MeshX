@@ -268,3 +268,83 @@ export const updateChatTheme = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ error: 'Internal server error.' });
   }
 };
+
+// PATCH /api/chats/:chatId/wallpaper
+export const updateChatWallpaper = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { chatId } = req.params;
+    const { wallpaper } = req.body;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found.' });
+
+    if (!chat.participants.some((p: any) => p.toString() === currentUserId)) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    chat.wallpaper = wallpaper;
+    await chat.save();
+
+    return res.status(200).json({ chat });
+  } catch (error: any) {
+    console.error('Update wallpaper error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+// PATCH /api/chats/:chatId/mute
+export const toggleMuteChat = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { chatId } = req.params;
+    const { muted } = req.body;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found.' });
+
+    if (!chat.participants.some((p: any) => p.toString() === currentUserId)) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    const cIdObj = currentUserId as any;
+    if (muted) {
+      if (!chat.mutedBy.includes(cIdObj)) {
+        chat.mutedBy.push(cIdObj);
+      }
+    } else {
+      chat.mutedBy = chat.mutedBy.filter((id: any) => id.toString() !== currentUserId);
+    }
+
+    await chat.save();
+    return res.status(200).json({ chat, isMuted: muted });
+  } catch (error: any) {
+    console.error('Toggle mute chat error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+// PATCH /api/chats/:chatId/disappearing
+export const updateDisappearingMessages = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { chatId } = req.params;
+    const { duration } = req.body;
+
+    const chat = await Chat.findById(chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found.' });
+
+    if (!chat.participants.some((p: any) => p.toString() === currentUserId)) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
+
+    chat.disappearingDuration = duration !== undefined ? duration : null;
+    await chat.save();
+
+    return res.status(200).json({ chat });
+  } catch (error: any) {
+    console.error('Update disappearing error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+

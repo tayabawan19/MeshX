@@ -16,6 +16,8 @@ export interface IChat extends Document {
     receivedColor: string;
   };
   wallpaper?: string;
+  mutedBy: mongoose.Types.ObjectId[];
+  disappearingDuration?: number | null;
   createdAt: Date;
 }
 
@@ -32,10 +34,12 @@ const ChatSchema: Schema = new Schema(
       createdAt: { type: Date, default: Date.now },
     },
     bubbleTheme: {
-      sentGradient: { type: [String], default: ['#6366f1', '#8b5cf6'] },
-      receivedColor: { type: String, default: '#1f2937' },
+      sentGradient: { type: [String], default: ['#7C3AED', '#3B82F6'] },
+      receivedColor: { type: String, default: '#1E1E2A' },
     },
     wallpaper: { type: String, default: 'default' },
+    mutedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    disappearingDuration: { type: Number, default: null },
   },
   { timestamps: true }
 );

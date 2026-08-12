@@ -1,79 +1,143 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Plus } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../common/Avatar';
-import { UserStatus } from '../../types';
 import { useThemeStore } from '../../store/useThemeStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { triggerHaptic } from '../../utils/haptics';
 
 interface StoryAvatarRowProps {
-  statuses: UserStatus[];
-  onPressStatus: (status: UserStatus) => void;
-  onAddStatus: () => void;
+  storyGroups: Array<{ user: any; stories: any[]; hasUnviewed: boolean }>;
+  myStories: any[];
+  onOpenStoryGroup: (user: any, stories: any[], isMine?: boolean) => void;
+  onCreateStory: () => void;
 }
 
 export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
-  statuses,
-  onPressStatus,
-  onAddStatus,
+  storyGroups,
+  myStories,
+  onOpenStoryGroup,
+  onCreateStory,
 }) => {
   const palette = useThemeStore((state) => state.palette);
+  const user = useAuthStore((state) => state.user);
+
+  const hasMyStories = myStories && myStories.length > 0;
 
   return (
     <View style={[styles.container, { borderBottomColor: palette.border }]}>
-      <TouchableOpacity
-        onPress={() => {
-          triggerHaptic('light');
-          onAddStatus();
-        }}
-        style={styles.item}
-      >
-        <View style={styles.addWrapper}>
-          <Avatar size="lg" url="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" />
-          <View style={[styles.plusBadge, { backgroundColor: palette.primary }]}>
-            <Plus size={14} color="#FFFFFF" />
-          </View>
-        </View>
-        <Text style={[styles.nameText, { color: palette.textSecondary }]}>Your Story</Text>
-      </TouchableOpacity>
-
-      {statuses.map((status) => (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Your Story Avatar */}
         <TouchableOpacity
-          key={status.id}
           onPress={() => {
             triggerHaptic('light');
-            onPressStatus(status);
+            if (hasMyStories) {
+              onOpenStoryGroup(user, myStories, true);
+            } else {
+              onCreateStory();
+            }
           }}
           style={styles.item}
         >
-          <Avatar
-            size="lg"
-            url={status.userAvatar}
-            name={status.userName || 'User'}
-            hasStory
-            storyViewed={status.viewedBy.includes('usr_me')}
-          />
-          <Text style={[styles.nameText, { color: palette.textPrimary }]} numberOfLines={1}>
-            {(status.userName || 'User').split(' ')[0]}
-          </Text>
+          <View style={styles.avatarWrapper}>
+            {hasMyStories ? (
+              <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.gradientRing}>
+                <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
+                  <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
+                </View>
+              </LinearGradient>
+            ) : (
+              <View style={styles.addWrapper}>
+                <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
+                <View style={[styles.plusBadge, { backgroundColor: palette.primary }]}>
+                  <Plus size={13} color="#FFFFFF" />
+                </View>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.nameText, { color: palette.textSecondary }]}>Your Story</Text>
         </TouchableOpacity>
-      ))}
+
+        {/* Contact Stories */}
+        {storyGroups.map((group) => {
+          const u = group.user || {};
+          const isUnviewed = group.hasUnviewed;
+
+          return (
+            <TouchableOpacity
+              key={u._id || u.id}
+              onPress={() => {
+                triggerHaptic('light');
+                onOpenStoryGroup(u, group.stories, false);
+              }}
+              style={styles.item}
+            >
+              <View style={styles.avatarWrapper}>
+                {isUnviewed ? (
+                  <LinearGradient colors={['#EC4899', '#8B5CF6', '#3B82F6']} style={styles.gradientRing}>
+                    <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
+                      <Avatar size="lg" url={u.avatarUrl} name={u.name || 'User'} />
+                    </View>
+                  </LinearGradient>
+                ) : (
+                  <View style={[styles.grayRing, { borderColor: palette.border }]}>
+                    <Avatar size="lg" url={u.avatarUrl} name={u.name || 'User'} />
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.nameText, { color: palette.textPrimary }]} numberOfLines={1}>
+                {(u.name || 'User').split(' ')[0]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
   },
   item: {
     alignItems: 'center',
     marginRight: 16,
     width: 68,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gradientRing: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    padding: 2.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  grayRing: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  innerBorder: {
+    width: 57,
+    height: 57,
+    borderRadius: 28.5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addWrapper: {
     position: 'relative',
@@ -82,9 +146,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,

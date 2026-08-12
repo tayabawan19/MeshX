@@ -18,6 +18,8 @@ import { ChatListItem } from '../../components/chats/ChatListItem';
 import { StoryAvatarRow } from '../../components/chats/StoryAvatarRow';
 import { ChatListItemSkeleton } from '../../components/common/SkeletonLoader';
 import { triggerHaptic } from '../../utils/haptics';
+import { CreateStoryModal } from '../modals/CreateStoryModal';
+import { StoryViewerModal } from '../modals/StoryViewerModal';
 
 export const ChatsListScreen: React.FC<{
   navigation?: any;
@@ -29,18 +31,22 @@ export const ChatsListScreen: React.FC<{
   const { user } = useAuthStore();
   const {
     chats,
-    statuses,
+    storyGroups,
+    myStories,
     muteChat,
     archiveChat,
     deleteChat,
-    addStatus,
     fetchChats,
+    fetchStoriesFeed,
+    fetchMyStories,
     setActiveChatId,
   } = useChatStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
+  const [activeStoryGroup, setActiveStoryGroup] = useState<{ user: any; stories: any[]; isMine?: boolean } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -48,13 +54,14 @@ export const ChatsListScreen: React.FC<{
 
   const loadData = async () => {
     setIsLoading(true);
-    await fetchChats();
+    await Promise.all([fetchChats(), fetchStoriesFeed(), fetchMyStories()]);
     setIsLoading(false);
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchChats();
+    triggerHaptic('impactLight');
+    await Promise.all([fetchChats(), fetchStoriesFeed(), fetchMyStories()]);
     setRefreshing(false);
   };
 
@@ -162,14 +169,10 @@ export const ChatsListScreen: React.FC<{
 
       {/* Active Stories Row */}
       <StoryAvatarRow
-        statuses={statuses}
-        onPressStatus={(st) => (onOpenStatusViewer ? onOpenStatusViewer(st.id) : null)}
-        onAddStatus={() =>
-          addStatus(
-            'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-            'New status update!'
-          )
-        }
+        storyGroups={storyGroups}
+        myStories={myStories}
+        onOpenStoryGroup={(u, st, isMine) => setActiveStoryGroup({ user: u, stories: st, isMine })}
+        onCreateStory={() => setIsCreateStoryOpen(true)}
       />
 
       {/* Chats List */}
@@ -213,7 +216,6 @@ export const ChatsListScreen: React.FC<{
                 {searchQuery
                   ? 'No conversations match your search.'
                   : 'Add someone to start chatting on MeshX!'}
-
               </Text>
               <TouchableOpacity
                 style={[styles.emptyBtn, { backgroundColor: palette.primary }]}
@@ -227,11 +229,21 @@ export const ChatsListScreen: React.FC<{
       )}
 
       {/* Floating Action Button (FAB) */}
-      <TouchableOpacity activeOpacity={0.85} onPress={handleOpenNewChat} style={styles.fabTouchable}>
+      <TouchableOpacity activeOpacity={0.8} onPress={handleOpenNewChat} style={styles.fabTouchable}>
         <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.fabGradient}>
           <MessageSquarePlus size={24} color="#FFFFFF" />
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Create Story Modal */}
+      <CreateStoryModal visible={isCreateStoryOpen} onClose={() => setIsCreateStoryOpen(false)} />
+
+      {/* Story Viewer Modal */}
+      <StoryViewerModal
+        visible={!!activeStoryGroup}
+        storyGroup={activeStoryGroup}
+        onClose={() => setActiveStoryGroup(null)}
+      />
     </View>
   );
 };

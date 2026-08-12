@@ -478,6 +478,61 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   openMediaViewer: (url, type, title) => set({ activeMediaViewer: { url, type, title } }),
   closeMediaViewer: () => set({ activeMediaViewer: null }),
 
+  storyGroups: [],
+  myStories: [],
+
+  fetchStoriesFeed: async () => {
+    try {
+      const res = await apiClient.get('/stories/feed');
+      if (res.data?.storyGroups) {
+        set({ storyGroups: res.data.storyGroups });
+      }
+    } catch (err) {
+      console.warn('[FetchStoriesFeed Error]', err);
+    }
+  },
+
+  fetchMyStories: async () => {
+    try {
+      const res = await apiClient.get('/stories/mine');
+      if (res.data?.stories) {
+        set({ myStories: res.data.stories });
+      }
+    } catch (err) {
+      console.warn('[FetchMyStories Error]', err);
+    }
+  },
+
+  postStory: async (data) => {
+    try {
+      const res = await apiClient.post('/stories', data);
+      await get().fetchStoriesFeed();
+      await get().fetchMyStories();
+      return res.data?.story;
+    } catch (err: any) {
+      console.error('[PostStory Error]', err);
+      throw err;
+    }
+  },
+
+  viewStoryApi: async (storyId: string) => {
+    try {
+      await apiClient.post(`/stories/${storyId}/view`);
+    } catch (err) {
+      console.warn('[ViewStoryApi Error]', err);
+    }
+  },
+
+  deleteStoryApi: async (storyId: string) => {
+    try {
+      await apiClient.delete(`/stories/${storyId}`);
+      await get().fetchMyStories();
+      await get().fetchStoriesFeed();
+    } catch (err) {
+      console.error('[DeleteStoryApi Error]', err);
+    }
+  },
+
   markStatusViewed: (statusId) => {
     set((state) => ({
       statuses: state.statuses.map((st) =>
@@ -487,6 +542,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       ),
     }));
   },
+
 
   addStatus: (mediaUrl, caption) => {
     const newStatus: UserStatus = {

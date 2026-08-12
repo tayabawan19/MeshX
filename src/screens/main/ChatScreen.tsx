@@ -31,6 +31,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { Message } from '../../types';
 import { triggerHaptic } from '../../utils/haptics';
 import { getSocket } from '../../config/api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 
 interface ChatScreenProps {
@@ -176,12 +178,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     });
   }).current;
 
+
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 70 }).current;
+  const insets = useSafeAreaInsets();
+
+
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header Bar */}
-      <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: Math.max(insets.top, 12),
+            backgroundColor: palette.surface,
+            borderBottomColor: palette.border,
+          },
+        ]}
+      >
+
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <ChevronLeft size={26} color={palette.textPrimary} />
         </TouchableOpacity>
@@ -336,7 +352,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { height: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, borderBottomWidth: 1 },
+  header: {
+    paddingBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
+
   backBtn: { padding: 6 },
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 4 },
   headerTextContainer: { marginLeft: 10 },

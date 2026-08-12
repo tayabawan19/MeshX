@@ -20,6 +20,8 @@ import { ChatListItemSkeleton } from '../../components/common/SkeletonLoader';
 import { triggerHaptic } from '../../utils/haptics';
 import { CreateStoryModal } from '../modals/CreateStoryModal';
 import { StoryViewerModal } from '../modals/StoryViewerModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 export const ChatsListScreen: React.FC<{
   navigation?: any;
@@ -121,15 +123,22 @@ export const ChatsListScreen: React.FC<{
     return isGroupMatch || isParticipantMatch || isLastMsgMatch;
   });
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header Bar */}
       <View
         style={[
           styles.header,
-          { backgroundColor: palette.surface, borderBottomColor: palette.border },
+          {
+            paddingTop: Math.max(insets.top, 12),
+            backgroundColor: palette.surface,
+            borderBottomColor: palette.border,
+          },
         ]}
       >
+
         <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>MeshX</Text>
         </View>
@@ -252,7 +261,7 @@ export const ChatsListScreen: React.FC<{
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    height: 56,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

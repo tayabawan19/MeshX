@@ -3,9 +3,13 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mic, MicOff, Video, VideoOff, Volume2, PhoneOff, Phone, RefreshCw } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { triggerHaptic } from '../../utils/haptics';
 
+
 export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+
   const {
     activeCall,
     acceptCall,
@@ -61,7 +65,16 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const isIncoming = activeCall.isIncoming;
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: Math.max(insets.top + 16, 40),
+          paddingBottom: Math.max(insets.bottom + 16, 24),
+        },
+      ]}
+    >
+
       <LinearGradient colors={['#0F0F1A', '#1E1B4B', '#0F0F1A']} style={StyleSheet.absoluteFillObject} />
 
       {/* Peer Header */}

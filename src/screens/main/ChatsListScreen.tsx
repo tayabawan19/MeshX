@@ -60,7 +60,8 @@ export const ChatsListScreen: React.FC<{
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    triggerHaptic('impactLight');
+    triggerHaptic('light');
+
     await Promise.all([fetchChats(), fetchStoriesFeed(), fetchMyStories()]);
     setRefreshing(false);
   };

@@ -8,6 +8,8 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { VoiceRecorder } from './VoiceRecorder';
 import { triggerHaptic } from '../../utils/haptics';
+import { apiClient } from '../../config/api';
+
 
 interface MessageInputBarProps {
   onSendMessage: (text: string) => void;

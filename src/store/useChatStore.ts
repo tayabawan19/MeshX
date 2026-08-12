@@ -30,10 +30,18 @@ interface ChatStoreState {
   activeCall: ActiveCallState | null;
   activeMediaViewer: { url: string; type: 'image' | 'video'; title?: string } | null;
   contacts: UserProfile[];
+  storyGroups: Array<{ user: UserProfile; stories: any[]; hasUnviewed: boolean }>;
+  myStories: any[];
 
   fetchChats: () => Promise<void>;
   fetchMessages: (chatId: string) => Promise<void>;
   fetchContacts: () => Promise<void>;
+  fetchStoriesFeed: () => Promise<void>;
+  fetchMyStories: () => Promise<void>;
+  postStory: (data: { type: 'image' | 'video' | 'text'; mediaUrl?: string; caption?: string; backgroundColor?: string }) => Promise<any>;
+  viewStoryApi: (storyId: string) => Promise<void>;
+  deleteStoryApi: (storyId: string) => Promise<void>;
+
   setActiveChatId: (chatId: string | null) => void;
   setSearchQuery: (query: string) => void;
   setReplyPreview: (reply: ReplyPreview | null) => void;
@@ -503,7 +511,8 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
   },
 
-  postStory: async (data) => {
+  postStory: async (data: { type: 'image' | 'video' | 'text'; mediaUrl?: string; caption?: string; backgroundColor?: string }) => {
+
     try {
       const res = await apiClient.post('/stories', data);
       await get().fetchStoriesFeed();

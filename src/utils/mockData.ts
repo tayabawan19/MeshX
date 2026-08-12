@@ -168,10 +168,7 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       status: 'read',
       createdAt: Date.now() - 15 * 60 * 1000,
     },
-      reactions: {},
-      status: 'read',
-      createdAt: Date.now() - 10 * 60 * 1000,
-    },
+
     {
       id: 'msg_5',
       chatId: 'chat_sarah',

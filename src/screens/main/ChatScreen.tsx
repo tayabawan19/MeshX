@@ -30,6 +30,8 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Message } from '../../types';
 import { triggerHaptic } from '../../utils/haptics';
+import { getSocket } from '../../config/api';
+
 
 interface ChatScreenProps {
   chatId?: string;

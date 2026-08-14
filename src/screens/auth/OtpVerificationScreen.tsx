@@ -126,9 +126,15 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
 
         <Text style={[styles.title, { color: palette.textPrimary }]}>Verify Your Email</Text>
         <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-          We sent a 6-digit verification code via Brevo SMTP to {'\n'}
+          We sent a 6-digit verification code to {'\n'}
           <Text style={{ color: palette.primary, fontWeight: '700' }}>{email}</Text>
         </Text>
+
+        <View style={styles.devHintBox}>
+          <Text style={styles.devHintText}>
+            💡 Dev Note: Check your backend terminal for the 6-digit OTP code (`[Brevo Email Service] OTP Generated`).
+          </Text>
+        </View>
 
         <Animated.View style={[styles.otpRow, { transform: [{ translateX: shakeAnimation }] }]}>
           {otpDigits.map((digit, index) => (
@@ -198,7 +204,24 @@ const styles = StyleSheet.create({
   content: { flex: 1, alignItems: 'center', paddingTop: 24 },
   iconContainer: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   title: { fontSize: 24, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 32 },
+  subtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  devHintBox: {
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(124, 58, 237, 0.3)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 24,
+    width: '100%',
+  },
+  devHintText: {
+    color: '#A78BFA',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   otpRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 24 },
   otpBox: { width: 48, height: 56, borderRadius: 12, borderWidth: 1.5, textAlign: 'center', fontSize: 24, fontWeight: '700' },
   errorText: { color: '#ef4444', fontSize: 13, fontWeight: '600', marginBottom: 16, textAlign: 'center' },

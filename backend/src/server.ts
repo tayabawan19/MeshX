@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import dotenv from 'dotenv';
+import dns from 'dns';
 
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
@@ -17,6 +18,13 @@ import mediaRoutes from './routes/mediaRoutes';
 import { setupSocketIO } from './sockets/chatSocket';
 
 dotenv.config();
+
+// Configure reliable DNS servers for MongoDB Atlas SRV lookup on Windows networks
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore if custom DNS fails
+}
 
 
 const app = express();

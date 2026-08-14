@@ -23,21 +23,37 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
+  const [localError, setLocalError] = useState('');
+
   const { signup, login, isLoading, error, clearError } = useAuthStore();
   const { theme } = useThemeStore();
 
   const handleAuthSubmit = async () => {
     clearError();
+    setLocalError('');
     triggerHaptic('selection');
 
     if (isLogin) {
-      if (!email || !password) return;
-      const success = await login(email.trim(), password);
-      if (success) {
+      if (!email.trim() || !password) {
+        setLocalError('Please enter both email and password.');
+        return;
+      }
+      const result = await login(email.trim(), password);
+      if (result === true) {
         triggerHaptic('success');
+      } else if (result === 'UNVERIFIED') {
+        triggerHaptic('warning');
+        navigation.navigate('OtpVerification', { email: email.trim(), mode: 'signup' });
       }
     } else {
-      if (!name || !email || !phone || !password) return;
+      if (!name.trim() || !email.trim() || !phone.trim() || !password) {
+        setLocalError('Please fill in all required fields (Name, Phone, Email, Password).');
+        return;
+      }
+      if (password.length < 8 || !/\d/.test(password)) {
+        setLocalError('Password must be at least 8 characters long and contain at least one number.');
+        return;
+      }
       const success = await signup({
         name: name.trim(),
         email: email.trim(),
@@ -155,7 +171,7 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
           </TouchableOpacity>
         )}
 
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {(error || localError) ? <Text style={styles.errorText}>{error || localError}</Text> : null}
 
         <GradientButton
           title={isLogin ? 'Sign In' : 'Sign Up & Verify Email'}

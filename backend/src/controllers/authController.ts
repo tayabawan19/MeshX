@@ -55,10 +55,17 @@ export const signup = async (req: Request, res: Response) => {
     const { name, email, phone, password } = req.body;
 
     if (!name || !email || !phone || !password) {
+      console.error('[Signup Validation Error] Missing required fields:', {
+        name: !!name,
+        email: !!email,
+        phone: !!phone,
+        password: !!password,
+      });
       return res.status(400).json({ error: 'All fields (name, email, phone, password) are required.' });
     }
 
     if (!validatePassword(password)) {
+      console.error('[Signup Validation Error] Password does not meet security requirements.');
       return res.status(400).json({
         error: 'Password must be at least 8 characters long and contain at least one number.',
       });
@@ -75,6 +82,7 @@ export const signup = async (req: Request, res: Response) => {
     });
 
     if (recentOtpsCount >= 3) {
+      console.error('[Signup Rate Limit] Exceeded 3 OTP requests in 15m for:', cleanEmail);
       return res.status(429).json({
         error: 'Too many OTP requests. Please wait 15 minutes before trying again.',
       });
@@ -85,7 +93,9 @@ export const signup = async (req: Request, res: Response) => {
     });
 
     if (existingUser && existingUser.isVerified) {
-      return res.status(400).json({ error: 'A user with this email or phone number already exists.' });
+      const matchField = existingUser.email === cleanEmail ? 'email' : 'phone number';
+      console.error(`[Signup Validation Error] A user with this ${matchField} already exists:`, cleanEmail);
+      return res.status(400).json({ error: `A user with this ${matchField} already exists.` });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -101,12 +111,14 @@ export const signup = async (req: Request, res: Response) => {
         isVerified: false,
       });
     } else {
+      console.log('[Signup Resume] Unverified account found. Resuming signup & refreshing credentials for:', cleanEmail);
       user.name = name.trim();
+      user.phone = cleanPhone;
       user.passwordHash = passwordHash;
     }
     await user.save();
 
-    await OtpToken.deleteMany({ email: cleanEmail, purpose: 'signup' });
+    await OtpToken.deleteMany({ email: cleanEmail });
 
     // Generate 6-digit cryptographically secure OTP
     const otpCode = generateOtp();
@@ -125,12 +137,13 @@ export const signup = async (req: Request, res: Response) => {
     await sendOtpEmail(cleanEmail, otpCode, user.name);
 
     return res.status(201).json({
-      message: 'Signup initiated. Please check your email for the 6-digit OTP code.',
+      message: existingUser ? 'Unverified account resumed. Check your email for the 6-digit OTP code.' : 'Signup initiated. Please check your email for the 6-digit OTP code.',
       email: cleanEmail,
+      isResumed: !!existingUser,
     });
   } catch (error: any) {
-    console.error('Signup error:', error);
-    return res.status(500).json({ error: 'Internal server error during signup.' });
+    console.error('[Signup Server Error] Error during signup process:', error.stack || error);
+    return res.status(500).json({ error: error.message || 'Internal server error during signup.' });
   }
 };
 
@@ -262,13 +275,26 @@ export const login = async (req: Request, res: Response) => {
     const user = await User.findOne({ email: cleanEmail });
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      console.log('[Login Attempt] No account found with email:', cleanEmail);
+      return res.status(401).json({ error: 'No account found with this email' });
+    }
+
+    if (!user.isVerified) {
+      console.log('[Login Attempt] User account unverified for email:', cleanEmail);
+      return res.status(401).json({
+        error: 'Please verify your email first',
+        isVerified: false,
+        email: cleanEmail,
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      console.log('[Login Attempt] Incorrect password for email:', cleanEmail);
+      return res.status(401).json({ error: 'Incorrect password' });
     }
+
+    console.log('[Login Attempt] Login successful for email:', cleanEmail);
 
     const deviceInfo = (req.headers['user-agent'] as string) || 'Mobile Device';
     const { accessToken, refreshToken } = await issueTokensAndSave(user._id.toString(), user.email, deviceInfo);
@@ -395,6 +421,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
       expiresAt,
       attempts: 0,
     });
+
+    console.log(`\n==================================================`);
+    console.log(`[Brevo Email Service] Password Reset OTP for ${cleanEmail}: ${otpCode}`);
+    console.log(`==================================================\n`);
 
     await sendOtpEmail(cleanEmail, otpCode, user.name);
 

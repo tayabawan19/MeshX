@@ -97,9 +97,13 @@ export function buildOtpEmailHtml(name: string, otpCode: string): string {
   `;
 }
 
+import nodemailer from 'nodemailer';
+
 export const sendOtpEmail = async (toEmail: string, otpCode: string, name?: string): Promise<boolean> => {
   const apiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'no-reply@meshx.app';
+  const smtpKey = process.env.BREVO_SMTP_KEY;
+  const smtpUser = process.env.BREVO_SMTP_USER || 'b1d8c5001@smtp-brevo.com';
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'maliktayab.in@gmail.com';
   const senderName = process.env.BREVO_SENDER_NAME || 'MeshX Auth';
   const recipientName = name || 'MeshX User';
 
@@ -109,36 +113,62 @@ export const sendOtpEmail = async (toEmail: string, otpCode: string, name?: stri
   console.log(`[Brevo Email Service] OTP Generated for ${toEmail}: ${otpCode}`);
   console.log(`==================================================\n`);
 
-  if (!apiKey || apiKey.includes('your_brevo') || apiKey.includes('your-brevo')) {
-    console.warn(`[Brevo Email Service] BREVO_API_KEY is not configured or using default template. Logged OTP code directly above.`);
-    return true;
-  }
-
-  try {
-    const response = await axios.post(
-      BREVO_API_URL,
-      {
-        sender: { name: senderName, email: senderEmail },
-        to: [{ email: toEmail, name: recipientName }],
-        subject: `${otpCode} is your MeshX verification code`,
-        htmlContent,
-      },
-      {
-        headers: {
-          'api-key': apiKey,
-          'Content-Type': 'application/json',
-          'accept': 'application/json',
+  // 1. Try Nodemailer SMTP if BREVO_SMTP_KEY is present
+  if (smtpKey) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: 'smtp-relay.brevo.com',
+        port: 587,
+        auth: {
+          user: smtpUser,
+          pass: smtpKey,
         },
-      }
-    );
+      });
 
-    console.log(`[Brevo Email Service] Email successfully sent to ${toEmail}. Message ID: ${response.data.messageId}`);
-    return true;
-  } catch (error: any) {
-    const errorMessage = error?.response?.data ? JSON.stringify(error.response.data) : error.message;
-    console.error(`[Brevo Email Service Error] Failed to send email to ${toEmail}:`, errorMessage);
-    throw new Error(`Brevo API Email Error: ${errorMessage}`);
+      const info = await transporter.sendMail({
+        from: `"${senderName}" <${senderEmail}>`,
+        to: `"${recipientName}" <${toEmail}>`,
+        subject: `${otpCode} is your MeshX verification code`,
+        html: htmlContent,
+      });
+
+      console.log(`[Brevo SMTP Service] Email successfully sent to ${toEmail}. MessageId: ${info.messageId}`);
+      return true;
+    } catch (smtpErr: any) {
+      console.error(`[Brevo SMTP Error] Failed via Nodemailer SMTP:`, smtpErr.message);
+    }
   }
+
+  // 2. Try Brevo REST API if BREVO_API_KEY is present
+  if (apiKey && !apiKey.includes('your_brevo') && !apiKey.includes('your-brevo')) {
+    try {
+      const response = await axios.post(
+        BREVO_API_URL,
+        {
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: toEmail, name: recipientName }],
+          subject: `${otpCode} is your MeshX verification code`,
+          htmlContent,
+        },
+        {
+          headers: {
+            'api-key': apiKey,
+            'Content-Type': 'application/json',
+            'accept': 'application/json',
+          },
+        }
+      );
+
+      console.log(`[Brevo API Service] Email successfully sent to ${toEmail}. Message ID: ${response.data.messageId}`);
+      return true;
+    } catch (error: any) {
+      const errorMessage = error?.response?.data ? JSON.stringify(error.response.data) : error.message;
+      console.error(`[Brevo Email Service Error] Failed to send email to ${toEmail}:`, errorMessage);
+    }
+  }
+
+  console.warn(`[Brevo Email Service Fallback] Sign-up proceeding in dev fallback mode. Use console OTP above: ${otpCode}`);
+  return false;
 };
 
 export const sendInviteEmail = async (toEmail: string, inviterName: string): Promise<boolean> => {

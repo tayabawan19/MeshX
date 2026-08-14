@@ -25,6 +25,13 @@ interface AuthState {
   checkAuthStatus: () => Promise<void>;
 }
 
+const getErrorMessage = (err: any, defaultFallback: string): string => {
+  if (err.response) {
+    return err.response.data?.error || err.response.data?.message || defaultFallback;
+  }
+  return "Can't reach server — check your connection";
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
@@ -47,7 +54,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-
   signup: async ({ name, email, phone, password }) => {
     set({ isLoading: true, error: null });
     try {
@@ -55,7 +61,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false, pendingEmail: email });
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Signup failed. Please try again.';
+      const msg = getErrorMessage(err, 'Signup failed. Please try again.');
       set({ isLoading: false, error: msg });
       return false;
     }
@@ -77,7 +83,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Invalid OTP code.';
+      const msg = getErrorMessage(err, 'Invalid OTP code.');
       set({ isLoading: false, error: msg });
       return false;
     }
@@ -90,7 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to resend OTP.';
+      const msg = getErrorMessage(err, 'Failed to resend OTP.');
       set({ isLoading: false, error: msg });
       return false;
     }
@@ -111,8 +117,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Invalid email or password.';
+      const isUnverified = err.response?.data?.isVerified === false;
+      const msg = getErrorMessage(err, 'Invalid email or password.');
       set({ isLoading: false, error: msg });
+      if (isUnverified) {
+        return 'UNVERIFIED';
+      }
       return false;
     }
   },
@@ -124,7 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false, pendingEmail: email });
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to process request.';
+      const msg = getErrorMessage(err, 'Failed to process request.');
       set({ isLoading: false, error: msg });
       return false;
     }
@@ -137,7 +147,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false, pendingEmail: null });
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to reset password.';
+      const msg = getErrorMessage(err, 'Failed to reset password.');
       set({ isLoading: false, error: msg });
       return false;
     }

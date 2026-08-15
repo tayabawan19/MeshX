@@ -88,7 +88,9 @@ setupSocketIO(io);
 
 // MongoDB connection & server listen
 mongoose
-  .connect(MONGO_URI)
+  .connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 8000,
+  })
   .then(() => {
     console.log('[Database] Connected to MongoDB database successfully.');
     server.listen(PORT, () => {
@@ -96,7 +98,8 @@ mongoose
     });
   })
   .catch((err: any) => {
-    console.error('[Database] MongoDB connection error:', err);
+    console.error('[Database] MongoDB connection error:', err.message || err);
+    console.warn('[Database Warning] If server selection timed out, verify that your IP is whitelisted in MongoDB Atlas Network Access (0.0.0.0/0).');
     console.log('[Server] Starting server in offline MongoDB fallback mode...');
     server.listen(PORT, () => {
       console.log(`[Server] MeshX real-time backend running on http://localhost:${PORT} (without MongoDB)`);

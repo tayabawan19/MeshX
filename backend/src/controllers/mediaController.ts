@@ -14,23 +14,29 @@ export const uploadMediaFile = async (req: AuthRequest, res: Response) => {
 
     if (mimetype.startsWith('image/')) {
       category = 'image';
-      if (size > 10 * 1024 * 1024) {
-        return res.status(400).json({ error: 'Image size exceeds maximum limit of 10MB.' });
+      if (size > 15 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Image size exceeds maximum limit of 15MB.' });
       }
     } else if (
       mimetype.startsWith('audio/') ||
+      mimetype.startsWith('video/') ||
       mimetype === 'application/octet-stream' ||
       mimetype.includes('m4a') ||
-      mimetype.includes('mp4')
+      mimetype.includes('mp4') ||
+      mimetype.includes('aac') ||
+      mimetype.includes('caf') ||
+      mimetype.includes('wav') ||
+      mimetype.includes('mp3') ||
+      mimetype.includes('3gp')
     ) {
       category = 'voice';
-      if (size > 5 * 1024 * 1024) {
-        return res.status(400).json({ error: 'Voice note size exceeds maximum limit of 5MB.' });
+      if (size > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Voice note size exceeds maximum limit of 10MB.' });
       }
     } else {
       category = 'document';
-      if (size > 20 * 1024 * 1024) {
-        return res.status(400).json({ error: 'Document size exceeds maximum limit of 20MB.' });
+      if (size > 25 * 1024 * 1024) {
+        return res.status(400).json({ error: 'Document size exceeds maximum limit of 25MB.' });
       }
     }
 

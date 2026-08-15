@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io';
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import Message from '../models/Message';
 import Chat from '../models/Chat';
@@ -37,6 +38,8 @@ export const setupSocketIO = (io: Server) => {
     if (!userId) return;
 
     onlineUsers.set(userId, socket.id);
+    socket.join(userId);
+    socket.join(`user_${userId}`);
     console.log(`[Socket.io] User connected: ${userId} (Socket ID: ${socket.id})`);
 
     await User.findByIdAndUpdate(userId, { isOnline: true });
@@ -104,6 +107,8 @@ export const setupSocketIO = (io: Server) => {
           expiresAtDate = new Date(Date.now() + chat.disappearingDuration * 1000);
         }
 
+        const validReplyTo = replyTo && mongoose.Types.ObjectId.isValid(replyTo) ? replyTo : null;
+
         const message = new Message({
           chatId,
           senderId: userId,
@@ -111,16 +116,22 @@ export const setupSocketIO = (io: Server) => {
           text: text || '',
           mediaUrl: mediaUrl || '',
           duration: duration || undefined,
-          replyTo: replyTo || null,
+          replyTo: validReplyTo,
           status: 'sent',
           expiresAt: expiresAtDate,
         });
 
         await message.save();
         await message.populate('senderId', '_id name avatarUrl');
-        if (replyTo) {
+        if (validReplyTo) {
           await message.populate('replyTo');
         }
+
+        const recipients = chat.participants.filter((p: any) => p.toString() !== userId);
+        const incUpdates: Record<string, number> = {};
+        recipients.forEach((p: any) => {
+          incUpdates[`unreadCounts.${p.toString()}`] = 1;
+        });
 
         await Chat.findByIdAndUpdate(chatId, {
           lastMessage: {
@@ -129,9 +140,19 @@ export const setupSocketIO = (io: Server) => {
             type: type || 'text',
             createdAt: new Date(),
           },
+          ...(Object.keys(incUpdates).length > 0 ? { $inc: incUpdates } : {}),
         });
 
         io.to(chatId).emit('receive_message', message);
+
+        // Also deliver to recipients who are online but currently on ChatsList (not in room chatId)
+        recipients.forEach((r: any) => {
+          const rIdStr = r.toString();
+          const rSocketId = onlineUsers.get(rIdStr);
+          if (rSocketId && !io.sockets.adapter.rooms.get(chatId)?.has(rSocketId)) {
+            io.to(rSocketId).emit('receive_message', message);
+          }
+        });
 
         // FCM Push Notification Trigger for offline / backgrounded recipients (suppressed if muted)
         const senderUser = await User.findById(userId);
@@ -143,7 +164,6 @@ export const setupSocketIO = (io: Server) => {
         else if (type === 'document') previewText = '📄 Document';
         else if (previewText.length > 50) previewText = previewText.slice(0, 50) + '...';
 
-        const recipients = chat.participants.filter((p: any) => p.toString() !== userId);
         for (const recipientId of recipients) {
           const rIdStr = recipientId.toString();
           const isMuted = chat.mutedBy?.some((mId: any) => mId.toString() === rIdStr);
@@ -181,19 +201,43 @@ export const setupSocketIO = (io: Server) => {
 
     socket.on('message_delivered', async (data: { messageId: string; chatId: string }) => {
       if (!data?.messageId || !data?.chatId) return;
+      if (!mongoose.Types.ObjectId.isValid(data.messageId)) return;
       await Message.findByIdAndUpdate(data.messageId, { status: 'delivered' });
       io.to(data.chatId).emit('message_status_update', { messageId: data.messageId, status: 'delivered' });
     });
 
     socket.on('message_read', async (data: { messageId: string; chatId: string }) => {
       if (!data?.messageId || !data?.chatId) return;
+      if (!mongoose.Types.ObjectId.isValid(data.messageId)) return;
       await Message.findByIdAndUpdate(data.messageId, { status: 'read' });
+      if (mongoose.Types.ObjectId.isValid(data.chatId)) {
+        await Chat.findByIdAndUpdate(data.chatId, {
+          $set: { [`unreadCounts.${userId}`]: 0 },
+        });
+      }
       io.to(data.chatId).emit('message_status_update', { messageId: data.messageId, status: 'read' });
+    });
+
+    socket.on('mark_chat_read', async (data: { chatId: string }) => {
+      try {
+        if (!data?.chatId || !mongoose.Types.ObjectId.isValid(data.chatId)) return;
+        await Chat.findByIdAndUpdate(data.chatId, {
+          $set: { [`unreadCounts.${userId}`]: 0 },
+        });
+        await Message.updateMany(
+          { chatId: data.chatId, senderId: { $ne: userId }, status: { $ne: 'read' } },
+          { $set: { status: 'read' } }
+        );
+        io.to(data.chatId).emit('chat_read', { chatId: data.chatId, userId });
+      } catch (error) {
+        console.error('[Socket.io] Error in mark_chat_read:', error);
+      }
     });
 
     socket.on('reaction_add', async (data: { messageId: string; chatId: string; emoji: string }) => {
       try {
         if (!data?.messageId || !data?.chatId || !data?.emoji) return;
+        if (!mongoose.Types.ObjectId.isValid(data.messageId)) return;
 
         const chat = await Chat.findById(data.chatId);
         if (!chat || !chat.participants.some((p: any) => p.toString() === userId)) return;
@@ -225,6 +269,7 @@ export const setupSocketIO = (io: Server) => {
     socket.on('reaction_remove', async (data: { messageId: string; chatId: string }) => {
       try {
         if (!data?.messageId || !data?.chatId) return;
+        if (!mongoose.Types.ObjectId.isValid(data.messageId)) return;
 
         const chat = await Chat.findById(data.chatId);
         if (!chat || !chat.participants.some((p: any) => p.toString() === userId)) return;
@@ -252,7 +297,8 @@ export const setupSocketIO = (io: Server) => {
         const { receiverId, type } = data;
         if (!receiverId) return;
 
-        const channelName = `call_${userId}_${receiverId}_${Date.now()}`;
+        const sortedIds = [userId, receiverId].sort();
+        const channelName = `call_${sortedIds[0]}_${sortedIds[1]}_${Date.now()}`;
         const caller = await User.findById(userId);
         const receiver = await User.findById(receiverId);
 
@@ -267,6 +313,14 @@ export const setupSocketIO = (io: Server) => {
         });
 
         await call.save();
+        console.log(`[Call Signaling] [INITIATE] Caller: ${userId} (${caller.name}) -> Receiver: ${receiverId} (${receiver.name}), CallId: ${call._id}, Channel: ${channelName}, Type: ${type}`);
+
+        // Acknowledge call creation to caller
+        socket.emit('call_initiated', {
+          callId: call._id.toString(),
+          channelName,
+          type: type || 'voice',
+        });
 
         const receiverSocketId = onlineUsers.get(receiverId);
         const payload = {
@@ -280,18 +334,22 @@ export const setupSocketIO = (io: Server) => {
 
         if (receiverSocketId) {
           io.to(receiverSocketId).emit('incoming_call', payload);
-          console.log(`[Call Signaling] Incoming call emitted to online user ${receiverId}`);
-        } else if (receiver.fcmToken) {
-          await sendPushNotification(
-            receiver.fcmToken,
-            `Incoming ${type} call`,
-            `${caller.name} is calling you...`,
-            {
-              callId: call._id.toString(),
-              type: 'call',
-              channelName,
-            }
-          );
+          console.log(`[Call Signaling] [INCOMING_EMITTED] Emitted incoming_call to receiver socket ${receiverSocketId}`);
+        } else {
+          console.log(`[Call Signaling] Receiver ${receiverId} offline. Attempting push notification...`);
+          if (receiver.fcmToken) {
+            await sendPushNotification(
+              receiver.fcmToken,
+              `Incoming ${type} call`,
+              `${caller.name} is calling you...`,
+              {
+                callId: call._id.toString(),
+                type: 'call',
+                channelName,
+              }
+            );
+            console.log(`[Call Signaling] Push notification sent to receiver ${receiverId}`);
+          }
         }
       } catch (error) {
         console.error('[Call Signaling Error] call_initiate:', error);
@@ -302,11 +360,19 @@ export const setupSocketIO = (io: Server) => {
       try {
         const { callId } = data;
         const call = await Call.findById(callId);
-        if (!call) return;
+        if (!call) {
+          console.warn(`[Call Signaling] [ACCEPT FAILED] Call ${callId} not found`);
+          return;
+        }
 
+        console.log(`[Call Signaling] [ACCEPT] Call ${callId} accepted by user ${userId}. Channel: ${call.channelName}`);
         const callerSocketId = onlineUsers.get(call.callerId.toString());
         if (callerSocketId) {
-          io.to(callerSocketId).emit('call_accepted', { callId });
+          io.to(callerSocketId).emit('call_accepted', {
+            callId: call._id.toString(),
+            channelName: call.channelName,
+          });
+          console.log(`[Call Signaling] Emitted call_accepted to caller socket ${callerSocketId}`);
         }
       } catch (error) {
         console.error('[Call Signaling Error] call_accept:', error);
@@ -316,12 +382,14 @@ export const setupSocketIO = (io: Server) => {
     socket.on('call_decline', async (data: { callId: string }) => {
       try {
         const { callId } = data;
+        console.log(`[Call Signaling] [DECLINE] Call ${callId} declined by user ${userId}`);
         const call = await Call.findByIdAndUpdate(callId, { status: 'declined' }, { new: true });
         if (!call) return;
 
         const callerSocketId = onlineUsers.get(call.callerId.toString());
         if (callerSocketId) {
           io.to(callerSocketId).emit('call_declined', { callId });
+          console.log(`[Call Signaling] Emitted call_declined to caller socket ${callerSocketId}`);
         }
       } catch (error) {
         console.error('[Call Signaling Error] call_decline:', error);
@@ -331,6 +399,7 @@ export const setupSocketIO = (io: Server) => {
     socket.on('call_end', async (data: { callId: string; duration?: number }) => {
       try {
         const { callId, duration } = data;
+        console.log(`[Call Signaling] [END] Call ${callId} ended by user ${userId}. Duration: ${duration || 0}s`);
         const call = await Call.findByIdAndUpdate(
           callId,
           { status: 'completed', duration: duration || 0 },
@@ -342,6 +411,7 @@ export const setupSocketIO = (io: Server) => {
         const otherSocketId = onlineUsers.get(otherUserId);
         if (otherSocketId) {
           io.to(otherSocketId).emit('call_ended', { callId, duration: duration || 0 });
+          console.log(`[Call Signaling] Emitted call_ended to other party socket ${otherSocketId}`);
         }
       } catch (error) {
         console.error('[Call Signaling Error] call_end:', error);

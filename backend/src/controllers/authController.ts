@@ -288,6 +288,11 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    if (!user.passwordHash) {
+      console.log('[Login Attempt] User has no passwordHash set for email:', cleanEmail);
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
       console.log('[Login Attempt] Incorrect password for email:', cleanEmail);
@@ -314,8 +319,8 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error('Login error:', error);
-    return res.status(500).json({ error: 'Internal server error during login.' });
+    console.error('Login error:', error?.message || error);
+    return res.status(500).json({ error: error?.message || 'Internal server error during login.' });
   }
 };
 

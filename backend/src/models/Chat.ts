@@ -11,6 +11,7 @@ export interface IChat extends Document {
     type: 'text' | 'image' | 'voice' | 'document';
     createdAt: Date;
   };
+  unreadCounts?: Map<string, number>;
   bubbleTheme: {
     sentGradient: [string, string];
     receivedColor: string;
@@ -19,6 +20,7 @@ export interface IChat extends Document {
   mutedBy: mongoose.Types.ObjectId[];
   disappearingDuration?: number | null;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const ChatSchema: Schema = new Schema(
@@ -32,6 +34,11 @@ const ChatSchema: Schema = new Schema(
       senderId: { type: Schema.Types.ObjectId, ref: 'User' },
       type: { type: String, enum: ['text', 'image', 'voice', 'document'], default: 'text' },
       createdAt: { type: Date, default: Date.now },
+    },
+    unreadCounts: {
+      type: Map,
+      of: Number,
+      default: {},
     },
     bubbleTheme: {
       sentGradient: { type: [String], default: ['#7C3AED', '#3B82F6'] },

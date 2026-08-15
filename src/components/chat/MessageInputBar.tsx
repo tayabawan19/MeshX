@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Modal, Image } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Modal, Image, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,7 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
 
   const [text, setText] = useState('');
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
@@ -44,6 +45,7 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
   };
 
   const uploadAndSend = async (uri: string, type: 'image' | 'voice' | 'document', extra?: any) => {
+    setIsUploading(true);
     try {
       const formData = new FormData();
       const filename = uri.split('/').pop() || `file_${Date.now()}`;
@@ -57,6 +59,8 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
         type: mime,
       } as any);
 
+      console.log(`[MediaUpload] Uploading ${type} from ${uri} to /media/upload...`);
+
       const res = await apiClient.post('/media/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -64,50 +68,96 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
       });
 
       if (res.data?.mediaUrl) {
+        console.log(`[MediaUpload Success] Uploaded to Cloudinary: ${res.data.mediaUrl}`);
         onSendMedia(type, res.data.mediaUrl, extra);
       } else {
+        console.warn('[MediaUpload] No mediaUrl in response, using local URI fallback');
         onSendMedia(type, uri, extra);
       }
-    } catch (err) {
-      console.warn('[MediaUpload] Backend upload failed, using local URI fallback:', err);
+    } catch (err: any) {
+      console.warn('[MediaUpload] Backend upload failed, using local URI fallback:', err?.message || err);
+      // Fallback to local URI so messaging never completely fails
       onSendMedia(type, uri, extra);
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const pickImage = async () => {
     setShowAttachments(false);
     triggerHaptic('selection');
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      await uploadAndSend(result.assets[0].uri, 'image');
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library in device settings to send images.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        await uploadAndSend(asset.uri, 'image');
+      }
+    } catch (error: any) {
+      console.error('[PickImage Error]', error);
+      Alert.alert('Gallery Error', 'Could not open photo library. Please try again.');
     }
   };
 
   const takePhoto = async () => {
     setShowAttachments(false);
     triggerHaptic('selection');
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (permission.granted) {
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-      if (!result.canceled && result.assets[0]) {
-        await uploadAndSend(result.assets[0].uri, 'image');
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Camera Permission Required',
+          'Please allow camera access in device settings to take and send photos.'
+        );
+        return;
       }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        await uploadAndSend(asset.uri, 'image');
+      }
+    } catch (error: any) {
+      console.error('[TakePhoto Error]', error);
+      Alert.alert(
+        'Camera Unavailable',
+        'Could not launch camera. If you are on an Android emulator, make sure camera is set to "Webcam0" in AVD settings, or choose an image from the Gallery instead.'
+      );
     }
   };
 
   const pickDocument = async () => {
     setShowAttachments(false);
     triggerHaptic('selection');
-    const result = await DocumentPicker.getDocumentAsync({});
-    if (!result.canceled && result.assets[0]) {
-      const doc = result.assets[0];
-      await uploadAndSend(doc.uri, 'document', {
-        mediaFileName: doc.name,
-        mediaFileSize: `${(doc.size! / (1024 * 1024)).toFixed(1)} MB`,
-      });
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const doc = result.assets[0];
+        await uploadAndSend(doc.uri, 'document', {
+          mediaFileName: doc.name,
+          mediaFileSize: doc.size ? `${(doc.size / (1024 * 1024)).toFixed(1)} MB` : '1.2 MB',
+        });
+      }
+    } catch (error) {
+      console.error('[PickDocument Error]', error);
     }
   };
 
@@ -194,7 +244,11 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
           <Paperclip size={20} color={palette.textMuted} />
         </TouchableOpacity>
 
-        {text.trim().length > 0 ? (
+        {isUploading ? (
+          <View style={styles.iconBtn}>
+            <ActivityIndicator size="small" color={palette.primary} />
+          </View>
+        ) : text.trim().length > 0 ? (
           <TouchableOpacity activeOpacity={0.8} onPress={handleSend} style={styles.sendBtnTouchable}>
             <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.sendGradient}>
               <Send size={18} color="#FFFFFF" />

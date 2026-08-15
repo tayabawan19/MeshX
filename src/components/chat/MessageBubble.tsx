@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Audio, AVPlaybackStatus } from 'expo-av';
 import { Check, CheckCheck, Play, Pause, FileText } from 'lucide-react-native';
 import { Message } from '../../types';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -16,6 +17,7 @@ interface MessageBubbleProps {
   isMe: boolean;
   isFirstInGroup?: boolean;
   isLastInGroup?: boolean;
+  animateEntrance?: boolean;
   senderName?: string;
   onLongPress?: (message: Message) => void;
   onSwipeReply?: (message: Message) => void;
@@ -26,12 +28,104 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isMe,
   isFirstInGroup = true,
   isLastInGroup = true,
+  animateEntrance = false,
   senderName,
   onLongPress,
 }) => {
   const { palette, chatThemes, themeMode } = useThemeStore();
   const { activeChatId, openMediaViewer } = useChatStore();
+
+  // Audio Playback State
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(
+    message.audioDuration ? message.audioDuration * 1000 : 0
+  );
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Unload audio on unmount
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+      }
+    };
+  }, []);
+
+  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    if (!status.isLoaded) {
+      if (status.error) {
+        console.error('[VoicePlayer Error]', status.error);
+        setIsLoadingAudio(false);
+        setIsPlayingAudio(false);
+      }
+      return;
+    }
+
+    setIsLoadingAudio(false);
+    setIsPlayingAudio(status.isPlaying);
+    setPlaybackPosition(status.positionMillis);
+    if (status.durationMillis) {
+      setPlaybackDuration(status.durationMillis);
+    }
+
+    if (status.didJustFinish) {
+      setIsPlayingAudio(false);
+      setPlaybackPosition(0);
+      soundRef.current?.setPositionAsync(0).catch(() => {});
+    }
+  };
+
+  const toggleAudio = async () => {
+    triggerHaptic('light');
+
+    if (!message.mediaUrl) {
+      console.warn('[VoicePlayer] No mediaUrl available for voice note');
+      return;
+    }
+
+    try {
+      if (soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.isPlaying) {
+            await soundRef.current.pauseAsync();
+            setIsPlayingAudio(false);
+          } else {
+            if (status.positionMillis >= (status.durationMillis || 0)) {
+              await soundRef.current.setPositionAsync(0);
+            }
+            await soundRef.current.playAsync();
+            setIsPlayingAudio(true);
+          }
+          return;
+        }
+      }
+
+      // Initialize Sound and Audio Mode
+      setIsLoadingAudio(true);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      console.log(`[VoicePlayer] Loading voice note from: ${message.mediaUrl}`);
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: message.mediaUrl },
+        { shouldPlay: true, progressUpdateIntervalMillis: 100 },
+        onPlaybackStatusUpdate
+      );
+
+      soundRef.current = sound;
+    } catch (err) {
+      console.error('[VoicePlayer Error] Failed to load/play audio:', err);
+      setIsLoadingAudio(false);
+      setIsPlayingAudio(false);
+    }
+  };
 
   const currentChatTheme = activeChatId ? chatThemes[activeChatId] : undefined;
   const sentGradient: [string, string] = currentChatTheme?.gradient || ['#7C3AED', '#3B82F6'];
@@ -57,11 +151,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const handleLongPress = () => {
     triggerHaptic('heavy');
     if (onLongPress) onLongPress(message);
-  };
-
-  const toggleAudio = () => {
-    triggerHaptic('light');
-    setIsPlayingAudio(!isPlayingAudio);
   };
 
   const renderReadStatus = () => {
@@ -108,6 +197,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     );
   };
 
+  // Waveform progress calculation
+  const totalDurationSeconds = Math.max(
+    Math.round(playbackDuration / 1000),
+    message.audioDuration || 5
+  );
+  const currentSeconds = Math.round(playbackPosition / 1000);
+  const progressRatio = playbackDuration > 0 ? playbackPosition / playbackDuration : 0;
+
   const renderContent = () => {
     return (
       <View style={styles.innerContent}>
@@ -139,23 +236,51 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {message.type === 'voice' && (
           <View style={styles.voiceContainer}>
-            <TouchableOpacity activeOpacity={0.8} onPress={toggleAudio} style={styles.voicePlayBtn}>
-              {isPlayingAudio ? <Pause size={18} color="#FFFFFF" /> : <Play size={18} color="#FFFFFF" style={{ marginLeft: 2 }} />}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={toggleAudio}
+              style={[
+                styles.voicePlayBtn,
+                { backgroundColor: isMe ? 'rgba(255,255,255,0.3)' : palette.primary },
+              ]}
+            >
+              {isLoadingAudio ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : isPlayingAudio ? (
+                <Pause size={18} color="#FFFFFF" />
+              ) : (
+                <Play size={18} color="#FFFFFF" style={{ marginLeft: 2 }} />
+              )}
             </TouchableOpacity>
             <View style={styles.waveformContainer}>
               <View style={styles.waveformBars}>
-                {[40, 70, 30, 90, 60, 100, 45, 80, 50, 95, 30, 70, 50].map((h, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.waveformBar,
-                      { height: (h / 100) * 22, backgroundColor: isMe ? '#FFFFFF' : palette.primaryLight },
-                    ]}
-                  />
-                ))}
+                {[40, 70, 30, 90, 60, 100, 45, 80, 50, 95, 30, 70, 50].map((h, idx) => {
+                  const barProgress = idx / 13;
+                  const isFilled = isPlayingAudio && progressRatio >= barProgress;
+                  return (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.waveformBar,
+                        {
+                          height: (h / 100) * 22,
+                          backgroundColor: isMe
+                            ? isFilled
+                              ? '#FFFFFF'
+                              : 'rgba(255,255,255,0.45)'
+                            : isFilled
+                            ? palette.primary
+                            : palette.border,
+                        },
+                      ]}
+                    />
+                  );
+                })}
               </View>
               <Text style={[styles.audioTime, { color: isMe ? 'rgba(255,255,255,0.85)' : palette.textMuted }]}>
-                {formatCallDuration(message.audioDuration || 14)}
+                {isPlayingAudio
+                  ? `${formatCallDuration(currentSeconds)} / ${formatCallDuration(totalDurationSeconds)}`
+                  : formatCallDuration(totalDurationSeconds)}
               </Text>
             </View>
           </View>
@@ -189,34 +314,42 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     );
   };
 
-  return (
-    <Animated.View entering={FadeInUp.springify().damping(15)} style={[styles.container, { marginBottom: isLastInGroup ? 8 : 3 }]}>
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onLongPress={handleLongPress}
-        style={[
-          styles.bubbleWrapper,
-          isMe ? styles.sentWrapper : styles.receivedWrapper,
-        ]}
-      >
-        {isMe ? (
-          <LinearGradient
-            colors={sentGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.bubble, sentBorderRadius]}
-          >
-            {renderContent()}
-          </LinearGradient>
-        ) : (
-          <View style={[styles.bubble, { backgroundColor: receivedColor }, receivedBorderRadius]}>
-            {renderContent()}
-          </View>
-        )}
-      </TouchableOpacity>
+  const bubbleElement = (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onLongPress={handleLongPress}
+      style={[
+        styles.bubbleWrapper,
+        isMe ? styles.sentWrapper : styles.receivedWrapper,
+      ]}
+    >
+      {isMe ? (
+        <LinearGradient
+          colors={sentGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.bubble, sentBorderRadius]}
+        >
+          {renderContent()}
+        </LinearGradient>
+      ) : (
+        <View style={[styles.bubble, { backgroundColor: receivedColor }, receivedBorderRadius]}>
+          {renderContent()}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
+  return animateEntrance ? (
+    <Animated.View entering={FadeInUp.springify().damping(20)} style={[styles.container, { marginBottom: isLastInGroup ? 8 : 3 }]}>
+      {bubbleElement}
       {renderReactions()}
     </Animated.View>
+  ) : (
+    <View style={[styles.container, { marginBottom: isLastInGroup ? 8 : 3 }]}>
+      {bubbleElement}
+      {renderReactions()}
+    </View>
   );
 };
 
@@ -235,8 +368,8 @@ const styles = StyleSheet.create({
   messageText: { fontSize: 15, lineHeight: 21 },
   imageWrapper: { borderRadius: 14, overflow: 'hidden', marginBottom: 6 },
   messageImage: { width: 220, height: 160, resizeMode: 'cover' },
-  voiceContainer: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
-  voicePlayBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  voiceContainer: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, minWidth: 170 },
+  voicePlayBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   waveformContainer: { flex: 1 },
   waveformBars: { flexDirection: 'row', alignItems: 'center', height: 24, gap: 3 },
   waveformBar: { width: 3, borderRadius: 2 },

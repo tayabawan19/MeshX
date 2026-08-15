@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,8 +33,6 @@ import { triggerHaptic } from '../../utils/haptics';
 import { getSocket } from '../../config/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
-
 interface ChatScreenProps {
   chatId?: string;
   onBack?: () => void;
@@ -62,6 +60,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     typingMap,
     sendMessage,
     setTyping,
+    setActiveChatId,
     setReplyPreview,
     toggleReaction,
     deleteMessage,
@@ -75,42 +74,80 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [disappearingEnabled, setDisappearingEnabled] = useState(false);
 
-  const currentChat = chats.find((c) => c.chatId === chatId || (c as any).id === chatId);
+  const seenMessageIds = useRef<Set<string>>(new Set());
+  const initialRenderDone = useRef(false);
+
+  useEffect(() => {
+    if (chatId) {
+      setActiveChatId(chatId);
+    }
+    return () => {
+      setActiveChatId(null);
+    };
+  }, [chatId]);
+
+  const currentChat = chats.find(
+    (c) => c.chatId === chatId || (c as any).id === chatId || (c as any)._id === chatId
+  );
   const chatMessages = messages[chatId] || [];
 
-  const recipient = currentChat?.participantProfiles && currentChat.participantProfiles.length > 0
-    ? currentChat.participantProfiles[0]
-    : null;
+  const reversedMessages = React.useMemo(() => {
+    return [...chatMessages].reverse();
+  }, [chatMessages]);
+
+  useEffect(() => {
+    if (chatMessages.length > 0 && !initialRenderDone.current) {
+      chatMessages.forEach((m) => {
+        const id = m.id || m._id;
+        if (id) seenMessageIds.current.add(id);
+      });
+      initialRenderDone.current = true;
+    }
+  }, [chatMessages]);
+
+  const currentUserId = user?.id || user?._id || user?.userId;
+  const recipient =
+    currentChat?.otherParticipant ||
+    (currentChat?.participantProfiles && currentChat.participantProfiles.length > 0
+      ? currentChat.participantProfiles.find((p) => (p.id || p._id || p.userId) !== currentUserId) ||
+        currentChat.participantProfiles[0]
+      : Array.isArray(currentChat?.participants)
+      ? (currentChat.participants.find(
+          (p: any) => typeof p === 'object' && (p._id || p.id || p.userId) !== currentUserId
+        ) as any)
+      : null);
 
   const isGroup = currentChat?.type === 'group';
-  const headerName = isGroup ? currentChat.groupName : recipient?.name || route?.params?.title || 'Chat';
-  const headerAvatar = isGroup ? currentChat.groupAvatarUrl : recipient?.avatarUrl || route?.params?.avatar;
-  const isOnline = !isGroup && recipient?.isOnline;
+  const headerName = isGroup ? (currentChat.groupName || 'Group') : (recipient?.name || route?.params?.title || 'Chat');
+  const headerAvatar = isGroup ? (currentChat.groupAvatarUrl || currentChat.groupAvatar) : (recipient?.avatarUrl || route?.params?.avatar);
+  const isOnline = !isGroup && !!recipient?.isOnline;
   const isTyping = typingMap[chatId];
 
   const recUserId = recipient?.id || recipient?._id || recipient?.userId || 'peer';
 
   const handleSendTextMessage = (text: string) => {
-    sendMessage(text, 'text');
+    sendMessage(text, 'text', undefined, undefined, chatId);
     scrollToBottom();
   };
 
   const handleSendMediaMessage = (type: 'image' | 'voice' | 'document', url: string, extra?: any) => {
-    sendMessage(type === 'image' ? 'Photo' : type === 'voice' ? 'Voice note' : 'Document', type, url, extra);
+    sendMessage(
+      type === 'image' ? 'Photo' : type === 'voice' ? 'Voice note' : 'Document',
+      type,
+      url,
+      extra,
+      chatId
+    );
     scrollToBottom();
   };
 
   const scrollToBottom = () => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
-    const contentHeight = event.nativeEvent.contentSize.height;
-    const layoutHeight = event.nativeEvent.layoutMeasurement.height;
-    setShowJumpToBottom(contentHeight - offsetY - layoutHeight > 300);
+    setShowJumpToBottom(offsetY > 300);
   };
 
   const handleLongPressMessage = (msg: Message) => {
@@ -178,11 +215,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     });
   }).current;
 
-
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 70 }).current;
   const insets = useSafeAreaInsets();
-
-
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
@@ -197,7 +231,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           },
         ]}
       >
-
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <ChevronLeft size={26} color={palette.textPrimary} />
         </TouchableOpacity>
@@ -250,33 +283,44 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         </View>
       )}
 
-      {/* Messages List */}
+      {/* Messages List - Inverted FlatList */}
       <FlatList
         ref={flatListRef}
-        data={chatMessages}
-        keyExtractor={(item, index) => item.id || item._id || `msg_${index}`}
+        inverted
+        data={reversedMessages}
+        keyExtractor={(item) => item.id || item._id || `${item.createdAt}`}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         contentContainerStyle={styles.messagesList}
+        ListHeaderComponent={
+          isTyping ? <TypingIndicator senderName={recipient?.name || 'Someone'} /> : null
+        }
         renderItem={({ item, index }) => {
           const sId = typeof item.senderId === 'string' ? item.senderId : (item.senderId as any)?._id;
           const currentId = user?.id || user?._id || user?.userId || 'usr_me';
           const isMe = sId === currentId || sId === 'usr_me';
 
-          const prevMsg = chatMessages[index - 1];
-          const nextMsg = chatMessages[index + 1];
+          // In inverted array: item at index+1 is previous chronologically, item at index-1 is next chronologically
+          const prevChronologicalMsg = reversedMessages[index + 1];
+          const nextChronologicalMsg = reversedMessages[index - 1];
 
-          const isFirstInGroup = !prevMsg || prevMsg.senderId !== item.senderId;
-          const isLastInGroup = !nextMsg || nextMsg.senderId !== item.senderId;
+          const isFirstInGroup = !prevChronologicalMsg || prevChronologicalMsg.senderId !== item.senderId;
+          const isLastInGroup = !nextChronologicalMsg || nextChronologicalMsg.senderId !== item.senderId;
 
           const msgTime = Number(item.createdAt) || Date.now();
-          const prevMsgTime = prevMsg ? Number(prevMsg.createdAt) || Date.now() : 0;
+          const prevMsgTime = prevChronologicalMsg ? Number(prevChronologicalMsg.createdAt) || Date.now() : 0;
 
           const showDateDivider =
-            index === 0 ||
+            !prevChronologicalMsg ||
             new Date(msgTime).toDateString() !== new Date(prevMsgTime).toDateString();
+
+          const msgId = item.id || item._id || `${item.createdAt}`;
+          const isNew = !seenMessageIds.current.has(msgId) && initialRenderDone.current;
+          if (!seenMessageIds.current.has(msgId)) {
+            seenMessageIds.current.add(msgId);
+          }
 
           return (
             <View>
@@ -286,17 +330,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
                 isMe={isMe}
                 isFirstInGroup={isFirstInGroup}
                 isLastInGroup={isLastInGroup}
+                animateEntrance={isNew}
                 senderName={!isMe && isGroup ? recipient?.name : undefined}
                 onLongPress={handleLongPressMessage}
               />
             </View>
           );
         }}
-        ListFooterComponent={
-          isTyping ? <TypingIndicator senderName={recipient?.name || 'Someone'} /> : null
-        }
       />
-
 
       {/* Jump to Bottom Floating Action Button */}
       {showJumpToBottom && (

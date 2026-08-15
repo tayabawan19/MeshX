@@ -1,17 +1,69 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import Chat from '../models/Chat';
 import Message from '../models/Message';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/authMiddleware';
 
+// Helper to format chat document for the requesting user
+export const formatChatForUser = (chatDoc: any, currentUserId: string) => {
+  const chatObj = chatDoc.toObject ? chatDoc.toObject() : { ...chatDoc };
+
+  let unreadCount = 0;
+  if (chatObj.unreadCounts) {
+    if (chatObj.unreadCounts instanceof Map) {
+      unreadCount = chatObj.unreadCounts.get(currentUserId) || 0;
+    } else if (typeof chatObj.unreadCounts === 'object') {
+      unreadCount = chatObj.unreadCounts[currentUserId] || 0;
+    }
+  }
+  chatObj.unreadCount = unreadCount;
+
+  if (chatObj.type === 'direct' && Array.isArray(chatObj.participants)) {
+    const other = chatObj.participants.find(
+      (p: any) => (p?._id ? p._id.toString() : p?.toString()) !== currentUserId
+    );
+    if (other && typeof other === 'object') {
+      chatObj.otherParticipant = {
+        _id: other._id?.toString() || other._id,
+        id: other._id?.toString() || other._id,
+        name: other.name || 'User',
+        avatarUrl: other.avatarUrl || '',
+        bio: other.bio || '',
+        isOnline: !!other.isOnline,
+        lastSeen: other.lastSeen,
+      };
+      chatObj.participantProfiles = [chatObj.otherParticipant];
+    }
+  } else if (chatObj.type === 'group' && Array.isArray(chatObj.participants)) {
+    chatObj.participantProfiles = chatObj.participants
+      .filter((p: any) => typeof p === 'object')
+      .map((p: any) => ({
+        _id: p._id?.toString() || p._id,
+        id: p._id?.toString() || p._id,
+        name: p.name || 'User',
+        avatarUrl: p.avatarUrl || '',
+        bio: p.bio || '',
+        isOnline: !!p.isOnline,
+        lastSeen: p.lastSeen,
+      }));
+  }
+
+  chatObj.chatId = chatObj._id?.toString() || chatObj.id;
+  return chatObj;
+};
+
 // GET /api/chats
 export const getChats = async (req: AuthRequest, res: Response) => {
   try {
     const currentUserId = req.user?.userId;
+    if (!currentUserId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const chats = await Chat.find({ participants: currentUserId })
+    const rawChats = await Chat.find({ participants: currentUserId })
       .populate('participants', '_id name avatarUrl bio isOnline lastSeen')
       .sort({ updatedAt: -1 });
+
+    const chats = rawChats.map((c) => formatChatForUser(c, currentUserId));
 
     return res.status(200).json({ chats });
   } catch (error: any) {
@@ -24,6 +76,7 @@ export const getChats = async (req: AuthRequest, res: Response) => {
 export const createOrGetDirectChat = async (req: AuthRequest, res: Response) => {
   try {
     const currentUserId = req.user?.userId;
+    if (!currentUserId) return res.status(401).json({ error: 'Unauthorized' });
     const otherUserId = req.body.otherUserId || req.body.recipientId;
 
     if (!otherUserId) {
@@ -59,6 +112,7 @@ export const createOrGetDirectChat = async (req: AuthRequest, res: Response) => 
           sentGradient: ['#6366f1', '#8b5cf6'],
           receivedColor: '#1f2937',
         },
+        unreadCounts: {},
       });
       await chat.save();
       await chat.populate('participants', '_id name avatarUrl bio isOnline lastSeen');
@@ -74,7 +128,8 @@ export const createOrGetDirectChat = async (req: AuthRequest, res: Response) => 
       await recipientUser.save();
     }
 
-    return res.status(200).json({ chat });
+    const formattedChat = formatChatForUser(chat, currentUserId);
+    return res.status(200).json({ chat: formattedChat });
 
   } catch (error: any) {
     console.error('Create or get direct chat error:', error);
@@ -86,6 +141,7 @@ export const createOrGetDirectChat = async (req: AuthRequest, res: Response) => 
 export const createGroupChat = async (req: AuthRequest, res: Response) => {
   try {
     const currentUserId = req.user?.userId;
+    if (!currentUserId) return res.status(401).json({ error: 'Unauthorized' });
     const { groupName, groupAvatar, participantIds } = req.body;
 
     if (!groupName || !participantIds || !Array.isArray(participantIds)) {
@@ -103,12 +159,14 @@ export const createGroupChat = async (req: AuthRequest, res: Response) => {
         sentGradient: ['#06b6d4', '#3b82f6'],
         receivedColor: '#1f2937',
       },
+      unreadCounts: {},
     });
 
     await groupChat.save();
     await groupChat.populate('participants', '_id name avatarUrl bio isOnline lastSeen');
 
-    return res.status(201).json({ chat: groupChat });
+    const formattedGroup = formatChatForUser(groupChat, currentUserId);
+    return res.status(201).json({ chat: formattedGroup });
   } catch (error: any) {
     console.error('Create group chat error:', error);
     return res.status(500).json({ error: 'Internal server error creating group chat.' });
@@ -122,6 +180,11 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
     const { chatId } = req.params;
     const { before, limit } = req.query;
 
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ error: 'Invalid chatId format.' });
+    }
+
+    // Security check: Verify user is a participant
     const chat = await Chat.findById(chatId);
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found.' });
@@ -136,7 +199,7 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
     }
 
     const queryCondition: any = { chatId };
-    if (before && typeof before === 'string') {
+    if (before && typeof before === 'string' && mongoose.Types.ObjectId.isValid(before)) {
       const beforeMessage = await Message.findById(before);
       if (beforeMessage) {
         queryCondition.createdAt = { $lt: beforeMessage.createdAt };
@@ -165,6 +228,10 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     const currentUserId = req.user?.userId;
     const { chatId } = req.params;
     const { text, type, mediaUrl, replyTo, expiresAt } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ error: 'Invalid chatId format.' });
+    }
 
     // Security check: Verify participant membership
     const chat = await Chat.findById(chatId);
@@ -197,21 +264,29 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const validReplyTo = replyTo && mongoose.Types.ObjectId.isValid(replyTo) ? replyTo : null;
+
     const message = new Message({
       chatId,
       senderId: currentUserId,
       type: type || 'text',
       text: text || '',
       mediaUrl: mediaUrl || '',
-      replyTo: replyTo || null,
+      replyTo: validReplyTo,
       status: 'sent',
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
     });
 
     await message.save();
     await message.populate('senderId', '_id name avatarUrl');
-    if (replyTo) {
+    if (validReplyTo) {
       await message.populate('replyTo');
+    }
+
+    const recipients = chat.participants.filter((p: any) => p.toString() !== currentUserId);
+    const incUpdates: Record<string, number> = {};
+    for (const r of recipients) {
+      incUpdates[`unreadCounts.${r.toString()}`] = 1;
     }
 
     await Chat.findByIdAndUpdate(chatId, {
@@ -221,11 +296,38 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
         type: type || 'text',
         createdAt: new Date(),
       },
+      ...(Object.keys(incUpdates).length > 0 ? { $inc: incUpdates } : {}),
     });
 
     return res.status(201).json({ message });
   } catch (error: any) {
     console.error('Send message error:', error);
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+// POST /api/chats/:chatId/read
+export const markChatRead = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { chatId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({ error: 'Invalid chatId format.' });
+    }
+
+    await Chat.findByIdAndUpdate(chatId, {
+      $set: { [`unreadCounts.${currentUserId}`]: 0 },
+    });
+
+    await Message.updateMany(
+      { chatId, senderId: { $ne: currentUserId }, status: { $ne: 'read' } },
+      { $set: { status: 'read' } }
+    );
+
+    return res.status(200).json({ success: true, chatId });
+  } catch (error: any) {
+    console.error('Mark chat read error:', error);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 };

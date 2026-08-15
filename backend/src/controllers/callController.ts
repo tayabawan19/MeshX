@@ -6,17 +6,27 @@ import { AuthRequest } from '../middleware/authMiddleware';
 export const generateAgoraToken = async (req: AuthRequest, res: Response) => {
   try {
     const { channelName } = req.body;
+    const currentUserId = req.user?.userId;
 
     if (!channelName) {
       return res.status(400).json({ error: 'channelName is required.' });
     }
 
-    const appId = process.env.AGORA_APP_ID || 'demo_agora_app_id_2026';
+    const appId = process.env.AGORA_APP_ID || '';
     const appCertificate = process.env.AGORA_APP_CERTIFICATE || '';
 
-    let token = `agora_rtc_token_${channelName}_${Date.now()}`;
+    let uid = 0;
+    if (currentUserId) {
+      let hash = 0;
+      for (let i = 0; i < currentUserId.length; i++) {
+        hash = (hash << 5) - hash + currentUserId.charCodeAt(i);
+        hash |= 0;
+      }
+      uid = Math.abs(hash);
+    }
 
-    // If Agora credentials are provided in .env, generate token
+    let token = '';
+
     if (appId && appCertificate) {
       try {
         const { RtcTokenBuilder, RtcRole } = require('agora-access-token');
@@ -28,19 +38,26 @@ export const generateAgoraToken = async (req: AuthRequest, res: Response) => {
           appId,
           appCertificate,
           channelName,
-          0,
+          uid,
           RtcRole.PUBLISHER,
           privilegeExpiredTs
         );
-      } catch (err) {
-        console.warn('[Agora Token Generation Warning] Using fallback token string:', err);
+        console.log(`[Agora Token Success] Signed token generated for channel=${channelName}, uid=${uid}`);
+      } catch (err: any) {
+        console.warn('[Agora Token Warning]', err?.message || err);
       }
+    }
+
+    if (!token) {
+      token = `agora_rtc_token_${channelName}_${uid}_${Date.now()}`;
+      console.log(`[Agora Token Fallback] Using dev token for channel=${channelName}, uid=${uid}`);
     }
 
     return res.status(200).json({
       token,
       appId,
       channelName,
+      uid,
     });
   } catch (error: any) {
     console.error('Generate Agora token error:', error);

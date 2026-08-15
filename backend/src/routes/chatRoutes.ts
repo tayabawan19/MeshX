@@ -9,6 +9,7 @@ import {
   updateChatWallpaper,
   toggleMuteChat,
   updateDisappearingMessages,
+  markChatRead,
 } from '../controllers/chatController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -21,6 +22,7 @@ router.post('/direct', createOrGetDirectChat as any);
 router.post('/group', createGroupChat as any);
 router.get('/:chatId/messages', getMessages as any);
 router.post('/:chatId/messages', sendMessage as any);
+router.post('/:chatId/read', markChatRead as any);
 router.put('/:chatId/theme', updateChatTheme as any);
 router.patch('/:chatId/theme', updateChatTheme as any);
 router.patch('/:chatId/wallpaper', updateChatWallpaper as any);

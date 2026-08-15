@@ -56,20 +56,43 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSendVoiceNote, o
 
   const handleSend = async () => {
     triggerHaptic('success');
-    let uri = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+    let uri = '';
     if (recording) {
       try {
         await recording.stopAndUnloadAsync();
         const recordedUri = recording.getURI();
         if (recordedUri) uri = recordedUri;
-      } catch (e) {}
+      } catch (e) {
+        console.error('[VoiceRecorder Error]', e);
+      }
     }
-    onSendVoiceNote(uri, seconds || 5);
+
+    // Reset audio mode back to playback
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+    } catch (e) {}
+
+    if (uri) {
+      onSendVoiceNote(uri, seconds || 1);
+    } else {
+      onCancel();
+    }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     triggerHaptic('error');
-    stopRecordingCleanup();
+    await stopRecordingCleanup();
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+    } catch (e) {}
     onCancel();
   };
 

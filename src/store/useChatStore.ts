@@ -6,8 +6,12 @@ import { useAuthStore } from './useAuthStore';
 
 
 
+import { agoraService } from '../services/agoraService';
+
 interface ActiveCallState {
   callId: string;
+  channelName?: string;
+  peerId?: string;
   peerName: string;
   peerAvatar: string;
   type: 'voice' | 'video';
@@ -48,7 +52,7 @@ interface ChatStoreState {
   setSearchQuery: (query: string) => void;
   setReplyPreview: (reply: ReplyPreview | null) => void;
 
-  sendMessage: (text: string, type?: MessageType, mediaUrl?: string, extra?: Partial<Message>) => void;
+  sendMessage: (text: string, type?: MessageType, mediaUrl?: string, extra?: Partial<Message>, explicitChatId?: string) => void;
   toggleReaction: (chatId: string, messageId: string, emoji: string) => void;
   deleteMessage: (chatId: string, messageId: string) => void;
   starMessage: (chatId: string, messageId: string) => void;
@@ -138,17 +142,23 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   setActiveChatId: (chatId) => {
     if (chatId) {
       const socket = getSocket();
-      if (socket) {
+      if (socket && socket.connected) {
         socket.emit('join_chat', chatId);
+        socket.emit('mark_chat_read', { chatId });
       }
+      try {
+        apiClient.post(`/chats/${chatId}/read`).catch(() => {});
+      } catch (e) {}
+
       get().fetchMessages(chatId);
 
       set((state) => ({
         activeChatId: chatId,
         replyPreview: null,
-        chats: state.chats.map((c) =>
-          c.chatId === chatId || (c as any).id === chatId ? { ...c, unreadCount: 0 } : c
-        ),
+        chats: state.chats.map((c) => {
+          const cId = c.chatId || (c as any).id || (c as any)._id;
+          return cId === chatId ? { ...c, unreadCount: 0 } : c;
+        }),
       }));
     } else {
       set({ activeChatId: null, replyPreview: null });
@@ -158,15 +168,16 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   setReplyPreview: (replyPreview) => set({ replyPreview }),
 
-  sendMessage: (text, type = 'text', mediaUrl, extra) => {
+  sendMessage: (text, type = 'text', mediaUrl, extra, explicitChatId) => {
     const { activeChatId, replyPreview, messages, chats } = get();
-    if (!activeChatId) return;
+    const targetChatId = explicitChatId || activeChatId;
+    if (!targetChatId) return;
 
     const currentUserId = (useAuthStore.getState().user as any)?.id || (useAuthStore.getState().user as any)?._id || 'me';
 
     const newMsg: Message = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      chatId: activeChatId,
+      chatId: targetChatId,
       senderId: currentUserId,
       text: text.trim(),
       type,
@@ -183,7 +194,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     const socket = getSocket();
     if (socket) {
       socket.emit('send_message', {
-        chatId: activeChatId,
+        chatId: targetChatId,
         text,
         type,
         mediaUrl,
@@ -191,12 +202,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       });
     }
 
-    const chatMsgs = messages[activeChatId] || [];
+    const chatMsgs = messages[targetChatId] || [];
     const updatedMsgs = [...chatMsgs, newMsg];
 
     const updatedChats = chats.map((c) => {
       const cId = c.chatId || (c as any).id || c._id;
-      if (cId === activeChatId) {
+      if (cId === targetChatId) {
         return {
           ...c,
           lastMessage: {
@@ -215,7 +226,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     set({
       messages: {
         ...messages,
-        [activeChatId]: updatedMsgs,
+        [targetChatId]: updatedMsgs,
       },
       chats: updatedChats.sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0)),
       replyPreview: null,
@@ -286,15 +297,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
 
   sendTypingStatus: (chatId, isTyping) => {
     const socket = getSocket();
-    if (socket) {
+    if (socket && socket.connected) {
       socket.emit(isTyping ? 'typing_start' : 'typing_stop', { chatId });
     }
-    set((state) => ({
-      typingMap: {
-        ...state.typingMap,
-        [chatId]: isTyping,
-      },
-    }));
   },
 
   setTyping: (chatId, isTyping) => {
@@ -323,9 +328,15 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       if (res.data?.chat) {
         const newChat = res.data.chat;
         const newId = newChat._id || newChat.id || newChat.chatId;
-        set((state) => ({
-          chats: [newChat, ...state.chats],
-        }));
+        newChat.chatId = newId;
+        set((state) => {
+          const filtered = state.chats.filter(
+            (c) => (c.chatId || (c as any).id || (c as any)._id) !== newId
+          );
+          return {
+            chats: [newChat, ...filtered],
+          };
+        });
         return newId;
       }
     } catch (err) {
@@ -397,6 +408,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     set({
       activeCall: {
         callId: `call_${Date.now()}`,
+        peerId,
         peerName,
         peerAvatar,
         type,
@@ -421,9 +433,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       socket.emit('call_accept', { callId: activeCall.callId });
     }
 
+    const channel = activeCall.channelName || activeCall.callId;
     try {
-      await apiClient.post('/calls/token', { channelName: activeCall.callId });
-    } catch (e) {}
+      await agoraService.initializeAndJoin(channel, activeCall.type);
+    } catch (e) {
+      console.warn('[CallStore] Agora join error:', e);
+    }
 
     set((state) => ({
       activeCall: state.activeCall ? { ...state.activeCall, status: 'connected', isIncoming: false } : null,
@@ -438,6 +453,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     if (socket) {
       socket.emit('call_decline', { callId: activeCall.callId });
     }
+    agoraService.leaveAndCleanup();
     set({ activeCall: null });
   },
 
@@ -449,19 +465,47 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       if (socket) {
         socket.emit('call_end', { callId: activeCall.callId, duration: activeCall.durationSeconds || 0 });
       }
+      if (activeCall.peerId) {
+        apiClient.post('/calls', {
+          receiverId: activeCall.peerId,
+          type: activeCall.type,
+          status: 'completed',
+          duration: activeCall.durationSeconds || 0,
+          channelName: activeCall.channelName || activeCall.callId,
+        }).catch(() => {});
+      }
     }
+    agoraService.leaveAndCleanup();
     set({ activeCall: null });
+    get().fetchCallHistory();
   },
 
 
-  toggleMuteCall: () =>
-    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isMuted: !state.activeCall.isMuted } } : state)),
-  toggleVideoCall: () =>
-    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isVideoEnabled: !state.activeCall.isVideoEnabled } } : state)),
-  toggleSpeakerCall: () =>
-    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isSpeakerOn: !state.activeCall.isSpeakerOn } } : state)),
-  toggleCameraFlip: () =>
-    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isFrontCamera: !state.activeCall.isFrontCamera } } : state)),
+  toggleMuteCall: () => {
+    const { activeCall } = get();
+    if (!activeCall) return;
+    const newMuted = !activeCall.isMuted;
+    agoraService.muteLocalAudio(newMuted);
+    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isMuted: newMuted } } : state));
+  },
+  toggleVideoCall: () => {
+    const { activeCall } = get();
+    if (!activeCall) return;
+    const newVideo = !activeCall.isVideoEnabled;
+    agoraService.setVideoEnabled(newVideo);
+    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isVideoEnabled: newVideo } } : state));
+  },
+  toggleSpeakerCall: () => {
+    const { activeCall } = get();
+    if (!activeCall) return;
+    const newSpeaker = !activeCall.isSpeakerOn;
+    agoraService.setSpeakerphone(newSpeaker);
+    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isSpeakerOn: newSpeaker } } : state));
+  },
+  toggleCameraFlip: () => {
+    agoraService.switchCamera();
+    set((state) => (state.activeCall ? { activeCall: { ...state.activeCall, isFrontCamera: !state.activeCall.isFrontCamera } } : state));
+  },
 
   openMediaViewer: (url, type, title) => set({ activeMediaViewer: { url, type, title } }),
   closeMediaViewer: () => set({ activeMediaViewer: null }),
@@ -563,23 +607,148 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     socket.off('message_status_update');
     socket.off('status_updated');
     socket.off('reaction_updated');
+    socket.off('chat_read');
 
-    socket.on('receive_message', (message: Message) => {
-      const chatId = message.chatId;
+    socket.on('receive_message', (message: any) => {
+      const cId = message.chatId;
+      if (!cId) return;
+
+      const normalizedMsg: Message = {
+        id: message._id || message.id,
+        _id: message._id,
+        chatId: cId,
+        senderId:
+          typeof message.senderId === 'object'
+            ? message.senderId._id || message.senderId.id
+            : message.senderId,
+        text: message.text || '',
+        type: message.type || 'text',
+        mediaUrl: message.mediaUrl,
+        replyTo: message.replyTo,
+        reactions: message.reactions || {},
+        status: message.status || 'delivered',
+        createdAt: message.createdAt ? new Date(message.createdAt).getTime() : Date.now(),
+      };
+
+      const currentUserId =
+        (useAuthStore.getState().user as any)?.id ||
+        (useAuthStore.getState().user as any)?._id ||
+        (useAuthStore.getState().user as any)?.userId;
+
+      const senderIdStr =
+        typeof message.senderId === 'object'
+          ? message.senderId._id || message.senderId.id
+          : message.senderId;
+
+      const isFromMe = senderIdStr === currentUserId;
+
       set((state) => {
-        const currentMsgs = state.messages[chatId] || [];
-        const exists = currentMsgs.some((m) => m.id === message.id || (m as any)._id === (message as any)._id);
-        const updatedMsgs = exists ? currentMsgs : [...currentMsgs, message];
+        // 1. Update messages array for this chat
+        const currentMsgs = state.messages[cId] || [];
+        let updatedMsgs: Message[];
+        const existsIndex = currentMsgs.findIndex(
+          (m) => m.id === normalizedMsg.id || (m as any)._id === normalizedMsg.id
+        );
+        if (existsIndex !== -1) {
+          const newArr = [...currentMsgs];
+          newArr[existsIndex] = normalizedMsg;
+          updatedMsgs = newArr;
+        } else {
+          const optimisticIndex = currentMsgs.findIndex(
+            (m) =>
+              m.id.startsWith('msg_') &&
+              m.senderId === normalizedMsg.senderId &&
+              m.text === normalizedMsg.text
+          );
+          if (optimisticIndex !== -1) {
+            const newArr = [...currentMsgs];
+            newArr[optimisticIndex] = normalizedMsg;
+            updatedMsgs = newArr;
+          } else {
+            updatedMsgs = [...currentMsgs, normalizedMsg];
+          }
+        }
+
+        // 2. Update chats list in real time: bump to top, update lastMessage, increment unread if not active chat
+        const targetChatIndex = state.chats.findIndex(
+          (c) => c.chatId === cId || (c as any).id === cId || (c as any)._id === cId
+        );
+
+        let updatedChats = [...state.chats];
+        const isActiveChat = state.activeChatId === cId;
+
+        if (targetChatIndex !== -1) {
+          const existingChat = state.chats[targetChatIndex];
+          const newUnreadCount = isActiveChat || isFromMe
+            ? 0
+            : (existingChat.unreadCount || 0) + 1;
+
+          const updatedChat: Chat = {
+            ...existingChat,
+            lastMessage: {
+              text:
+                normalizedMsg.type === 'voice'
+                  ? '🎙️ Voice note'
+                  : normalizedMsg.type === 'image'
+                  ? '📷 Photo'
+                  : normalizedMsg.type === 'document'
+                  ? '📄 Document'
+                  : normalizedMsg.text,
+              senderId: senderIdStr,
+              createdAt: normalizedMsg.createdAt,
+              timestamp: Number(normalizedMsg.createdAt),
+              type: normalizedMsg.type,
+            },
+            unreadCount: newUnreadCount,
+            updatedAt: normalizedMsg.createdAt,
+          };
+
+          // Bump to top
+          updatedChats.splice(targetChatIndex, 1);
+          updatedChats.unshift(updatedChat);
+        } else {
+          // If chat not in local store, fetch latest chats from API
+          get().fetchChats();
+        }
+
         return {
           messages: {
             ...state.messages,
-            [chatId]: updatedMsgs,
+            [cId]: updatedMsgs,
           },
+          chats: updatedChats,
         };
       });
+
+      // If active chat and from peer, mark read immediately
+      if (get().activeChatId === cId && !isFromMe) {
+        socket.emit('message_read', { messageId: normalizedMsg.id, chatId: cId });
+      }
     });
 
-    const handleTypingStart = ({ chatId }: { chatId: string }) => {
+    socket.on('chat_read', ({ chatId, userId }: { chatId: string; userId: string }) => {
+      const currentUserId =
+        (useAuthStore.getState().user as any)?.id ||
+        (useAuthStore.getState().user as any)?._id ||
+        (useAuthStore.getState().user as any)?.userId;
+
+      if (userId === currentUserId) {
+        set((state) => ({
+          chats: state.chats.map((c) =>
+            c.chatId === chatId || (c as any).id === chatId || (c as any)._id === chatId
+              ? { ...c, unreadCount: 0 }
+              : c
+          ),
+        }));
+      }
+    });
+
+    const handleTypingStart = ({ chatId, userId }: { chatId: string; userId?: string }) => {
+      const currentUserId =
+        (useAuthStore.getState().user as any)?.id ||
+        (useAuthStore.getState().user as any)?._id ||
+        (useAuthStore.getState().user as any)?.userId;
+      if (userId && currentUserId && userId === currentUserId) return;
       set((state) => ({
         typingMap: { ...state.typingMap, [chatId]: true },
       }));
@@ -614,16 +783,29 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     socket.on('message_status_update', handleStatusUpdate);
     socket.on('status_updated', handleStatusUpdate);
 
+    socket.off('call_initiated');
     socket.off('incoming_call');
     socket.off('call_accepted');
     socket.off('call_declined');
     socket.off('call_ended');
 
+    socket.on('call_initiated', (payload: { callId: string; channelName: string; type: 'voice' | 'video' }) => {
+      console.log(`[Socket.io Client] call_initiated received: callId=${payload.callId}, channelName=${payload.channelName}`);
+      set((state) => ({
+        activeCall: state.activeCall
+          ? { ...state.activeCall, callId: payload.callId, channelName: payload.channelName }
+          : state.activeCall,
+      }));
+    });
+
     socket.on('incoming_call', (payload: { callId: string; callerId: string; callerName: string; callerAvatar: string; channelName: string; type: 'voice' | 'video' }) => {
+      console.log(`[Socket.io Client] incoming_call received from ${payload.callerName} (${payload.callerId}), channel=${payload.channelName}`);
       triggerHaptic('heavy');
       set({
         activeCall: {
           callId: payload.callId,
+          channelName: payload.channelName,
+          peerId: payload.callerId,
           peerName: payload.callerName,
           peerAvatar: payload.callerAvatar,
           type: payload.type,
@@ -631,28 +813,53 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           status: 'calling',
           isMuted: false,
           isVideoEnabled: payload.type === 'video',
-          isSpeakerOn: false,
+          isSpeakerOn: true,
           isFrontCamera: true,
           durationSeconds: 0,
         },
       });
     });
 
-    socket.on('call_accepted', () => {
+    socket.on('call_accepted', async (payload?: { callId?: string; channelName?: string }) => {
+      console.log(`[Socket.io Client] call_accepted received:`, payload);
       triggerHaptic('success');
+      const { activeCall } = get();
+      const channel = payload?.channelName || activeCall?.channelName || payload?.callId || activeCall?.callId;
+
+      if (activeCall && channel) {
+        try {
+          await agoraService.initializeAndJoin(channel, activeCall.type);
+        } catch (e) {
+          console.warn('[CallStore] Caller agora join error:', e);
+        }
+      }
+
       set((state) => ({
-        activeCall: state.activeCall ? { ...state.activeCall, status: 'connected', isIncoming: false } : null,
+        activeCall: state.activeCall
+          ? {
+              ...state.activeCall,
+              callId: payload?.callId || state.activeCall.callId,
+              channelName: channel,
+              status: 'connected',
+              isIncoming: false,
+            }
+          : null,
       }));
     });
 
     socket.on('call_declined', () => {
+      console.log(`[Socket.io Client] call_declined received`);
       triggerHaptic('error');
+      agoraService.leaveAndCleanup();
       set({ activeCall: null });
     });
 
     socket.on('call_ended', () => {
+      console.log(`[Socket.io Client] call_ended received`);
       triggerHaptic('light');
+      agoraService.leaveAndCleanup();
       set({ activeCall: null });
+      get().fetchCallHistory();
     });
   },
 }));

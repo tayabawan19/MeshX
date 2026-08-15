@@ -38,6 +38,7 @@ export interface Chat {
   type: ChatType;
   participants: (string | UserProfile)[];
   participantProfiles?: UserProfile[];
+  otherParticipant?: UserProfile;
   groupName?: string;
   groupAvatar?: string;
   groupAvatarUrl?: string;
@@ -49,6 +50,7 @@ export interface Chat {
     timestamp?: number;
   };
   unreadCount?: number;
+  unreadCounts?: Record<string, number>;
   bubbleTheme: BubbleTheme;
   wallpaper?: string;
   isMuted?: boolean;

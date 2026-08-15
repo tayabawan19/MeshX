@@ -75,7 +75,9 @@ export const ChatsListScreen: React.FC<{
       onSelectChat(cId);
     } else if (navigation) {
       const found = chats.find((c) => c.chatId === cId || (c as any).id === cId || c._id === cId);
-      navigation.navigate('Chat', { chatId: cId, title: found?.groupName || 'Chat' });
+      const title = found?.type === 'group' ? (found.groupName || 'Group') : (found?.otherParticipant?.name || 'Chat');
+      const avatar = found?.type === 'group' ? (found.groupAvatar || found.groupAvatarUrl) : found?.otherParticipant?.avatarUrl;
+      navigation.navigate('Chat', { chatId: cId, title, avatar });
     }
   };
 
@@ -116,11 +118,12 @@ export const ChatsListScreen: React.FC<{
     if (!searchQuery.trim()) return !chat.isArchived;
     const q = searchQuery.toLowerCase();
     const isGroupMatch = chat.groupName?.toLowerCase().includes(q);
+    const otherNameMatch = chat.otherParticipant?.name?.toLowerCase().includes(q);
     const isParticipantMatch = chat.participantProfiles?.some((p) =>
       p.name.toLowerCase().includes(q)
     );
-    const isLastMsgMatch = chat.lastMessage?.text.toLowerCase().includes(q);
-    return isGroupMatch || isParticipantMatch || isLastMsgMatch;
+    const isLastMsgMatch = chat.lastMessage?.text?.toLowerCase().includes(q);
+    return isGroupMatch || otherNameMatch || isParticipantMatch || isLastMsgMatch;
   });
 
   const insets = useSafeAreaInsets();

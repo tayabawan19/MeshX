@@ -6,19 +6,32 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "MeshX needs access to your camera for high-definition video calling and taking photos.",
+        "NSMicrophoneUsageDescription": "MeshX needs access to your microphone for voice and video calling and voice notes."
+      }
+    },
+    "android": {
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.INTERNET"
+      ]
     },
     "plugins": [
       [
         "expo-image-picker",
         {
-          "photosPermission": "MeshX needs access to your photos to send images."
+          "photosPermission": "MeshX needs access to your photos to send images.",
+          "cameraPermission": "MeshX needs access to your camera for video calls and photos."
         }
       ],
       [
         "expo-av",
         {
-          "microphonePermission": "MeshX needs microphone access to record voice notes."
+          "microphonePermission": "MeshX needs microphone access to record voice notes and connect calls."
         }
       ]
     ]

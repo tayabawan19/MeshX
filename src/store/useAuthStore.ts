@@ -13,7 +13,7 @@ interface AuthState {
   signup: (payload: { name: string; email: string; phone: string; password: string }) => Promise<boolean>;
   verifyOtp: (email: string, otp: string) => Promise<boolean>;
   resendOtp: (email: string) => Promise<boolean>;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean | 'UNVERIFIED'>;
   forgotPassword: (email: string) => Promise<boolean>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<boolean>;
   updateProfile: (updated: Partial<UserProfile>) => Promise<boolean>;

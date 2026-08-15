@@ -26,21 +26,34 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   const palette = useThemeStore((state) => state.palette);
 
   const isGroup = chat.type === 'group';
-  const recipient = chat.participantProfiles && chat.participantProfiles.length > 0
-    ? chat.participantProfiles[0]
-    : null;
+  const recipient =
+    chat.otherParticipant ||
+    (chat.participantProfiles && chat.participantProfiles.length > 0
+      ? chat.participantProfiles.find(
+          (p) => (p.id || p._id || (p as any).userId) !== currentUserId
+        ) || chat.participantProfiles[0]
+      : Array.isArray(chat.participants)
+      ? (chat.participants.find(
+          (p: any) => typeof p === 'object' && (p._id || p.id || p.userId) !== currentUserId
+        ) as any)
+      : null);
 
-  const displayName = isGroup ? chat.groupName : recipient?.name || 'Direct Chat';
-  const avatarUrl = isGroup ? chat.groupAvatarUrl : recipient?.avatarUrl;
-  const isOnline = !isGroup && recipient?.isOnline;
+  const displayName = isGroup ? (chat.groupName || 'Group') : (recipient?.name || 'Direct Chat');
+  const avatarUrl = isGroup ? (chat.groupAvatar || chat.groupAvatarUrl) : recipient?.avatarUrl;
+  const isOnline = !isGroup && !!recipient?.isOnline;
+
+  const unreadCount = Number(chat.unreadCount) || 0;
+  const hasUnread = unreadCount > 0;
+  const unreadDisplay = unreadCount > 9 ? '9+' : `${unreadCount}`;
 
   const renderLastMessagePreview = () => {
     if (!chat.lastMessage) return 'No messages yet';
-    const prefix = chat.lastMessage.senderId === currentUserId ? 'You: ' : '';
+    const sId = typeof chat.lastMessage.senderId === 'object' ? (chat.lastMessage.senderId as any)._id : chat.lastMessage.senderId;
+    const prefix = sId === currentUserId ? 'You: ' : '';
     if (chat.lastMessage.type === 'voice') return `${prefix}🎙️ Voice note`;
     if (chat.lastMessage.type === 'image') return `${prefix}📷 Photo`;
     if (chat.lastMessage.type === 'document') return `${prefix}📄 Document`;
-    return `${prefix}${chat.lastMessage.text}`;
+    return `${prefix}${chat.lastMessage.text || ''}`;
   };
 
   const handlePress = () => {
@@ -48,7 +61,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
     onPress();
   };
 
-  const timeVal = Number(chat.lastMessage?.timestamp || chat.lastMessage?.createdAt) || Date.now();
+  const timeVal = Number(chat.lastMessage?.timestamp || chat.lastMessage?.createdAt) || (typeof chat.updatedAt === 'number' ? chat.updatedAt : Date.now());
 
   return (
     <Animated.View entering={FadeInRight.duration(300)}>
@@ -57,15 +70,32 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
         onPress={handlePress}
         style={[styles.container, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}
       >
-        <Avatar url={avatarUrl} name={displayName} size="md" isOnline={!!isOnline} />
+        <Avatar url={avatarUrl} name={displayName} size="md" isOnline={isOnline} />
 
         <View style={styles.content}>
           <View style={styles.topRow}>
-            <Text style={[styles.name, { color: palette.textPrimary }]} numberOfLines={1}>
+            <Text
+              style={[
+                styles.name,
+                {
+                  color: palette.textPrimary,
+                  fontWeight: hasUnread ? '800' : '600',
+                },
+              ]}
+              numberOfLines={1}
+            >
               {displayName}
             </Text>
             {chat.lastMessage && (
-              <Text style={[styles.timestamp, { color: chat.unreadCount ? palette.primaryLight : palette.textMuted }]}>
+              <Text
+                style={[
+                  styles.timestamp,
+                  {
+                    color: hasUnread ? palette.primaryLight : palette.textMuted,
+                    fontWeight: hasUnread ? '700' : '500',
+                  },
+                ]}
+              >
                 {formatChatTimestamp(timeVal)}
               </Text>
             )}
@@ -75,7 +105,10 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
             <Text
               style={[
                 styles.preview,
-                { color: chat.unreadCount ? palette.textPrimary : palette.textSecondary, fontWeight: chat.unreadCount ? '600' : '400' },
+                {
+                  color: hasUnread ? palette.textPrimary : palette.textSecondary,
+                  fontWeight: hasUnread ? '700' : '400',
+                },
               ]}
               numberOfLines={1}
             >
@@ -84,9 +117,9 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
 
             <View style={styles.actionsBadgeGroup}>
               {chat.isMuted && <BellOff size={14} color={palette.textMuted} style={{ marginRight: 6 }} />}
-              {!!chat.unreadCount && chat.unreadCount > 0 && (
+              {hasUnread && (
                 <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.unreadBadge}>
-                  <Text style={styles.unreadText}>{chat.unreadCount}</Text>
+                  <Text style={styles.unreadText}>{unreadDisplay}</Text>
                 </LinearGradient>
               )}
             </View>

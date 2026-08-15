@@ -26,7 +26,13 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (activeCall?.status === 'connected') {
-      timer = setInterval(() => setSeconds((prev) => prev + 1), 1000);
+      timer = setInterval(() => {
+        setSeconds((prev) => {
+          const next = prev + 1;
+          if (activeCall) activeCall.durationSeconds = next;
+          return next;
+        });
+      }, 1000);
     }
     return () => clearInterval(timer);
   }, [activeCall?.status]);
@@ -34,7 +40,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   if (!activeCall) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={{ color: '#fff' }}>Call Ended</Text>
+        <Text style={{ color: '#fff', fontSize: 16 }}>Call Ended</Text>
       </View>
     );
   }
@@ -63,6 +69,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   };
 
   const isIncoming = activeCall.isIncoming;
+  const isConnected = activeCall.status === 'connected';
 
   return (
     <View
@@ -74,19 +81,20 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
         },
       ]}
     >
+      <LinearGradient colors={['#0B0B14', '#17153B', '#0B0B14']} style={StyleSheet.absoluteFillObject} />
 
-      <LinearGradient colors={['#0F0F1A', '#1E1B4B', '#0F0F1A']} style={StyleSheet.absoluteFillObject} />
-
-      {/* Peer Header */}
+      {/* Header Info */}
       <View style={styles.header}>
-        <Image
-          source={{
-            uri:
-              activeCall.peerAvatar ||
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-          }}
-          style={styles.avatar}
-        />
+        {(!isConnected || activeCall.type === 'voice' || !activeCall.isVideoEnabled) && (
+          <Image
+            source={{
+              uri:
+                activeCall.peerAvatar ||
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+            }}
+            style={styles.avatar}
+          />
+        )}
         <Text style={styles.peerName}>{activeCall.peerName}</Text>
         <Text style={styles.callStatus}>
           {isIncoming
@@ -98,19 +106,32 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
       </View>
 
       {/* Video Canvas Container */}
-      {!isIncoming && activeCall.type === 'video' && activeCall.isVideoEnabled && (
+      {!isIncoming && activeCall.type === 'video' && (
         <View style={styles.videoCanvas}>
+          {/* Remote Video Stream View */}
           <Image
-            source={{ uri: activeCall.peerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb' }}
+            source={{
+              uri:
+                activeCall.peerAvatar ||
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+            }}
             style={StyleSheet.absoluteFillObject}
           />
           <View style={styles.videoOverlay}>
             <Text style={styles.hdBadge}>Agora RTC HD 1080p</Text>
           </View>
+
+          {/* Local User PIP View */}
+          {activeCall.isVideoEnabled && (
+            <View style={styles.pipView}>
+              <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={StyleSheet.absoluteFillObject} />
+              <Text style={styles.pipLabel}>You</Text>
+            </View>
+          )}
         </View>
       )}
 
-      {/* Incoming Call Accept / Decline Controls */}
+      {/* Incoming Call Controls */}
       {isIncoming ? (
         <View style={styles.incomingControlsRow}>
           <TouchableOpacity style={styles.declineBtn} onPress={handleDeclineCall}>
@@ -124,7 +145,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       ) : (
-        /* Active Call Controls Bar */
+        /* Connected / Outgoing Call Controls Bar */
         <View style={styles.controlsRow}>
           <TouchableOpacity
             style={[styles.controlBtn, activeCall.isMuted && styles.controlBtnActive]}
@@ -180,15 +201,17 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0F1A', justifyContent: 'space-between', paddingVertical: 60, paddingHorizontal: 24 },
+  container: { flex: 1, backgroundColor: '#0B0B14', justifyContent: 'space-between', paddingVertical: 50, paddingHorizontal: 20 },
   emptyContainer: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
-  header: { alignItems: 'center', marginTop: 20 },
+  header: { alignItems: 'center', marginTop: 10 },
   avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#6366f1', marginBottom: 16 },
   peerName: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
   callStatus: { fontSize: 14, color: '#a5b4fc', fontWeight: '600' },
-  videoCanvas: { flex: 1, marginVertical: 24, borderRadius: 24, overflow: 'hidden', backgroundColor: '#1e1b4b' },
-  videoOverlay: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  videoCanvas: { flex: 1, marginVertical: 20, borderRadius: 24, overflow: 'hidden', backgroundColor: '#1e1b4b', position: 'relative' },
+  videoOverlay: { position: 'absolute', top: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   hdBadge: { color: '#10b981', fontSize: 11, fontWeight: '700' },
+  pipView: { position: 'absolute', top: 14, right: 14, width: 90, height: 120, borderRadius: 14, overflow: 'hidden', borderWidth: 2, borderColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
+  pipLabel: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
   incomingControlsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', marginBottom: 30 },
   acceptBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#10B981', justifyContent: 'center', alignItems: 'center', elevation: 8 },
   declineBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', elevation: 8 },

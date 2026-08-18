@@ -21,12 +21,12 @@ import { triggerHaptic } from '../../utils/haptics';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const COLOR_PALETTES: [string, string][] = [
-  ['#7C3AED', '#3B82F6'],
-  ['#EC4899', '#8B5CF6'],
-  ['#10B981', '#06B6D4'],
-  ['#F59E0B', '#EF4444'],
-  ['#6366F1', '#EC4899'],
-  ['#06B6D4', '#3B82F6'],
+  ['#8B7FD1', '#7B93D6'], // Dusty Lavender -> Soft Periwinkle
+  ['#6FAFA0', '#7B93D6'], // Muted Mint -> Soft Periwinkle
+  ['#E58A8A', '#8B7FD1'], // Soft Coral -> Dusty Lavender
+  ['#D4A373', '#E6A868'], // Warm Clay Sand
+  ['#7EA68B', '#6FAFA0'], // Muted Sage
+  ['#7B93D6', '#8B7FD1'], // Soft Periwinkle -> Dusty Lavender
 ];
 
 interface CreateStoryModalProps {

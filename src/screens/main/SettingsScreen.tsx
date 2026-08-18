@@ -30,6 +30,8 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Header } from '../../components/common/Header';
 import { Avatar } from '../../components/common/Avatar';
+import { ClayCard } from '../../components/common/ClayCard';
+import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
@@ -194,15 +196,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* User Card */}
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <ClayCard
+          borderRadius={24}
           onPress={() => {
             setEditName(user?.name || '');
             setEditBio(user?.bio || '');
             setEditAvatarUrl(user?.avatarUrl || '');
             setShowProfileModal(true);
           }}
-          style={[styles.userCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
+          style={styles.userCard}
         >
           <Avatar url={user?.avatarUrl} name={user?.name} size="xl" />
           <View style={styles.userInfo}>
@@ -213,19 +215,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
             <Text style={[styles.userEmail, { color: palette.primaryLight }]}>{user?.email}</Text>
           </View>
           <ChevronRight size={20} color={palette.textMuted} />
-        </TouchableOpacity>
+        </ClayCard>
 
         {/* Section: Appearance */}
         <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>APPEARANCE</Text>
-        <View style={[styles.sectionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <ClayCard borderRadius={24} style={styles.sectionCard}>
           {/* Segmented Theme Switcher */}
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              {themeMode === 'dark' ? <Moon size={22} color="#8B5CF6" /> : <Sun size={22} color="#F59E0B" />}
+              {themeMode === 'dark' ? <Moon size={22} color={palette.primary} /> : <Sun size={22} color={palette.warning} />}
               <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Theme</Text>
             </View>
 
-            <View style={styles.segmentedContainer}>
+            <View style={[styles.segmentedContainer, { backgroundColor: palette.inputBackground }]}>
               {(['dark', 'light', 'system'] as const).map((mode) => (
                 <TouchableOpacity
                   key={mode}
@@ -235,7 +237,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
                   }}
                   style={[
                     styles.segmentBtn,
-                    themeMode === mode && { backgroundColor: palette.primary },
+                    themeMode === mode && [
+                      styles.segmentBtnActive,
+                      {
+                        backgroundColor: palette.primary,
+                        borderTopColor: palette.clayHighlight,
+                      },
+                    ],
                   ]}
                 >
                   <Text
@@ -252,72 +260,66 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
           </View>
 
           {/* Per-Chat Bubble Customization */}
-          <TouchableOpacity onPress={() => setShowThemeModal(true)} style={styles.settingRow}>
+          <TouchableOpacity onPress={() => setShowThemeModal(true)} style={[styles.settingRow, { borderBottomWidth: 0 }]}>
             <View style={styles.settingLeft}>
-              <Palette size={22} color="#EC4899" />
+              <Palette size={22} color={palette.accent} />
               <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Bubble Theme Picker</Text>
             </View>
             <ChevronRight size={20} color={palette.textMuted} />
           </TouchableOpacity>
-        </View>
+        </ClayCard>
 
         {/* Section: Privacy & Notifications */}
         <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>PRIVACY & NOTIFICATIONS</Text>
-        <View style={[styles.sectionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <ClayCard borderRadius={24} style={styles.sectionCard}>
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Bell size={22} color="#3B82F6" />
+              <Bell size={22} color={palette.accent} />
               <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Message Notifications</Text>
             </View>
-            <Switch
+            <ClaySwitch
               value={notificationsEnabled}
               onValueChange={(val) => {
                 triggerHaptic('selection');
                 setNotificationsEnabled(val);
               }}
-              trackColor={{ false: '#767577', true: '#7C3AED' }}
-              thumbColor="#FFFFFF"
             />
           </View>
 
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Shield size={22} color="#10B981" />
+              <Shield size={22} color={palette.onlineGreen} />
               <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Show Last Seen</Text>
             </View>
-            <Switch
+            <ClaySwitch
               value={lastSeenVisible}
               onValueChange={(val) => handleTogglePrivacy('lastSeenVisible', val)}
-              trackColor={{ false: '#767577', true: '#7C3AED' }}
-              thumbColor="#FFFFFF"
             />
           </View>
 
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <Check size={22} color="#6366F1" />
+              <Check size={22} color={palette.primary} />
               <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Read Receipts (✓✓)</Text>
             </View>
-            <Switch
+            <ClaySwitch
               value={readReceiptsEnabled}
               onValueChange={(val) => handleTogglePrivacy('readReceiptsEnabled', val)}
-              trackColor={{ false: '#767577', true: '#7C3AED' }}
-              thumbColor="#FFFFFF"
             />
           </View>
 
-          <TouchableOpacity onPress={handleOpenBlockedModal} style={styles.settingRow}>
+          <TouchableOpacity onPress={handleOpenBlockedModal} style={[styles.settingRow, { borderBottomWidth: 0 }]}>
             <View style={styles.settingLeft}>
-              <UserX size={22} color="#EF4444" />
+              <UserX size={22} color={palette.error} />
               <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Blocked Users</Text>
             </View>
             <ChevronRight size={20} color={palette.textMuted} />
           </TouchableOpacity>
-        </View>
+        </ClayCard>
 
         {/* Section: Account Actions */}
         <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>ACCOUNT</Text>
-        <View style={[styles.sectionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <ClayCard borderRadius={24} style={styles.sectionCard}>
           <TouchableOpacity
             onPress={() => {
               triggerHaptic('heavy');
@@ -337,14 +339,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
               setDeleteConfirmText('');
               setShowDeleteModal(true);
             }}
-            style={styles.settingRow}
+            style={[styles.settingRow, { borderBottomWidth: 0 }]}
           >
             <View style={styles.settingLeft}>
-              <Trash2 size={22} color="#EF4444" />
-              <Text style={[styles.settingLabel, { color: '#EF4444' }]}>Delete Account</Text>
+              <Trash2 size={22} color={palette.error} />
+              <Text style={[styles.settingLabel, { color: palette.error }]}>Delete Account</Text>
             </View>
           </TouchableOpacity>
-        </View>
+        </ClayCard>
       </ScrollView>
 
       {/* Profile Edit Modal */}
@@ -475,28 +477,46 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: palette.surfaceElevated }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Choose Bubble Gradient</Text>
+              <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Choose Bubble Theme</Text>
               <TouchableOpacity onPress={() => setShowThemeModal(false)}>
                 <X size={24} color={palette.textMuted} />
               </TouchableOpacity>
             </View>
 
             <Text style={[styles.modalSub, { color: palette.textSecondary }]}>
-              Select colors for sent and received message bubbles.
+              Soft clay pastel tones for sent & received message bubbles.
             </Text>
 
             <View style={styles.themesGrid}>
               {BUBBLE_THEMES.map((item) => (
                 <TouchableOpacity
                   key={item.id}
+                  activeOpacity={0.8}
                   onPress={() =>
                     handleSelectBubbleTheme(item.gradient, themeMode === 'dark' ? item.receivedColorDark : item.receivedColorLight)
                   }
                   style={styles.themeOption}
                 >
-                  <LinearGradient colors={item.gradient} style={styles.themeGradient}>
-                    <Check size={20} color="#FFFFFF" />
-                  </LinearGradient>
+                  <View
+                    style={[
+                      styles.claySwatchCircle,
+                      {
+                        borderTopColor: palette.clayHighlight,
+                        borderLeftColor: palette.clayHighlight,
+                        borderBottomColor: 'rgba(0,0,0,0.4)',
+                        borderRightColor: 'rgba(0,0,0,0.25)',
+                      },
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={item.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.themeGradient}
+                    >
+                      <Check size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                  </View>
                   <Text style={[styles.themeName, { color: palette.textPrimary }]}>{item.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -522,7 +542,15 @@ const styles = StyleSheet.create({
   settingLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   settingLabel: { fontSize: 15, fontWeight: '600' },
   segmentedContainer: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 3 },
-  segmentBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9 },
+  segmentBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 },
+  segmentBtnActive: {
+    borderWidth: 1.2,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 4,
+  },
   segmentText: { fontSize: 12, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalCard: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
@@ -544,6 +572,19 @@ const styles = StyleSheet.create({
   confirmDeleteBtn: { flex: 1, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
   themesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'space-around' },
   themeOption: { alignItems: 'center' },
-  themeGradient: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  claySwatchCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1.8,
+    overflow: 'hidden',
+    marginBottom: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 6 },
+    shadowOpacity: 0.38,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  themeGradient: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   themeName: { fontSize: 12, fontWeight: '600' },
 });

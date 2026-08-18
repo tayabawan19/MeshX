@@ -5,10 +5,16 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   RefreshControl,
   Alert,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { Search, Users, MessageSquarePlus, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChatStore } from '../../store/useChatStore';
@@ -17,11 +23,11 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { ChatListItem } from '../../components/chats/ChatListItem';
 import { StoryAvatarRow } from '../../components/chats/StoryAvatarRow';
 import { ChatListItemSkeleton } from '../../components/common/SkeletonLoader';
+import { ClayInput } from '../../components/common/ClayInput';
 import { triggerHaptic } from '../../utils/haptics';
 import { CreateStoryModal } from '../modals/CreateStoryModal';
 import { StoryViewerModal } from '../modals/StoryViewerModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 
 export const ChatsListScreen: React.FC<{
   navigation?: any;
@@ -50,6 +56,9 @@ export const ChatsListScreen: React.FC<{
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [activeStoryGroup, setActiveStoryGroup] = useState<{ user: any; stories: any[]; isMine?: boolean } | null>(null);
 
+  // FAB Squish Scale
+  const fabScale = useSharedValue(1);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -63,7 +72,6 @@ export const ChatsListScreen: React.FC<{
   const handleRefresh = async () => {
     setRefreshing(true);
     triggerHaptic('light');
-
     await Promise.all([fetchChats(), fetchStoriesFeed(), fetchMyStories()]);
     setRefreshing(false);
   };
@@ -128,6 +136,10 @@ export const ChatsListScreen: React.FC<{
 
   const insets = useSafeAreaInsets();
 
+  const fabAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: fabScale.value }],
+  }));
+
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header Bar */}
@@ -141,7 +153,6 @@ export const ChatsListScreen: React.FC<{
           },
         ]}
       >
-
         <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>MeshX</Text>
         </View>
@@ -149,21 +160,25 @@ export const ChatsListScreen: React.FC<{
         <View style={styles.headerRight}>
           <TouchableOpacity
             onPress={handleOpenGroup}
-            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated }]}
+            style={[
+              styles.headerIconBtn,
+              {
+                backgroundColor: palette.surfaceElevated,
+                borderTopColor: palette.clayHighlight,
+                borderLeftColor: palette.clayHighlight,
+                borderBottomColor: 'rgba(0,0,0,0.35)',
+                borderRightColor: 'rgba(0,0,0,0.2)',
+              },
+            ]}
           >
             <Users size={20} color={palette.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Search Input Bar */}
+      {/* Recessed Clay Search Slot */}
       <View style={styles.searchWrapper}>
-        <View
-          style={[
-            styles.searchBar,
-            { backgroundColor: palette.inputBackground, borderColor: palette.border },
-          ]}
-        >
+        <ClayInput borderRadius={24} style={styles.searchBar}>
           <Search size={18} color={palette.textMuted} style={{ marginRight: 8 }} />
           <TextInput
             value={searchQuery}
@@ -177,10 +192,10 @@ export const ChatsListScreen: React.FC<{
               <X size={16} color={palette.textMuted} />
             </TouchableOpacity>
           )}
-        </View>
+        </ClayInput>
       </View>
 
-      {/* Active Stories Row */}
+      {/* Active Stories Row with Puffy Donut Rings */}
       <StoryAvatarRow
         storyGroups={storyGroups}
         myStories={myStories}
@@ -206,6 +221,7 @@ export const ChatsListScreen: React.FC<{
               tintColor={palette.primary}
             />
           }
+          contentContainerStyle={{ paddingBottom: 90 }}
           renderItem={({ item }) => {
             const cId = item.chatId || (item as any).id || (item as any)._id;
             return (
@@ -231,7 +247,16 @@ export const ChatsListScreen: React.FC<{
                   : 'Add someone to start chatting on MeshX!'}
               </Text>
               <TouchableOpacity
-                style={[styles.emptyBtn, { backgroundColor: palette.primary }]}
+                style={[
+                  styles.emptyBtn,
+                  {
+                    backgroundColor: palette.primary,
+                    borderTopColor: palette.clayHighlight,
+                    borderLeftColor: palette.clayHighlight,
+                    borderBottomColor: 'rgba(0,0,0,0.4)',
+                    borderRightColor: 'rgba(0,0,0,0.25)',
+                  },
+                ]}
                 onPress={handleOpenNewChat}
               >
                 <Text style={styles.emptyBtnText}>Start New Chat</Text>
@@ -241,12 +266,34 @@ export const ChatsListScreen: React.FC<{
         />
       )}
 
-      {/* Floating Action Button (FAB) */}
-      <TouchableOpacity activeOpacity={0.8} onPress={handleOpenNewChat} style={styles.fabTouchable}>
-        <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.fabGradient}>
-          <MessageSquarePlus size={24} color="#FFFFFF" />
-        </LinearGradient>
-      </TouchableOpacity>
+      {/* Prominent Puffy Clay FAB */}
+      <TouchableWithoutFeedback
+        onPressIn={() => (fabScale.value = withSpring(0.92, { damping: 14, stiffness: 260 }))}
+        onPressOut={() => (fabScale.value = withSpring(1, { damping: 12, stiffness: 180 }))}
+        onPress={handleOpenNewChat}
+      >
+        <Animated.View
+          style={[
+            styles.fabClayButton,
+            {
+              borderTopColor: palette.clayHighlight,
+              borderLeftColor: palette.clayHighlight,
+              borderBottomColor: 'rgba(0, 0, 0, 0.45)',
+              borderRightColor: 'rgba(0, 0, 0, 0.30)',
+            },
+            fabAnimatedStyle,
+          ]}
+        >
+          <LinearGradient
+            colors={[palette.primary, palette.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fabGradient}
+          >
+            <MessageSquarePlus size={26} color="#FFFFFF" />
+          </LinearGradient>
+        </Animated.View>
+      </TouchableWithoutFeedback>
 
       {/* Create Story Modal */}
       <CreateStoryModal visible={isCreateStoryOpen} onClose={() => setIsCreateStoryOpen(false)} />
@@ -272,17 +319,58 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+  headerTitle: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
-  headerIconBtn: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
+  headerIconBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 3, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   searchWrapper: { paddingHorizontal: 16, paddingVertical: 10 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', height: 44, borderRadius: 22, borderWidth: 1, paddingHorizontal: 14 },
+  searchBar: { height: 46 },
   searchInput: { flex: 1, fontSize: 14 },
   emptyContainer: { padding: 40, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', marginBottom: 6 },
   emptySub: { fontSize: 14, textAlign: 'center', marginBottom: 20 },
-  emptyBtn: { paddingHorizontal: 20, paddingVertical: 11, borderRadius: 20 },
-  emptyBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  fabTouchable: { position: 'absolute', bottom: 24, right: 20, borderRadius: 28, elevation: 8 },
-  fabGradient: { width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
+  emptyBtn: {
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  emptyBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  fabClayButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 2,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 8, height: 12 },
+    shadowOpacity: 0.52,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

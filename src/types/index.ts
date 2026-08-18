@@ -1,7 +1,7 @@
 export type MessageType = 'text' | 'image' | 'voice' | 'document';
 export type MessageStatus = 'sent' | 'delivered' | 'read';
 export type CallType = 'voice' | 'video';
-export type CallStatus = 'calling' | 'connected' | 'ended' | 'declined' | 'missed';
+export type CallStatus = 'calling' | 'incoming' | 'connected' | 'ended' | 'declined' | 'missed';
 export type ChatType = 'direct' | 'group';
 
 export interface UserProfile {

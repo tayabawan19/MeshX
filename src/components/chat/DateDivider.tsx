@@ -12,7 +12,18 @@ export const DateDivider: React.FC<DateDividerProps> = ({ timestamp }) => {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.pill, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+      <View
+        style={[
+          styles.pill,
+          {
+            backgroundColor: palette.surfaceElevated,
+            borderTopColor: palette.clayHighlight,
+            borderLeftColor: palette.clayHighlight,
+            borderBottomColor: 'rgba(0, 0, 0, 0.35)',
+            borderRightColor: 'rgba(0, 0, 0, 0.20)',
+          },
+        ]}
+      >
         <Text style={[styles.text, { color: palette.textMuted }]}>{formatDateDivider(timestamp)}</Text>
       </View>
     </View>
@@ -25,14 +36,19 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1.2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
   text: {
     fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

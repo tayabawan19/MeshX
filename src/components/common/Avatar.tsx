@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Image, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { radius } from '../../theme';
+import { useThemeStore } from '../../store/useThemeStore';
 
 interface AvatarProps {
   url?: string;
@@ -27,21 +27,35 @@ export const Avatar: React.FC<AvatarProps> = ({
   hasStory = false,
   storyViewed = false,
 }) => {
+  const palette = useThemeStore((state) => state.palette);
   const dimension = SIZE_MAP[size];
-  const borderPadding = hasStory ? 3 : 0;
+  const borderPadding = hasStory ? 4 : 0;
   const imageSize = dimension - borderPadding * 2;
   const initial = name ? name.charAt(0).toUpperCase() : '?';
 
   const storyGradients: [string, string] = storyViewed
-    ? ['#6B6B80', '#A0A0B0']
-    : ['#EC4899', '#7C3AED'];
+    ? ['#4A4A60', '#323246']
+    : ['#8B7FD1', '#7B93D6'];
 
   const renderContent = () => (
-    <View style={[styles.imageContainer, { width: imageSize, height: imageSize, borderRadius: imageSize / 2 }]}>
+    <View
+      style={[
+        styles.clayAvatarWrapper,
+        {
+          width: imageSize,
+          height: imageSize,
+          borderRadius: imageSize / 2,
+          borderTopColor: palette.clayHighlight,
+          borderLeftColor: palette.clayHighlight,
+          borderBottomColor: 'rgba(0, 0, 0, 0.35)',
+          borderRightColor: 'rgba(0, 0, 0, 0.25)',
+        },
+      ]}
+    >
       {url ? (
         <Image source={{ uri: url }} style={{ width: imageSize, height: imageSize, borderRadius: imageSize / 2 }} />
       ) : (
-        <View style={[styles.fallback, { width: imageSize, height: imageSize, borderRadius: imageSize / 2 }]}>
+        <View style={[styles.fallback, { width: imageSize, height: imageSize, borderRadius: imageSize / 2, backgroundColor: palette.primary }]}>
           <Text style={[styles.fallbackText, { fontSize: imageSize * 0.4 }]}>{initial}</Text>
         </View>
       )}
@@ -55,7 +69,18 @@ export const Avatar: React.FC<AvatarProps> = ({
           colors={storyGradients}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[styles.storyBorder, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
+          style={[
+            styles.storyDonutRing,
+            {
+              width: dimension,
+              height: dimension,
+              borderRadius: dimension / 2,
+              borderTopColor: palette.clayHighlight,
+              borderLeftColor: palette.clayHighlight,
+              borderBottomColor: 'rgba(0, 0, 0, 0.40)',
+              borderRightColor: 'rgba(0, 0, 0, 0.30)',
+            },
+          ]}
         >
           {renderContent()}
         </LinearGradient>
@@ -66,13 +91,15 @@ export const Avatar: React.FC<AvatarProps> = ({
       {isOnline && (
         <View
           style={[
-            styles.onlineBadge,
+            styles.onlineClayNub,
             {
-              width: size === 'sm' ? 10 : size === 'md' ? 13 : 16,
-              height: size === 'sm' ? 10 : size === 'md' ? 13 : 16,
+              backgroundColor: palette.onlineGreen,
+              borderColor: palette.background,
+              width: size === 'sm' ? 11 : size === 'md' ? 14 : 18,
+              height: size === 'sm' ? 11 : size === 'md' ? 14 : 18,
               borderRadius: 99,
-              right: size === 'sm' ? 0 : 2,
-              bottom: size === 'sm' ? 0 : 2,
+              right: size === 'sm' ? -1 : 1,
+              bottom: size === 'sm' ? -1 : 1,
             },
           ]}
         />
@@ -82,30 +109,44 @@ export const Avatar: React.FC<AvatarProps> = ({
 };
 
 const styles = StyleSheet.create({
-  storyBorder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 2,
-  },
-  imageContainer: {
+  clayAvatarWrapper: {
     overflow: 'hidden',
-    backgroundColor: '#242430',
+    backgroundColor: '#242436',
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 3, height: 5 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  storyDonutRing: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 3,
+    borderWidth: 1.5,
+    shadowColor: '#000000',
+    shadowOffset: { width: 4, height: 6 },
+    shadowOpacity: 0.38,
+    shadowRadius: 10,
+    elevation: 5,
   },
   fallback: {
-    backgroundColor: '#7C3AED',
     justifyContent: 'center',
     alignItems: 'center',
   },
   fallbackText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  onlineBadge: {
+  onlineClayNub: {
     position: 'absolute',
-    backgroundColor: '#10B981',
-    borderWidth: 2,
-    borderColor: '#0F0F14',
+    borderWidth: 2.2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

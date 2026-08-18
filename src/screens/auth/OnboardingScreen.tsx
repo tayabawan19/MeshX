@@ -1,40 +1,40 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MessageSquare, ShieldCheck, Video, ArrowRight } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { GradientButton } from '../../components/common/GradientButton';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const SLIDES = [
   {
     id: 1,
-    title: 'Expressive Animated Bubble UI',
-    description: 'Custom per-chat themes, fluid spring physics, emoji reactions, and voice notes with live waveforms.',
+    title: 'Clay-Pillow Chat UI',
+    description: 'Soft tactile bubbles, clay squeeze physics, reactions, and audio voice notes with real-time tactile waveforms.',
     icon: MessageSquare,
-    colors: ['#7C3AED', '#3B82F6'] as [string, string],
+    colors: ['#8B7FD1', '#7B93D6'] as [string, string],
   },
   {
     id: 2,
     title: 'Private & Disappearing Chats',
     description: 'End-to-end feel with disappearing messages timer, read receipts control, and last-seen privacy.',
     icon: ShieldCheck,
-    colors: ['#0D9488', '#10B981'] as [string, string],
+    colors: ['#6FAFA0', '#7B93D6'] as [string, string],
   },
   {
     id: 3,
-    title: 'HD Voice & Video Calling',
+    title: 'Crystal Clear Voice & Video',
     description: 'Instant RTC calling with mute controls, camera flip, and speaker toggles anywhere in the world.',
     icon: Video,
-    colors: ['#EC4899', '#8B5CF6'] as [string, string],
+    colors: ['#E58A8A', '#8B7FD1'] as [string, string],
   },
 ];
 
 export const OnboardingScreen: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const { setIsOnboarded } = useAuthStore();
+  const palette = useThemeStore((state) => state.palette);
 
   const handleNext = () => {
     triggerHaptic('light');
@@ -49,30 +49,53 @@ export const OnboardingScreen: React.FC = () => {
   const IconComponent = currentSlide.icon;
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#0F0F14', '#1A1A22']} style={StyleSheet.absoluteFillObject} />
-
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
       <View style={styles.content}>
-        {/* Animated Icon Circle */}
-        <LinearGradient colors={currentSlide.colors} style={styles.iconCircle}>
-          <IconComponent size={64} color="#FFFFFF" />
-        </LinearGradient>
+        {/* Raised Clay Icon Pod */}
+        <View
+          style={[
+            styles.clayPodWrapper,
+            {
+              borderTopColor: palette.clayHighlight,
+              borderLeftColor: palette.clayHighlight,
+              borderBottomColor: 'rgba(0, 0, 0, 0.45)',
+              borderRightColor: 'rgba(0, 0, 0, 0.30)',
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={currentSlide.colors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.podGradient}
+          >
+            <IconComponent size={64} color="#FFFFFF" />
+          </LinearGradient>
+        </View>
 
-        <Text style={styles.title}>{currentSlide.title}</Text>
-        <Text style={styles.description}>{currentSlide.description}</Text>
+        <Text style={[styles.title, { color: palette.textPrimary }]}>{currentSlide.title}</Text>
+        <Text style={[styles.description, { color: palette.textSecondary }]}>{currentSlide.description}</Text>
 
-        {/* Pagination Indicators */}
+        {/* Tactile Clay Pagination Dots */}
         <View style={styles.pagination}>
           {SLIDES.map((_, idx) => (
             <TouchableOpacity
               key={idx}
+              activeOpacity={0.8}
               onPress={() => {
                 triggerHaptic('selection');
                 setActiveIndex(idx);
               }}
               style={[
                 styles.dot,
-                idx === activeIndex ? { width: 28, backgroundColor: currentSlide.colors[0] } : { width: 8, backgroundColor: '#333344' },
+                idx === activeIndex
+                  ? {
+                      width: 28,
+                      backgroundColor: currentSlide.colors[0],
+                      borderTopColor: palette.clayHighlight,
+                      borderWidth: 1,
+                    }
+                  : { width: 10, backgroundColor: palette.surfaceElevated },
               ]}
             />
           ))}
@@ -81,7 +104,7 @@ export const OnboardingScreen: React.FC = () => {
 
       <View style={styles.footer}>
         <GradientButton
-          title={activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
+          title={activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Continue'}
           onPress={handleNext}
           colors={currentSlide.colors}
           icon={<ArrowRight size={20} color="#FFFFFF" />}
@@ -94,7 +117,6 @@ export const OnboardingScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F14',
     justifyContent: 'space-between',
     padding: 24,
   },
@@ -103,30 +125,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconCircle: {
+  clayPodWrapper: {
     width: 140,
     height: 140,
-    borderRadius: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 50,
+    borderWidth: 2.2,
+    overflow: 'hidden',
     marginBottom: 36,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 8, height: 12 },
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
     elevation: 12,
   },
+  podGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 26,
+    fontSize: 27,
     fontWeight: '800',
-    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 12,
     paddingHorizontal: 16,
+    letterSpacing: 0.2,
   },
   description: {
     fontSize: 16,
-    color: '#A0A0B0',
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
@@ -138,8 +165,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
   },
   footer: {
     marginBottom: 20,

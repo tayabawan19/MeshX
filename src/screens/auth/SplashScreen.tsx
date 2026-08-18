@@ -1,21 +1,34 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+} from 'react-native-reanimated';
 import { MessageSquare, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useThemeStore } from '../../store/useThemeStore';
 
 interface SplashScreenProps {
   onFinish: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
-  const scale = useSharedValue(0.3);
+  const palette = useThemeStore((state) => state.palette);
+
+  const scale = useSharedValue(0.4);
   const opacity = useSharedValue(0);
+  const textTranslateY = useSharedValue(20);
 
   useEffect(() => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 100 });
-    opacity.value = withTiming(1, { duration: 800 });
+    opacity.value = withTiming(1, { duration: 300 });
+    scale.value = withSequence(
+      withSpring(1.1, { damping: 9, stiffness: 140 }),
+      withSpring(1, { damping: 12, stiffness: 180 })
+    );
+    textTranslateY.value = withSpring(0, { damping: 12, stiffness: 160 });
 
     const timer = setTimeout(() => {
       onFinish();
@@ -29,19 +42,41 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
     opacity: opacity.value,
   }));
 
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: textTranslateY.value }],
+  }));
+
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#0F0F14', '#1A1A22', '#0F0F14']} style={StyleSheet.absoluteFillObject} />
-
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
       <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
-        <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.iconContainer}>
-          <MessageSquare size={48} color="#FFFFFF" />
-        </LinearGradient>
-        <Text style={styles.title}>MESHX</Text>
+        <View
+          style={[
+            styles.clayEmblemWrapper,
+            {
+              borderTopColor: palette.clayHighlight,
+              borderLeftColor: palette.clayHighlight,
+              borderBottomColor: 'rgba(0, 0, 0, 0.45)',
+              borderRightColor: 'rgba(0, 0, 0, 0.30)',
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={[palette.primary, palette.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientFill}
+          >
+            <MessageSquare size={46} color="#FFFFFF" />
+          </LinearGradient>
+        </View>
+      </Animated.View>
 
+      <Animated.View style={[styles.infoWrapper, textAnimatedStyle]}>
+        <Text style={[styles.title, { color: palette.textPrimary }]}>MESHX</Text>
         <View style={styles.taglineRow}>
-          <Sparkles size={14} color="#7C3AED" />
-          <Text style={styles.tagline}>Realtime • Modern • Secure</Text>
+          <Sparkles size={15} color={palette.primaryLight} />
+          <Text style={[styles.tagline, { color: palette.textSecondary }]}>Soft Tactile Realtime Messaging</Text>
         </View>
       </Animated.View>
     </View>
@@ -51,31 +86,38 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F14',
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoWrapper: {
     alignItems: 'center',
+    marginBottom: 24,
   },
-  iconContainer: {
+  clayEmblemWrapper: {
     width: 96,
     height: 96,
-    borderRadius: 32,
+    borderRadius: 36,
+    borderWidth: 2,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 8, height: 12 },
+    shadowOpacity: 0.48,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+  gradientFill: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 10,
+  },
+  infoWrapper: {
+    alignItems: 'center',
   },
   title: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   taglineRow: {
     flexDirection: 'row',
@@ -84,9 +126,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tagline: {
-    color: '#A0A0B0',
     fontSize: 14,
-    fontWeight: '500',
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    letterSpacing: 0.4,
   },
 });

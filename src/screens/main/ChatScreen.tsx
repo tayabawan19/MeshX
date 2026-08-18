@@ -25,6 +25,7 @@ import { MessageInputBar } from '../../components/chat/MessageInputBar';
 import { TypingIndicator } from '../../components/chat/TypingIndicator';
 import { DateDivider } from '../../components/chat/DateDivider';
 import { ReactionPicker } from '../../components/chat/ReactionPicker';
+import { LiquidBackground } from '../../components/common/LiquidBackground';
 import { useChatStore } from '../../store/useChatStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -118,26 +119,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       : null);
 
   const isGroup = currentChat?.type === 'group';
-  const headerName = isGroup ? (currentChat.groupName || 'Group') : (recipient?.name || route?.params?.title || 'Chat');
-  const headerAvatar = isGroup ? (currentChat.groupAvatarUrl || currentChat.groupAvatar) : (recipient?.avatarUrl || route?.params?.avatar);
+  const headerName = isGroup ? (currentChat?.groupName || 'Group') : (recipient?.name || 'MeshX Chat');
+  const headerAvatar = isGroup ? (currentChat?.groupAvatar || currentChat?.groupAvatarUrl) : recipient?.avatarUrl;
   const isOnline = !isGroup && !!recipient?.isOnline;
-  const isTyping = typingMap[chatId];
+  const recUserId = recipient?.id || recipient?._id || recipient?.userId || 'usr_peer';
 
-  const recUserId = recipient?.id || recipient?._id || recipient?.userId || 'peer';
+  const isTyping = typingMap[chatId] || false;
 
   const handleSendTextMessage = (text: string) => {
+    triggerHaptic('light');
     sendMessage(text, 'text', undefined, undefined, chatId);
     scrollToBottom();
   };
 
-  const handleSendMediaMessage = (type: 'image' | 'voice' | 'document', url: string, extra?: any) => {
-    sendMessage(
-      type === 'image' ? 'Photo' : type === 'voice' ? 'Voice note' : 'Document',
-      type,
-      url,
-      extra,
-      chatId
-    );
+  const handleSendMediaMessage = (type: 'image' | 'voice' | 'document', mediaUrl: string, extra?: any) => {
+    triggerHaptic('medium');
+    sendMessage('', type, mediaUrl, extra, chatId);
     scrollToBottom();
   };
 
@@ -302,7 +299,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           const currentId = user?.id || user?._id || user?.userId || 'usr_me';
           const isMe = sId === currentId || sId === 'usr_me';
 
-          // In inverted array: item at index+1 is previous chronologically, item at index-1 is next chronologically
           const prevChronologicalMsg = reversedMessages[index + 1];
           const nextChronologicalMsg = reversedMessages[index - 1];
 
@@ -339,14 +335,23 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         }}
       />
 
-      {/* Jump to Bottom Floating Action Button */}
+      {/* Jump to Bottom Raised Clay Button */}
       {showJumpToBottom && (
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={scrollToBottom}
-          style={[styles.jumpBtn, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
+          style={[
+            styles.jumpBtn,
+            {
+              backgroundColor: palette.surfaceElevated,
+              borderTopColor: palette.clayHighlight,
+              borderLeftColor: palette.clayHighlight,
+              borderBottomColor: 'rgba(0,0,0,0.4)',
+              borderRightColor: 'rgba(0,0,0,0.25)',
+            },
+          ]}
         >
-          <ChevronDown size={20} color={palette.textPrimary} />
+          <ChevronDown size={22} color={palette.textPrimary} />
         </TouchableOpacity>
       )}
 
@@ -360,7 +365,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       {/* Message Contextual Action Sheet & Emoji Picker Modal */}
       <Modal visible={showActionSheet} transparent animationType="fade" onRequestClose={() => setShowActionSheet(false)}>
         <TouchableOpacity activeOpacity={1} onPress={() => setShowActionSheet(false)} style={styles.modalOverlay}>
-          <View style={[styles.actionSheetContainer, { backgroundColor: palette.surfaceElevated }]}>
+          <View
+            style={[
+              styles.actionSheetContainer,
+              {
+                backgroundColor: palette.surfaceElevated,
+                borderTopColor: palette.clayHighlight,
+                borderLeftColor: palette.clayHighlight,
+                borderBottomColor: 'rgba(0,0,0,0.4)',
+                borderRightColor: 'rgba(0,0,0,0.25)',
+              },
+            ]}
+          >
             <ReactionPicker onSelectEmoji={handleAddReaction} />
 
             <View style={styles.actionGrid}>
@@ -375,7 +391,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleStarMsg} style={styles.actionItem}>
-                <Star size={20} color="#F59E0B" />
+                <Star size={20} color="#E6A868" />
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Star</Text>
               </TouchableOpacity>
 
@@ -392,7 +408,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   header: {
     paddingBottom: 10,
     flexDirection: 'row',
@@ -400,7 +418,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
-
   backBtn: { padding: 6 },
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 4 },
   headerTextContainer: { marginLeft: 10 },
@@ -411,9 +428,32 @@ const styles = StyleSheet.create({
   disappearingNotice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 6, paddingHorizontal: 12, gap: 6 },
   disappearingText: { fontSize: 12, fontWeight: '500' },
   messagesList: { paddingVertical: 12 },
-  jumpBtn: { position: 'absolute', bottom: 80, right: 20, width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 4 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  actionSheetContainer: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
+  jumpBtn: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  actionSheetContainer: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    padding: 20,
+  },
   actionGrid: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 10 },
   actionItem: { alignItems: 'center', padding: 10 },
   actionLabel: { fontSize: 12, fontWeight: '600', marginTop: 6 },

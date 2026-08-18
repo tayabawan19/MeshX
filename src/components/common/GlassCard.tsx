@@ -1,37 +1,17 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { useThemeStore } from '../../store/useThemeStore';
+import { ClayCard } from './ClayCard';
+import { ViewStyle } from 'react-native';
 
 interface GlassCardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
   borderRadius?: number;
 }
 
-export const GlassCard: React.FC<GlassCardProps> = ({ children, style, borderRadius = 20 }) => {
-  const palette = useThemeStore((state) => state.palette);
-
+export const GlassCard: React.FC<GlassCardProps> = ({ children, style, borderRadius = 28 }) => {
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: palette.glassBackground,
-          borderColor: palette.glassBorder,
-          borderRadius,
-        },
-        style,
-      ]}
-    >
+    <ClayCard style={style} borderRadius={borderRadius}>
       {children}
-    </View>
+    </ClayCard>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    padding: 16,
-    overflow: 'hidden',
-  },
-});

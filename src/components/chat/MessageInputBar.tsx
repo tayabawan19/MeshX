@@ -197,7 +197,18 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
 
       {/* Quick Emoji Bar */}
       {showEmojiPicker && (
-        <View style={[styles.emojiBar, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+        <View
+          style={[
+            styles.emojiBar,
+            {
+              backgroundColor: palette.surfaceElevated,
+              borderTopColor: palette.clayHighlight,
+              borderLeftColor: palette.clayHighlight,
+              borderBottomColor: 'rgba(0,0,0,0.35)',
+              borderRightColor: 'rgba(0,0,0,0.2)',
+            },
+          ]}
+        >
           {['😊', '😂', '🔥', '❤️', '👍', '🎉', '🙌', '💯', '✨'].map((emoji) => (
             <TouchableOpacity
               key={emoji}
@@ -213,8 +224,19 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
         </View>
       )}
 
-      {/* Main Input Row */}
-      <View style={[styles.inputRow, { backgroundColor: palette.inputBackground, borderColor: palette.border }]}>
+      {/* Main Recessed Clay Input Row */}
+      <View
+        style={[
+          styles.inputRow,
+          {
+            backgroundColor: palette.inputBackground,
+            borderTopColor: palette.clayInsetDark,
+            borderLeftColor: palette.clayInsetDark,
+            borderBottomColor: palette.clayInsetLight,
+            borderRightColor: palette.clayInsetLight,
+          },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => {
             triggerHaptic('light');
@@ -250,9 +272,21 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
           </View>
         ) : text.trim().length > 0 ? (
           <TouchableOpacity activeOpacity={0.8} onPress={handleSend} style={styles.sendBtnTouchable}>
-            <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.sendGradient}>
-              <Send size={18} color="#FFFFFF" />
-            </LinearGradient>
+            <View
+              style={[
+                styles.sendClayButton,
+                {
+                  borderTopColor: palette.clayHighlight,
+                  borderLeftColor: palette.clayHighlight,
+                  borderBottomColor: 'rgba(0,0,0,0.4)',
+                  borderRightColor: 'rgba(0,0,0,0.25)',
+                },
+              ]}
+            >
+              <LinearGradient colors={[palette.primary, palette.accent]} style={styles.sendGradient}>
+                <Send size={17} color="#FFFFFF" />
+              </LinearGradient>
+            </View>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -350,29 +384,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 26,
-    borderWidth: 1,
+    borderWidth: 1.8,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    minHeight: 48,
-  },
-  iconBtn: {
-    padding: 8,
+    paddingVertical: 6,
   },
   textInput: {
     flex: 1,
     fontSize: 15,
     maxHeight: 100,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  iconBtn: {
+    padding: 8,
   },
   sendBtnTouchable: {
-    borderRadius: 20,
-    overflow: 'hidden',
     marginLeft: 4,
   },
+  sendClayButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 3, height: 5 },
+    shadowOpacity: 0.38,
+    shadowRadius: 8,
+    elevation: 5,
+  },
   sendGradient: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -382,13 +425,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   attachmentSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
   },
   sheetTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -401,12 +444,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   optionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 3, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   optionLabel: {
     fontSize: 13,

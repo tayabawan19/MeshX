@@ -17,6 +17,24 @@ export interface CallSessionCallbacks {
   onError?: (errCode: number, message: string) => void;
 }
 
+let agoraNativeModule: any = null;
+
+function resolveNativeAgora(): any {
+  if (agoraNativeModule !== null) return agoraNativeModule === false ? null : agoraNativeModule;
+  try {
+    // Dynamic import to prevent Metro static bundler resolution failure when package is not installed
+    const pkgName = ['react', 'native', 'agora'].join('-');
+    const req = typeof require !== 'undefined' ? require : null;
+    if (req) {
+      agoraNativeModule = req(pkgName);
+      return agoraNativeModule;
+    }
+  } catch (e) {
+    agoraNativeModule = false;
+  }
+  return null;
+}
+
 class AgoraCallingService {
   private engine: any = null;
   private currentChannel: string | null = null;
@@ -32,8 +50,7 @@ class AgoraCallingService {
 
   private checkNativeAvailability() {
     try {
-      // Check if native Agora module exists (development build)
-      const agoraModule = require('react-native-agora');
+      const agoraModule = resolveNativeAgora();
       if (agoraModule && (agoraModule.createAgoraRtcEngine || agoraModule.RtcEngine)) {
         this.isNativeAgoraAvailable = true;
         console.log('[AgoraService] Native react-native-agora module detected.');
@@ -127,38 +144,40 @@ class AgoraCallingService {
       this.currentUid = tokenData.uid;
 
       if (this.isNativeAgoraAvailable) {
-        const agoraModule = require('react-native-agora');
-        this.engine = agoraModule.createAgoraRtcEngine();
-        this.engine.initialize({ appId: tokenData.appId });
+        const agoraModule = resolveNativeAgora();
+        if (agoraModule && agoraModule.createAgoraRtcEngine) {
+          this.engine = agoraModule.createAgoraRtcEngine();
+          this.engine.initialize({ appId: tokenData.appId });
 
-        this.engine.registerEventHandler({
-          onJoinChannelSuccess: (connection: any, elapsed: number) => {
-            console.log(`[Agora RTC] Joined channel ${channelName} successfully in ${elapsed}ms`);
-            this.isJoined = true;
-          },
-          onUserJoined: (connection: any, uid: number) => {
-            console.log(`[Agora RTC] Remote user ${uid} joined channel`);
-            this.callbacks.onUserJoined?.(uid);
-          },
-          onUserOffline: (connection: any, uid: number, reason: number) => {
-            console.log(`[Agora RTC] Remote user ${uid} left channel. Reason=${reason}`);
-            this.callbacks.onUserOffline?.(uid);
-          },
-          onError: (errCode: number, message: string) => {
-            console.error(`[Agora RTC Error] Code=${errCode}, Msg=${message}`);
-            this.callbacks.onError?.(errCode, message);
-          },
-        });
+          this.engine.registerEventHandler({
+            onJoinChannelSuccess: (connection: any, elapsed: number) => {
+              console.log(`[Agora RTC] Joined channel ${channelName} successfully in ${elapsed}ms`);
+              this.isJoined = true;
+            },
+            onUserJoined: (connection: any, uid: number) => {
+              console.log(`[Agora RTC] Remote user ${uid} joined channel`);
+              this.callbacks.onUserJoined?.(uid);
+            },
+            onUserOffline: (connection: any, uid: number, reason: number) => {
+              console.log(`[Agora RTC] Remote user ${uid} left channel. Reason=${reason}`);
+              this.callbacks.onUserOffline?.(uid);
+            },
+            onError: (errCode: number, message: string) => {
+              console.error(`[Agora RTC Error] Code=${errCode}, Msg=${message}`);
+              this.callbacks.onError?.(errCode, message);
+            },
+          });
 
-        this.engine.enableAudio();
-        if (type === 'video') {
-          this.engine.enableVideo();
-          this.engine.startPreview();
-        } else {
-          this.engine.disableVideo();
+          this.engine.enableAudio();
+          if (type === 'video') {
+            this.engine.enableVideo();
+            this.engine.startPreview();
+          } else {
+            this.engine.disableVideo();
+          }
+
+          this.engine.joinChannel(tokenData.token, channelName, tokenData.uid, {});
         }
-
-        this.engine.joinChannel(tokenData.token, channelName, tokenData.uid, {});
       } else {
         console.log(`[AgoraService Mock/Expo Mode] Simulated channel join on ${channelName} with token.`);
         this.isJoined = true;

@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Camera, User, FileText, Check, ArrowRight } from 'lucide-react-native';
 import { Header } from '../../components/common/Header';
 import { GradientButton } from '../../components/common/GradientButton';
+import { ClayInput } from '../../components/common/ClayInput';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { apiClient } from '../../config/api';
@@ -63,46 +64,42 @@ export const ProfileSetupScreen: React.FC = () => {
 
           if (uploadRes.data?.url) {
             setAvatarUrl(uploadRes.data.url);
-            triggerHaptic('success');
           }
         } catch (uploadErr) {
-          console.warn('Avatar upload failed, will retry on save:', uploadErr);
+          console.warn('Direct avatar upload failed, will upload on save:', uploadErr);
         } finally {
           setIsUploadingAvatar(false);
         }
       }
     } catch (err) {
       console.error('Pick avatar error:', err);
+      setIsUploadingAvatar(false);
     }
   };
 
   const handleFinish = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
-    }
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Main' }],
+    });
   };
 
   const handleSave = async () => {
-    setErrorMsg('');
     if (!name.trim()) {
-      setErrorMsg('Display name cannot be empty.');
-      triggerHaptic('warning');
+      setErrorMsg('Please enter your name.');
+      triggerHaptic('error');
       return;
     }
 
     setIsSaving(true);
+    setErrorMsg('');
     triggerHaptic('medium');
 
     try {
       let finalAvatarUrl = avatarUrl;
 
-      // If avatar is a local file URI that hasn't been uploaded yet
-      if (avatarUrl && (avatarUrl.startsWith('file://') || avatarUrl.startsWith('content://'))) {
+      // If avatar is local file URI, upload to Cloudinary first
+      if (avatarUrl && avatarUrl.startsWith('file://')) {
         try {
           const formData = new FormData();
           formData.append('file', {
@@ -193,7 +190,7 @@ export const ProfileSetupScreen: React.FC = () => {
 
         <View style={styles.formGroup}>
           <Text style={[styles.label, { color: palette.textSecondary }]}>DISPLAY NAME</Text>
-          <View style={[styles.inputRow, { backgroundColor: palette.inputBackground, borderColor: palette.border }]}>
+          <ClayInput style={styles.inputRow}>
             <User size={20} color={palette.textMuted} style={styles.inputIcon} />
             <TextInput
               value={name}
@@ -202,22 +199,22 @@ export const ProfileSetupScreen: React.FC = () => {
               placeholderTextColor={palette.textMuted}
               style={[styles.input, { color: palette.textPrimary }]}
             />
-          </View>
+          </ClayInput>
         </View>
 
         <View style={styles.formGroup}>
           <Text style={[styles.label, { color: palette.textSecondary }]}>STATUS / BIO</Text>
-          <View style={[styles.inputRow, { backgroundColor: palette.inputBackground, borderColor: palette.border }]}>
-            <FileText size={20} color={palette.textMuted} style={styles.inputIcon} />
+          <ClayInput style={[styles.inputRow, { height: 75, alignItems: 'flex-start', paddingTop: 10 }]}>
+            <FileText size={20} color={palette.textMuted} style={[styles.inputIcon, { marginTop: 4 }]} />
             <TextInput
               value={bio}
               onChangeText={setBio}
               placeholder="Write a short bio..."
               placeholderTextColor={palette.textMuted}
               multiline
-              style={[styles.input, { color: palette.textPrimary, height: 60 }]}
+              style={[styles.input, { color: palette.textPrimary, height: 55 }]}
             />
-          </View>
+          </ClayInput>
         </View>
 
         <GradientButton

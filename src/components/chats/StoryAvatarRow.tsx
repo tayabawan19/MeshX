@@ -30,6 +30,7 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Your Story Avatar */}
         <TouchableOpacity
+          activeOpacity={0.8}
           onPress={() => {
             triggerHaptic('light');
             if (hasMyStories) {
@@ -42,7 +43,18 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
         >
           <View style={styles.avatarWrapper}>
             {hasMyStories ? (
-              <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.gradientRing}>
+              <LinearGradient
+                colors={['#8B7FD1', '#7B93D6']}
+                style={[
+                  styles.clayDonutRing,
+                  {
+                    borderTopColor: palette.clayHighlight,
+                    borderLeftColor: palette.clayHighlight,
+                    borderBottomColor: 'rgba(0,0,0,0.40)',
+                    borderRightColor: 'rgba(0,0,0,0.25)',
+                  },
+                ]}
+              >
                 <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
                   <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
                 </View>
@@ -50,8 +62,17 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
             ) : (
               <View style={styles.addWrapper}>
                 <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
-                <View style={[styles.plusBadge, { backgroundColor: palette.primary }]}>
-                  <Plus size={13} color="#FFFFFF" />
+                <View
+                  style={[
+                    styles.plusClayBadge,
+                    {
+                      backgroundColor: palette.primary,
+                      borderTopColor: palette.clayHighlight,
+                      borderColor: palette.background,
+                    },
+                  ]}
+                >
+                  <Plus size={14} color="#FFFFFF" />
                 </View>
               </View>
             )}
@@ -67,6 +88,7 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
           return (
             <TouchableOpacity
               key={u._id || u.id}
+              activeOpacity={0.8}
               onPress={() => {
                 triggerHaptic('light');
                 onOpenStoryGroup(u, group.stories, false);
@@ -75,13 +97,32 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
             >
               <View style={styles.avatarWrapper}>
                 {isUnviewed ? (
-                  <LinearGradient colors={['#EC4899', '#8B5CF6', '#3B82F6']} style={styles.gradientRing}>
+                  <LinearGradient
+                    colors={['#8B7FD1', '#7B93D6']}
+                    style={[
+                      styles.clayDonutRing,
+                      {
+                        borderTopColor: palette.clayHighlight,
+                        borderLeftColor: palette.clayHighlight,
+                        borderBottomColor: 'rgba(0,0,0,0.40)',
+                        borderRightColor: 'rgba(0,0,0,0.25)',
+                      },
+                    ]}
+                  >
                     <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
                       <Avatar size="lg" url={u.avatarUrl} name={u.name || 'User'} />
                     </View>
                   </LinearGradient>
                 ) : (
-                  <View style={[styles.grayRing, { borderColor: palette.border }]}>
+                  <View
+                    style={[
+                      styles.viewedDonutRing,
+                      {
+                        borderColor: palette.border,
+                        backgroundColor: palette.surfaceElevated,
+                      },
+                    ]}
+                  >
                     <Avatar size="lg" url={u.avatarUrl} name={u.name || 'User'} />
                   </View>
                 )}
@@ -99,7 +140,7 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
   scrollContent: {
@@ -116,48 +157,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gradientRing: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    padding: 2.5,
+  clayDonutRing: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    padding: 3.5,
+    borderWidth: 1.8,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 4, height: 6 },
+    shadowOpacity: 0.38,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  grayRing: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+  viewedDonutRing: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   innerBorder: {
-    width: 57,
-    height: 57,
-    borderRadius: 28.5,
+    width: 59,
+    height: 59,
+    borderRadius: 29.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addWrapper: {
     position: 'relative',
   },
-  plusBadge: {
+  plusClayBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#0F0F14',
+    borderWidth: 2.2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 4,
   },
   nameText: {
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 6,
+    marginTop: 7,
     textAlign: 'center',
   },
 });

@@ -10,6 +10,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MessageSquare, Mail, Lock, User, Phone } from 'lucide-react-native';
 import { GradientButton } from '../../components/common/GradientButton';
+import { ClayCard } from '../../components/common/ClayCard';
+import { ClayInput } from '../../components/common/ClayInput';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -26,7 +28,7 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   const [localError, setLocalError] = useState('');
 
   const { signup, login, isLoading, error, clearError } = useAuthStore();
-  const { theme } = useThemeStore();
+  const palette = useThemeStore((state) => state.palette);
 
   const handleAuthSubmit = async () => {
     clearError();
@@ -68,218 +70,287 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <LinearGradient colors={['#0F0F14', '#161622', '#0F0F14']} style={StyleSheet.absoluteFillObject} />
-
-      <View style={styles.header}>
-        <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.logoBadge}>
-          <MessageSquare size={36} color="#FFFFFF" />
-        </LinearGradient>
-        <Text style={styles.appTitle}>MESHX</Text>
-
-        <Text style={styles.subtitle}>
-          {isLogin ? 'Welcome back! Sign in to continue.' : 'Create an account to start chatting.'}
-        </Text>
-      </View>
-
-      <View style={styles.formCard}>
-        {/* Toggle Switch */}
-        <View style={styles.toggleRow}>
-          <TouchableOpacity
-            onPress={() => {
-              clearError();
-              triggerHaptic('selection');
-              setIsLogin(true);
-            }}
-            style={[styles.toggleTab, isLogin && styles.toggleTabActive]}
+    <View style={[styles.screen, { backgroundColor: palette.background }]}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        {/* Header Clay Logo */}
+        <View style={styles.header}>
+          <View
+            style={[
+              styles.clayLogoBadge,
+              {
+                borderTopColor: palette.clayHighlight,
+                borderLeftColor: palette.clayHighlight,
+                borderBottomColor: 'rgba(0,0,0,0.45)',
+                borderRightColor: 'rgba(0,0,0,0.30)',
+              },
+            ]}
           >
-            <Text style={[styles.toggleText, isLogin && styles.toggleTextActive]}>Login</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              clearError();
-              triggerHaptic('selection');
-              setIsLogin(false);
-            }}
-            style={[styles.toggleTab, !isLogin && styles.toggleTabActive]}
-          >
-            <Text style={[styles.toggleText, !isLogin && styles.toggleTextActive]}>Sign Up</Text>
-          </TouchableOpacity>
+            <LinearGradient
+              colors={[palette.primary, palette.accent]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoGradient}
+            >
+              <MessageSquare size={38} color="#FFFFFF" />
+            </LinearGradient>
+          </View>
+
+          <Text style={[styles.appTitle, { color: palette.textPrimary }]}>MESHX</Text>
+          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
+            {isLogin ? 'Welcome back! Sign in to continue.' : 'Create an account to start chatting.'}
+          </Text>
         </View>
 
-        {/* Signup Fields */}
-        {!isLogin && (
-          <>
-            <View style={styles.inputContainer}>
-              <User size={20} color="#A0A0B0" style={styles.inputIcon} />
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Full Name"
-                placeholderTextColor="#6B6B80"
-                style={styles.input}
-              />
+        {/* Raised Clay Form Card */}
+        <ClayCard borderRadius={32} elevationLevel="high" style={styles.formCard}>
+          {/* Recessed Clay Toggle Track */}
+          <View
+            style={[
+              styles.toggleTrack,
+              {
+                backgroundColor: palette.inputBackground,
+                borderTopColor: palette.clayInsetDark,
+                borderLeftColor: palette.clayInsetDark,
+                borderBottomColor: palette.clayInsetLight,
+                borderRightColor: palette.clayInsetLight,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                clearError();
+                triggerHaptic('selection');
+                setIsLogin(true);
+              }}
+              style={[
+                styles.togglePill,
+                isLogin && [
+                  styles.togglePillActive,
+                  {
+                    backgroundColor: palette.primary,
+                    borderTopColor: palette.clayHighlight,
+                  },
+                ],
+              ]}
+            >
+              <Text style={[styles.toggleText, isLogin ? styles.toggleTextActive : { color: palette.textMuted }]}>
+                Login
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                clearError();
+                triggerHaptic('selection');
+                setIsLogin(false);
+              }}
+              style={[
+                styles.togglePill,
+                !isLogin && [
+                  styles.togglePillActive,
+                  {
+                    backgroundColor: palette.primary,
+                    borderTopColor: palette.clayHighlight,
+                  },
+                ],
+              ]}
+            >
+              <Text style={[styles.toggleText, !isLogin ? styles.toggleTextActive : { color: palette.textMuted }]}>
+                Sign Up
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {(localError || error) ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{localError || error}</Text>
             </View>
+          ) : null}
 
-            <View style={styles.inputContainer}>
-              <Phone size={20} color="#A0A0B0" style={styles.inputIcon} />
-              <TextInput
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Phone Number (+1 555 019 2834)"
-                placeholderTextColor="#6B6B80"
-                keyboardType="phone-pad"
-                style={styles.input}
-              />
-            </View>
-          </>
-        )}
+          {/* Recessed Clay Input Slots */}
+          {!isLogin && (
+            <>
+              <ClayInput style={styles.inputSlot}>
+                <User size={20} color={palette.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Full Name"
+                  placeholderTextColor={palette.textMuted}
+                  value={name}
+                  onChangeText={setName}
+                  style={[styles.textInput, { color: palette.textPrimary }]}
+                  autoCapitalize="words"
+                />
+              </ClayInput>
 
-        {/* Email Field */}
-        <View style={styles.inputContainer}>
-          <Mail size={20} color="#A0A0B0" style={styles.inputIcon} />
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email address"
-            placeholderTextColor="#6B6B80"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={styles.input}
+              <ClayInput style={styles.inputSlot}>
+                <Phone size={20} color={palette.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Phone Number"
+                  placeholderTextColor={palette.textMuted}
+                  value={phone}
+                  onChangeText={setPhone}
+                  style={[styles.textInput, { color: palette.textPrimary }]}
+                  keyboardType="phone-pad"
+                />
+              </ClayInput>
+            </>
+          )}
+
+          <ClayInput style={styles.inputSlot}>
+            <Mail size={20} color={palette.textMuted} style={styles.inputIcon} />
+            <TextInput
+              placeholder="Email Address"
+              placeholderTextColor={palette.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              style={[styles.textInput, { color: palette.textPrimary }]}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </ClayInput>
+
+          <ClayInput style={styles.inputSlot}>
+            <Lock size={20} color={palette.textMuted} style={styles.inputIcon} />
+            <TextInput
+              placeholder="Password (min 8 chars)"
+              placeholderTextColor={palette.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              style={[styles.textInput, { color: palette.textPrimary }]}
+              secureTextEntry
+            />
+          </ClayInput>
+
+          {isLogin && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotBtn}
+            >
+              <Text style={[styles.forgotText, { color: palette.primaryLight }]}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
+
+          <GradientButton
+            title={isLogin ? 'Sign In' : 'Create Account'}
+            onPress={handleAuthSubmit}
+            isLoading={isLoading}
+            style={{ marginTop: 8 }}
           />
-        </View>
-
-        {/* Password Field */}
-        <View style={styles.inputContainer}>
-          <Lock size={20} color="#A0A0B0" style={styles.inputIcon} />
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor="#6B6B80"
-            secureTextEntry
-            style={styles.input}
-          />
-        </View>
-
-        {isLogin && (
-          <TouchableOpacity
-            style={styles.forgotBtn}
-            onPress={() => navigation.navigate('ForgotPassword')}
-          >
-            <Text style={styles.forgotBtnText}>Forgot password?</Text>
-          </TouchableOpacity>
-        )}
-
-        {(error || localError) ? <Text style={styles.errorText}>{error || localError}</Text> : null}
-
-        <GradientButton
-          title={isLogin ? 'Sign In' : 'Sign Up & Verify Email'}
-          onPress={handleAuthSubmit}
-          isLoading={isLoading}
-          style={{ marginTop: 12 }}
-        />
-      </View>
-    </ScrollView>
+        </ClayCard>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
-    flexGrow: 1,
-    backgroundColor: '#0F0F14',
-    justifyContent: 'center',
     padding: 24,
+    paddingTop: 54,
+    paddingBottom: 40,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  logoBadge: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
+  clayLogoBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 32,
+    borderWidth: 2,
+    overflow: 'hidden',
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 6, height: 10 },
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  logoGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
   appTitle: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   subtitle: {
     fontSize: 14,
-    color: '#A0A0B0',
     marginTop: 6,
     textAlign: 'center',
   },
   formCard: {
-    backgroundColor: '#1A1A24',
-    borderRadius: 24,
     padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  toggleRow: {
+  toggleTrack: {
     flexDirection: 'row',
-    backgroundColor: '#12121A',
-    borderRadius: 16,
+    borderRadius: 20,
+    borderWidth: 1.5,
     padding: 4,
     marginBottom: 20,
   },
-  toggleTab: {
+  togglePill: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 16,
   },
-  toggleTabActive: {
-    backgroundColor: '#7C3AED',
+  togglePillActive: {
+    borderWidth: 1.2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
   },
   toggleText: {
-    fontSize: 14,
     fontWeight: '600',
-    color: '#A0A0B0',
+    fontSize: 14,
   },
   toggleTextActive: {
     color: '#FFFFFF',
+    fontWeight: '800',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#12121A',
-    borderRadius: 16,
+  errorBanner: {
+    backgroundColor: 'rgba(229, 115, 115, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    paddingHorizontal: 14,
-    height: 52,
+    borderColor: 'rgba(229, 115, 115, 0.35)',
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 14,
+  },
+  errorText: {
+    color: '#E57373',
+    fontSize: 13,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  inputSlot: {
     marginBottom: 14,
   },
   inputIcon: {
     marginRight: 10,
   },
-  input: {
+  textInput: {
     flex: 1,
-    color: '#FFFFFF',
     fontSize: 15,
+    height: '100%',
   },
   forgotBtn: {
     alignSelf: 'flex-end',
     marginBottom: 14,
-    marginTop: -4,
+    marginTop: -2,
   },
-  forgotBtnText: {
-    color: '#A0A0B0',
+  forgotText: {
     fontSize: 13,
-    fontWeight: '600',
-  },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
+    fontWeight: '700',
   },
 });

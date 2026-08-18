@@ -1,22 +1,20 @@
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
-
 import Constants from 'expo-constants';
 
-const getBackendHost = (): string => {
-  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
-      return ip;
-    }
-  }
-  return '192.168.100.2';
+const PROD_URL = 'https://meshx.onrender.com';
+
+const getBackendUrl = (): { apiUrl: string; socketUrl: string } => {
+  // Use the live hosted Render backend as primary for APK and global access
+  return {
+    apiUrl: `${PROD_URL}/api`,
+    socketUrl: PROD_URL,
+  };
 };
 
-const HOST = getBackendHost();
-export const API_BASE_URL = `http://${HOST}:5000/api`;
-export const SOCKET_BASE_URL = `http://${HOST}:5000`;
+const urls = getBackendUrl();
+export const API_BASE_URL = urls.apiUrl;
+export const SOCKET_BASE_URL = urls.socketUrl;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Modal, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Modal, Image, Alert, ActivityIndicator, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +25,7 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
 }) => {
   const { palette, themeMode } = useThemeStore();
   const { replyPreview, setReplyPreview } = useChatStore();
+  const insets = useSafeAreaInsets();
 
   const [text, setText] = useState('');
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -175,8 +177,10 @@ export const MessageInputBar: React.FC<MessageInputBarProps> = ({
   }
 
 
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8) + 4;
+
   return (
-    <View style={[styles.wrapper, { backgroundColor: palette.background }]}>
+    <View style={[styles.wrapper, { backgroundColor: palette.background, paddingBottom: bottomInset }]}>
       {/* Reply Preview Banner */}
       {replyPreview && (
         <View style={[styles.replyBanner, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>

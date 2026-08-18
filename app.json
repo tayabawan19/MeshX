@@ -49,6 +49,12 @@
           "microphonePermission": "MeshX needs microphone access to record voice notes and connect calls."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "91c01923-1efe-415d-875e-729d968260eb"
+      }
+    },
+    "owner": "tayabawan19"
   }
 }

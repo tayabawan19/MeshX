@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet, Text, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { View, StyleSheet, Text, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,6 +31,7 @@ const CustomClayTabBar: React.FC<CustomTabBarProps> = ({
   totalUnread,
 }) => {
   const palette = useThemeStore((state) => state.palette);
+  const insets = useSafeAreaInsets();
   const horizontalPadding = 16;
   const dockWidth = SCREEN_WIDTH - horizontalPadding * 2;
   const tabWidth = dockWidth / 3;
@@ -54,8 +56,10 @@ const CustomClayTabBar: React.FC<CustomTabBarProps> = ({
     { name: 'Settings', icon: Settings },
   ];
 
+  const bottomInsetPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 12) + 8;
+
   return (
-    <View style={[styles.bottomContainer, { backgroundColor: palette.background }]}>
+    <View style={[styles.bottomContainer, { backgroundColor: palette.background, paddingBottom: bottomInsetPadding }]}>
       {/* Raised Clay Pill Dock */}
       <View
         style={[

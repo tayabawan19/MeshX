@@ -6,6 +6,8 @@
     "start": "expo start",
     "dev": "expo start",
     "backend:dev": "npm --prefix backend run dev",
+    "build:backend": "npm --prefix backend install && npm --prefix backend run build",
+    "start:backend": "npm --prefix backend start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"

@@ -5,6 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/91c01923-1efe-415d-875e-729d968260eb"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tayyab.meshx",

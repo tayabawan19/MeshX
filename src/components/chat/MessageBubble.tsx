@@ -320,9 +320,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Story Reply Preview Card */}
-        {message.storyReply && (
+        {Boolean(
+          message.storyReply &&
+            (message.storyReply.storyId ||
+              (typeof message.storyReply.mediaUrl === 'string' && message.storyReply.mediaUrl.trim().length > 0) ||
+              (typeof message.storyReply.caption === 'string' && message.storyReply.caption.trim().length > 0))
+        ) && (
           <View style={[styles.storyReplyCard, { backgroundColor: isMe ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.06)', borderColor: '#000000' }]}>
-            {message.storyReply.mediaUrl ? (
+            {message.storyReply?.mediaUrl ? (
               <Image source={{ uri: message.storyReply.mediaUrl }} style={styles.storyReplyThumbnail} />
             ) : (
               <View style={[styles.storyReplyTextThumb, { backgroundColor: palette.primary }]}>
@@ -332,7 +337,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <View style={styles.storyReplyMeta}>
               <Text style={[styles.storyReplyTitle, { color: isMe ? sentTextColor : palette.secondary }]}>Story reply</Text>
               <Text style={[styles.storyReplyCaption, { color: isMe ? sentTextColor : palette.textSecondary }]} numberOfLines={1}>
-                {message.storyReply.caption || 'Status story'}
+                {message.storyReply?.caption || 'Status story'}
               </Text>
             </View>
           </View>

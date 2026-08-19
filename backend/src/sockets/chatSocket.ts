@@ -133,6 +133,11 @@ export const setupSocketIO = (io: Server) => {
 
         const validReplyTo = replyTo && mongoose.Types.ObjectId.isValid(replyTo) ? replyTo : null;
 
+        const validStoryReply =
+          storyReply && (storyReply.storyId || storyReply.mediaUrl || storyReply.caption)
+            ? storyReply
+            : undefined;
+
         const message = new Message({
           chatId,
           senderId: userId,
@@ -141,7 +146,7 @@ export const setupSocketIO = (io: Server) => {
           mediaUrl: mediaUrl || '',
           duration: duration || undefined,
           replyTo: validReplyTo,
-          storyReply: storyReply || undefined,
+          storyReply: validStoryReply,
           isForwarded: !!isForwarded,
           forwardCount: forwardCount || (isForwarded ? 1 : 0),
           status: 'sent',

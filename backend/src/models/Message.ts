@@ -51,12 +51,7 @@ const MessageSchema: Schema = new Schema(
     mediaUrl: { type: String, default: '' },
     duration: { type: Number },
     replyTo: { type: Schema.Types.ObjectId, ref: 'Message' },
-    storyReply: {
-      storyId: { type: Schema.Types.ObjectId, ref: 'Story' },
-      mediaUrl: { type: String, default: '' },
-      caption: { type: String, default: '' },
-      type: { type: String, default: 'image' },
-    },
+    storyReply: { type: Schema.Types.Mixed, default: null },
     reactions: [
       {
         userId: { type: Schema.Types.ObjectId, ref: 'User' },

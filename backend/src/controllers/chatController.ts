@@ -357,6 +357,10 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     }
 
     const validReplyTo = replyTo && mongoose.Types.ObjectId.isValid(replyTo) ? replyTo : null;
+    const validStoryReply =
+      storyReply && (storyReply.storyId || storyReply.mediaUrl || storyReply.caption)
+        ? storyReply
+        : undefined;
 
     const message = new Message({
       chatId,
@@ -365,7 +369,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       text: text || '',
       mediaUrl: mediaUrl || '',
       replyTo: validReplyTo,
-      storyReply: storyReply || undefined,
+      storyReply: validStoryReply,
       isForwarded: !!isForwarded,
       forwardCount: forwardCount || (isForwarded ? 1 : 0),
       status: 'sent',

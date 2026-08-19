@@ -263,6 +263,13 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       }
     }
 
+    const activeStoryReply =
+      extra?.storyReply && (extra.storyReply.storyId || extra.storyReply.mediaUrl || extra.storyReply.caption)
+        ? extra.storyReply
+        : storyReplyPreview && (storyReplyPreview.storyId || storyReplyPreview.mediaUrl || storyReplyPreview.caption)
+        ? storyReplyPreview
+        : undefined;
+
     const newMsg: Message = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       chatId: targetChatId,
@@ -271,7 +278,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       type,
       mediaUrl,
       replyTo: replyPreview || undefined,
-      storyReply: storyReplyPreview || undefined,
+      storyReply: activeStoryReply,
       reactions: {},
       status: 'sent',
       createdAt: Date.now(),
@@ -289,7 +296,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
         mediaUrl,
         duration: extra?.audioDuration || extra?.duration,
         replyTo: replyPreview?.id,
-        storyReply: storyReplyPreview,
+        storyReply: activeStoryReply,
       });
     }
 

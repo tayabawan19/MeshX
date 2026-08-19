@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { UserProfile } from '../types';
-import { apiClient, setAuthTokens, initSocket, disconnectSocket } from '../config/api';
+import { apiClient, setAuthTokens, initSocket, disconnectSocket, getAccessToken } from '../config/api';
 import { e2eeService } from '../services/e2eeService';
 
 interface AuthState {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isCheckingAuth: boolean;
   isOnboarded: boolean;
   error: string | null;
   pendingEmail: string | null;
@@ -37,23 +38,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  isCheckingAuth: false,
   isOnboarded: true,
   error: null,
   pendingEmail: null,
 
   checkAuthStatus: async () => {
-    set({ isLoading: true });
+    const token = getAccessToken();
+    if (!token) {
+      set({ user: null, isAuthenticated: false, isCheckingAuth: false, isLoading: false });
+      return;
+    }
+
+    set({ isCheckingAuth: true });
     try {
       const res = await apiClient.get('/users/me');
       if (res.data?.user) {
         const u = res.data.user;
-        set({ user: u, isAuthenticated: true, isLoading: false });
+        set({ user: u, isAuthenticated: true, isCheckingAuth: false, isLoading: false });
         e2eeService.initialize(u._id || u.id);
       } else {
-        set({ user: null, isAuthenticated: false, isLoading: false });
+        set({ user: null, isAuthenticated: false, isCheckingAuth: false, isLoading: false });
       }
     } catch (err) {
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, isAuthenticated: false, isCheckingAuth: false, isLoading: false });
     }
   },
 

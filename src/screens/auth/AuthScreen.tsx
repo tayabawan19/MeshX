@@ -25,8 +25,9 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   const [password, setPassword] = useState('');
 
   const [localError, setLocalError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signup, login, isLoading, error, clearError } = useAuthStore();
+  const { signup, login, error, clearError } = useAuthStore();
   const palette = useThemeStore((state) => state.palette);
 
   const handleAuthSubmit = async () => {
@@ -34,37 +35,42 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
     setLocalError('');
     triggerHaptic('selection');
 
-    if (isLogin) {
-      if (!email.trim() || !password) {
-        setLocalError('Please enter both email and password.');
-        return;
+    setIsSubmitting(true);
+    try {
+      if (isLogin) {
+        if (!email.trim() || !password) {
+          setLocalError('Please enter both email and password.');
+          return;
+        }
+        const result = await login(email.trim(), password);
+        if (result === true) {
+          triggerHaptic('success');
+        } else if (result === 'UNVERIFIED') {
+          triggerHaptic('warning');
+          navigation.navigate('OtpVerification', { email: email.trim(), mode: 'signup' });
+        }
+      } else {
+        if (!name.trim() || !email.trim() || !phone.trim() || !password) {
+          setLocalError('Please fill in all required fields (Name, Phone, Email, Password).');
+          return;
+        }
+        if (password.length < 8 || !/\d/.test(password)) {
+          setLocalError('Password must be at least 8 characters long and contain at least one number.');
+          return;
+        }
+        const success = await signup({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          password,
+        });
+        if (success) {
+          triggerHaptic('success');
+          navigation.navigate('OtpVerification', { email: email.trim(), mode: 'signup' });
+        }
       }
-      const result = await login(email.trim(), password);
-      if (result === true) {
-        triggerHaptic('success');
-      } else if (result === 'UNVERIFIED') {
-        triggerHaptic('warning');
-        navigation.navigate('OtpVerification', { email: email.trim(), mode: 'signup' });
-      }
-    } else {
-      if (!name.trim() || !email.trim() || !phone.trim() || !password) {
-        setLocalError('Please fill in all required fields (Name, Phone, Email, Password).');
-        return;
-      }
-      if (password.length < 8 || !/\d/.test(password)) {
-        setLocalError('Password must be at least 8 characters long and contain at least one number.');
-        return;
-      }
-      const success = await signup({
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        password,
-      });
-      if (success) {
-        triggerHaptic('success');
-        navigation.navigate('OtpVerification', { email: email.trim(), mode: 'signup' });
-      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -209,7 +215,7 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
           <BoldButton
             title={isLogin ? 'Sign In' : 'Create Account'}
             onPress={handleAuthSubmit}
-            loading={isLoading}
+            loading={isSubmitting}
             variant="primary"
             size="lg"
             style={{ marginTop: 10 }}

@@ -33,6 +33,7 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [cooldown, setCooldown] = useState(30);
   const [canResend, setCanResend] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
   const shakeTranslateX = useSharedValue(0);
@@ -94,18 +95,23 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
     if (fullOtp.length !== 6) return;
 
     triggerHaptic('selection');
+    setIsSubmitting(true);
 
-    if (mode === 'reset') {
-      navigation.navigate('ResetPassword', { email, otp: fullOtp });
-      return;
-    }
+    try {
+      if (mode === 'reset') {
+        navigation.navigate('ResetPassword', { email, otp: fullOtp });
+        return;
+      }
 
-    const success = await verifyOtp(email, fullOtp);
-    if (success) {
-      triggerHaptic('success');
-      navigation.replace('ProfileSetup');
-    } else {
-      triggerShake();
+      const success = await verifyOtp(email, fullOtp);
+      if (success) {
+        triggerHaptic('success');
+        navigation.replace('ProfileSetup');
+      } else {
+        triggerShake();
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -211,7 +217,7 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
           <BoldButton
             title="Verify & Continue"
             onPress={() => submitOtp()}
-            loading={isLoading}
+            loading={isSubmitting}
             variant="primary"
             size="lg"
             disabled={otpDigits.some((d) => d === '')}

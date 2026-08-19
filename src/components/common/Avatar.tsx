@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Image, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../store/useThemeStore';
+import { getContactAccent } from '../../theme/colors';
 
 interface AvatarProps {
   url?: string;
@@ -10,13 +11,14 @@ interface AvatarProps {
   isOnline?: boolean;
   hasStory?: boolean;
   storyViewed?: boolean;
+  accentColor?: string;
 }
 
 const SIZE_MAP = {
-  sm: 36,
-  md: 48,
-  lg: 60,
-  xl: 80,
+  sm: 38,
+  md: 50,
+  lg: 64,
+  xl: 84,
 };
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -26,37 +28,60 @@ export const Avatar: React.FC<AvatarProps> = ({
   isOnline = false,
   hasStory = false,
   storyViewed = false,
+  accentColor,
 }) => {
   const palette = useThemeStore((state) => state.palette);
   const dimension = SIZE_MAP[size];
   const borderPadding = hasStory ? 4 : 0;
   const imageSize = dimension - borderPadding * 2;
   const initial = name ? name.charAt(0).toUpperCase() : '?';
+  const assignedColor = accentColor || getContactAccent(name);
 
+  // Dual-tone candy story rings: Coral & Lime
   const storyGradients: [string, string] = storyViewed
-    ? ['#4A4A60', '#323246']
-    : ['#8B7FD1', '#7B93D6'];
+    ? ['#4A485A', '#2E2B48']
+    : ['#FF4D5E', '#C6FF3D'];
 
   const renderContent = () => (
     <View
       style={[
-        styles.clayAvatarWrapper,
+        styles.avatarWrapper,
         {
           width: imageSize,
           height: imageSize,
           borderRadius: imageSize / 2,
-          borderTopColor: palette.clayHighlight,
-          borderLeftColor: palette.clayHighlight,
-          borderBottomColor: 'rgba(0, 0, 0, 0.35)',
-          borderRightColor: 'rgba(0, 0, 0, 0.25)',
+          borderColor: '#000000',
         },
       ]}
     >
       {url ? (
-        <Image source={{ uri: url }} style={{ width: imageSize, height: imageSize, borderRadius: imageSize / 2 }} />
+        <Image
+          source={{ uri: url }}
+          style={{ width: imageSize, height: imageSize, borderRadius: imageSize / 2 }}
+        />
       ) : (
-        <View style={[styles.fallback, { width: imageSize, height: imageSize, borderRadius: imageSize / 2, backgroundColor: palette.primary }]}>
-          <Text style={[styles.fallbackText, { fontSize: imageSize * 0.4 }]}>{initial}</Text>
+        <View
+          style={[
+            styles.fallback,
+            {
+              width: imageSize,
+              height: imageSize,
+              borderRadius: imageSize / 2,
+              backgroundColor: assignedColor,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.fallbackText,
+              {
+                fontSize: imageSize * 0.44,
+                color: assignedColor === '#C6FF3D' || assignedColor === '#FFD23F' ? '#100F17' : '#FFFFFF',
+              },
+            ]}
+          >
+            {initial}
+          </Text>
         </View>
       )}
     </View>
@@ -70,15 +95,11 @@ export const Avatar: React.FC<AvatarProps> = ({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[
-            styles.storyDonutRing,
+            styles.storyRing,
             {
               width: dimension,
               height: dimension,
               borderRadius: dimension / 2,
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0, 0, 0, 0.40)',
-              borderRightColor: 'rgba(0, 0, 0, 0.30)',
             },
           ]}
         >
@@ -91,12 +112,12 @@ export const Avatar: React.FC<AvatarProps> = ({
       {isOnline && (
         <View
           style={[
-            styles.onlineClayNub,
+            styles.onlineDot,
             {
-              backgroundColor: palette.onlineGreen,
-              borderColor: palette.background,
-              width: size === 'sm' ? 11 : size === 'md' ? 14 : 18,
-              height: size === 'sm' ? 11 : size === 'md' ? 14 : 18,
+              backgroundColor: palette.onlineGreen, // #C6FF3D
+              borderColor: '#000000',
+              width: size === 'sm' ? 12 : size === 'md' ? 15 : 19,
+              height: size === 'sm' ? 12 : size === 'md' ? 15 : 19,
               borderRadius: 99,
               right: size === 'sm' ? -1 : 1,
               bottom: size === 'sm' ? -1 : 1,
@@ -109,44 +130,30 @@ export const Avatar: React.FC<AvatarProps> = ({
 };
 
 const styles = StyleSheet.create({
-  clayAvatarWrapper: {
+  avatarWrapper: {
     overflow: 'hidden',
-    backgroundColor: '#242436',
-    borderWidth: 1.5,
+    backgroundColor: '#1E1C30',
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 3, height: 5 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  storyDonutRing: {
+  storyRing: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: 3,
-    borderWidth: 1.5,
-    shadowColor: '#000000',
-    shadowOffset: { width: 4, height: 6 },
-    shadowOpacity: 0.38,
-    shadowRadius: 10,
-    elevation: 5,
+    borderWidth: 2,
+    borderColor: '#000000',
   },
   fallback: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   fallbackText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '900',
   },
-  onlineClayNub: {
+  onlineDot: {
     position: 'absolute',
-    borderWidth: 2.2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 4,
+    borderWidth: 2,
+    zIndex: 2,
   },
 });

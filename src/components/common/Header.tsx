@@ -37,21 +37,27 @@ export const Header: React.FC<HeaderProps> = ({
       style={[
         styles.container,
         {
-          paddingTop: Math.max(insets.top, 12),
-          backgroundColor: palette.surface,
-          borderBottomColor: palette.border,
+          paddingTop: Math.max(insets.top, 14),
+          backgroundColor: palette.background,
+          borderBottomColor: '#000000',
         },
       ]}
     >
       <View style={styles.left}>
         {showBack && (
-          <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <ChevronLeft size={26} color={palette.textPrimary} />
+          <TouchableOpacity
+            onPress={handleBack}
+            style={[styles.backButton, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <ChevronLeft size={22} color="#FFFFFF" />
           </TouchableOpacity>
         )}
         <View style={styles.titleContainer}>
           <Text style={[styles.title, { color: palette.textPrimary }]}>{title}</Text>
-          {subtitle && <Text style={[styles.subtitle, { color: palette.onlineGreen }]}>{subtitle}</Text>}
+          {subtitle && (
+            <Text style={[styles.subtitle, { color: palette.secondary }]}>{subtitle}</Text>
+          )}
         </View>
       </View>
       {rightElement && <View style={styles.right}>{rightElement}</View>}
@@ -61,31 +67,39 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 12,
+    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
   titleContainer: {
     justifyContent: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 12,
-    fontWeight: '500',
-    marginTop: 1,
+    fontWeight: '800',
+    marginTop: 2,
+    letterSpacing: -0.2,
   },
   right: {
     flexDirection: 'row',

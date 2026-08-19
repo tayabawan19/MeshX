@@ -43,6 +43,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageInfoModal } from '../modals/MessageInfoModal';
 import { ForwardPickerModal } from '../modals/ForwardPickerModal';
 import { GroupDetailsModal } from '../modals/GroupDetailsModal';
+import { getContactAccent } from '../../theme/colors';
 
 interface ChatScreenProps {
   chatId?: string;
@@ -150,6 +151,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const headerAvatar = isGroup ? (currentChat?.groupAvatar || currentChat?.groupAvatarUrl) : recipient?.avatarUrl;
   const isOnline = !isGroup && !!recipient?.isOnline;
   const recUserId = recipient?.id || recipient?._id || recipient?.userId || 'usr_peer';
+  const assignedAccent = getContactAccent(headerName);
 
   const isTyping = typingMap[chatId] || false;
 
@@ -166,7 +168,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   };
 
   const scrollToBottom = () => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    if (flatListRef.current) {
+      flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+    }
   };
 
   const handleScroll = (event: any) => {
@@ -174,22 +178,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     setShowJumpToBottom(offsetY > 300);
   };
 
-  const handleLongPressMessage = (msg: Message) => {
-    if (isSelectionMode) {
-      toggleSelectMessage(msg);
-    } else {
-      setSelectedMessage(msg);
-      setShowActionSheet(true);
-    }
+  const handleLongPressMessage = (message: Message) => {
+    setSelectedMessage(message);
+    setShowActionSheet(true);
   };
 
-  const toggleSelectMessage = (msg: Message) => {
+  const toggleSelectMessage = (message: Message) => {
     triggerHaptic('selection');
-    const msgId = msg.id || msg._id || '';
+    const msgId = message.id || (message as any)._id || '';
     if (selectedMessageIds.includes(msgId)) {
       const next = selectedMessageIds.filter((id) => id !== msgId);
       setSelectedMessageIds(next);
-      if (next.length === 0) setIsSelectionMode(false);
+      if (next.length === 0) {
+        setIsSelectionMode(false);
+      }
     } else {
       setSelectedMessageIds([...selectedMessageIds, msgId]);
     }
@@ -198,74 +200,67 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const handleAddReaction = (emoji: string) => {
     if (selectedMessage) {
       toggleReaction(chatId, selectedMessage.id, emoji);
-      setShowActionSheet(false);
-      setSelectedMessage(null);
-    }
-  };
-
-  const handleCopyMessage = () => {
-    if (selectedMessage?.text) {
-      Clipboard.setString(selectedMessage.text);
-      triggerHaptic('success');
     }
     setShowActionSheet(false);
   };
 
   const handleReplyMessage = () => {
     if (selectedMessage) {
-      triggerHaptic('light');
-      const senderIdStr =
-        typeof selectedMessage.senderId === 'string'
-          ? selectedMessage.senderId
-          : (selectedMessage.senderId as any)?._id || '';
+      const sName =
+        selectedMessage.senderId === currentUserId
+          ? 'You'
+          : (selectedMessage.senderId as any)?.name || recipient?.name || 'User';
+      const sId = typeof selectedMessage.senderId === 'string' ? selectedMessage.senderId : (selectedMessage.senderId as any)?._id || 'unknown';
       setReplyPreview({
         id: selectedMessage.id,
-        text: selectedMessage.text || 'Media message',
-        senderId: senderIdStr,
-        senderName: senderIdStr === currentUserId ? 'You' : recipient?.name,
+        text: selectedMessage.text || `[${selectedMessage.type}]`,
+        senderName: sName,
+        senderId: sId,
       });
     }
     setShowActionSheet(false);
   };
 
+  const handleCopyMessage = () => {
+    if (selectedMessage && selectedMessage.text) {
+      Clipboard.setString(selectedMessage.text);
+      triggerHaptic('light');
+    }
+    setShowActionSheet(false);
+  };
+
   const handleOpenEdit = () => {
-    if (selectedMessage) {
-      setEditText(selectedMessage.text || '');
+    if (selectedMessage && selectedMessage.text) {
+      setEditText(selectedMessage.text);
       setShowActionSheet(false);
       setShowEditModal(true);
     }
   };
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = () => {
     if (selectedMessage && editText.trim()) {
-      await editMessage(chatId, selectedMessage.id || (selectedMessage as any)._id, editText.trim());
+      editMessage(chatId, selectedMessage.id, editText.trim());
+      triggerHaptic('success');
       setShowEditModal(false);
-      setSelectedMessage(null);
     }
   };
 
   const handleOpenForwardSingle = () => {
-    if (selectedMessage) {
-      setShowActionSheet(false);
-      setShowForwardPicker(true);
-    }
+    setShowActionSheet(false);
+    setShowForwardPicker(true);
   };
 
   const handleOpenMessageInfo = () => {
-    if (selectedMessage) {
-      setShowActionSheet(false);
-      setShowMessageInfo(true);
-    }
+    setShowActionSheet(false);
+    setShowMessageInfo(true);
   };
 
   const handleDeletePrompt = () => {
     if (!selectedMessage) return;
-    const sId =
-      typeof selectedMessage.senderId === 'string'
-        ? selectedMessage.senderId
-        : (selectedMessage.senderId as any)?._id;
-    const isMe = sId === currentUserId;
-    const msgId = selectedMessage.id || (selectedMessage as any)._id;
+    const msgId = selectedMessage.id;
+    const isMe =
+      selectedMessage.senderId === currentUserId ||
+      (selectedMessage.senderId as any)?._id === currentUserId;
 
     const oneHourMs = 60 * 60 * 1000;
     const isWithin1Hour = Date.now() - Number(selectedMessage.createdAt) <= oneHourMs;
@@ -401,9 +396,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           style={[
             styles.selectionHeader,
             {
-              paddingTop: Math.max(insets.top, 12),
-              backgroundColor: palette.surfaceElevated,
-              borderBottomColor: palette.border,
+              paddingTop: Math.max(insets.top, 14),
+              backgroundColor: palette.secondary, // Electric Lime #C6FF3D
+              borderBottomColor: '#000000',
             },
           ]}
         >
@@ -414,24 +409,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             }}
             style={styles.backBtn}
           >
-            <X size={24} color={palette.textPrimary} />
+            <X size={24} color="#100F17" strokeWidth={2.5} />
           </TouchableOpacity>
 
-          <Text style={[styles.selectionCount, { color: palette.textPrimary }]}>
-            {selectedMessageIds.length} selected
+          <Text style={[styles.selectionCount, { color: '#100F17' }]}>
+            {selectedMessageIds.length} Selected
           </Text>
 
           <View style={styles.selectionActions}>
-            <TouchableOpacity onPress={handleBulkStar} style={styles.actionIcon}>
-              <Star size={20} color="#E6A868" />
+            <TouchableOpacity onPress={handleBulkStar} style={styles.actionIconPill}>
+              <Star size={18} color="#100F17" />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleBulkForward} style={styles.actionIcon}>
-              <CornerUpRight size={20} color={palette.primaryLight} />
+            <TouchableOpacity onPress={handleBulkForward} style={styles.actionIconPill}>
+              <CornerUpRight size={18} color="#100F17" />
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleBulkDelete} style={styles.actionIcon}>
-              <Trash2 size={20} color={palette.error} />
+            <TouchableOpacity onPress={handleBulkDelete} style={[styles.actionIconPill, { backgroundColor: palette.error }]}>
+              <Trash2 size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -440,18 +435,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           style={[
             styles.header,
             {
-              paddingTop: Math.max(insets.top, 12),
-              backgroundColor: palette.surface,
-              borderBottomColor: palette.border,
+              paddingTop: Math.max(insets.top, 14),
+              backgroundColor: palette.background,
+              borderBottomColor: '#000000',
             },
           ]}
         >
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <ChevronLeft size={26} color={palette.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.headerBackWrapper}>
+            <View style={styles.headerBackShadow} />
+            <TouchableOpacity onPress={onBack} style={[styles.backBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+              <ChevronLeft size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity onPress={handleHeaderPress} style={styles.headerInfo}>
-            <Avatar url={headerAvatar} name={headerName} size="sm" isOnline={!!isOnline} />
+            <Avatar url={headerAvatar} name={headerName} size="sm" isOnline={!!isOnline} accentColor={assignedAccent} />
             <View style={styles.headerTextContainer}>
               <Text style={[styles.headerName, { color: palette.textPrimary }]} numberOfLines={1}>
                 {headerName}
@@ -459,32 +457,38 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               <Text
                 style={[
                   styles.headerStatus,
-                  { color: isOnline ? palette.onlineGreen : palette.textMuted },
+                  { color: isOnline ? palette.secondary : palette.textMuted },
                 ]}
               >
-                {isGroup ? `${currentChat?.participants?.length || 2} members • Tap for info` : isOnline ? 'Online' : 'Offline'}
+                {isGroup ? `${currentChat?.participants?.length || 2} members` : isOnline ? 'Online' : 'Offline'}
               </Text>
             </View>
           </TouchableOpacity>
 
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleVoiceCall} style={styles.actionIcon}>
-              <Phone size={20} color={palette.textPrimary} />
-            </TouchableOpacity>
+            <View style={styles.headerActionBtnWrapper}>
+              <View style={styles.headerActionBtnShadow} />
+              <TouchableOpacity onPress={handleVoiceCall} style={[styles.actionBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+                <Phone size={18} color={palette.secondary} />
+              </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity onPress={handleVideoCall} style={styles.actionIcon}>
-              <Video size={22} color={palette.textPrimary} />
-            </TouchableOpacity>
+            <View style={styles.headerActionBtnWrapper}>
+              <View style={styles.headerActionBtnShadow} />
+              <TouchableOpacity onPress={handleVideoCall} style={[styles.actionBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+                <Video size={19} color={palette.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
 
       {/* Disappearing Messages Notice */}
       {disappearingEnabled && (
-        <View style={[styles.disappearingNotice, { backgroundColor: palette.surfaceElevated }]}>
-          <Clock size={14} color={palette.primaryLight} />
-          <Text style={[styles.disappearingText, { color: palette.textSecondary }]}>
-            Disappearing messages are ON (24 hours expiration).
+        <View style={[styles.disappearingNotice, { backgroundColor: palette.surface, borderColor: '#000000' }]}>
+          <Clock size={14} color={palette.secondary} />
+          <Text style={[styles.disappearingText, { color: palette.textPrimary }]}>
+            Disappearing messages ON (24 hours).
           </Text>
         </View>
       )}
@@ -549,24 +553,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         }}
       />
 
-      {/* Jump to Bottom Raised Clay Button */}
+      {/* Jump to Bottom Button with Hard Shadow */}
       {showJumpToBottom && (
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={scrollToBottom}
-          style={[
-            styles.jumpBtn,
-            {
-              backgroundColor: palette.surfaceElevated,
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0,0,0,0.4)',
-              borderRightColor: 'rgba(0,0,0,0.25)',
-            },
-          ]}
-        >
-          <ChevronDown size={22} color={palette.textPrimary} />
-        </TouchableOpacity>
+        <View style={styles.jumpBtnWrapper}>
+          <View style={styles.jumpBtnShadow} />
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={scrollToBottom}
+            style={[styles.jumpBtn, { backgroundColor: palette.secondary, borderColor: '#000000' }]}
+          >
+            <ChevronDown size={22} color="#100F17" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Message Input Bar */}
@@ -574,9 +572,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         onSendMessage={handleSendTextMessage}
         onSendMedia={handleSendMediaMessage}
         onTyping={(typing) => setTyping(chatId, typing)}
+        replyPreview={null}
+        setReplyPreview={setReplyPreview}
       />
 
-      {/* Message Contextual Action Sheet & Emoji Picker Modal */}
+      {/* Message Action Sheet Modal */}
       <Modal
         visible={showActionSheet}
         transparent
@@ -592,11 +592,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             style={[
               styles.actionSheetContainer,
               {
-                backgroundColor: palette.surfaceElevated,
-                borderTopColor: palette.clayHighlight,
-                borderLeftColor: palette.clayHighlight,
-                borderBottomColor: 'rgba(0,0,0,0.4)',
-                borderRightColor: 'rgba(0,0,0,0.25)',
+                backgroundColor: palette.surface,
+                borderColor: '#000000',
               },
             ]}
           >
@@ -604,46 +601,62 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
             <View style={styles.actionGrid}>
               <TouchableOpacity onPress={handleReplyMessage} style={styles.actionItem}>
-                <CornerUpLeft size={20} color={palette.primaryLight} />
+                <View style={[styles.actionIconCircle, { backgroundColor: '#2E4BFF', borderColor: '#000000' }]}>
+                  <CornerUpLeft size={18} color="#FFFFFF" />
+                </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Reply</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleCopyMessage} style={styles.actionItem}>
-                <Copy size={20} color={palette.textPrimary} />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+                  <Copy size={18} color="#FFFFFF" />
+                </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Copy</Text>
               </TouchableOpacity>
 
               {isSelectedMsgEditable && (
                 <TouchableOpacity onPress={handleOpenEdit} style={styles.actionItem}>
-                  <Edit3 size={20} color={palette.primaryLight} />
+                  <View style={[styles.actionIconCircle, { backgroundColor: '#00F0FF', borderColor: '#000000' }]}>
+                    <Edit3 size={18} color="#100F17" />
+                  </View>
                   <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Edit</Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity onPress={handleOpenForwardSingle} style={styles.actionItem}>
-                <CornerUpRight size={20} color={palette.primaryLight} />
+                <View style={[styles.actionIconCircle, { backgroundColor: '#C6FF3D', borderColor: '#000000' }]}>
+                  <CornerUpRight size={18} color="#100F17" />
+                </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Forward</Text>
               </TouchableOpacity>
 
               {isSelectedMsgMine && (
                 <TouchableOpacity onPress={handleOpenMessageInfo} style={styles.actionItem}>
-                  <Info size={20} color={palette.textPrimary} />
+                  <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+                    <Info size={18} color="#FFFFFF" />
+                  </View>
                   <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Info</Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity onPress={handleStarMsg} style={styles.actionItem}>
-                <Star size={20} color="#E6A868" />
+                <View style={[styles.actionIconCircle, { backgroundColor: '#FFD23F', borderColor: '#000000' }]}>
+                  <Star size={18} color="#100F17" />
+                </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Star</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleStartSelection} style={styles.actionItem}>
-                <CheckSquare size={20} color={palette.textPrimary} />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+                  <CheckSquare size={18} color="#FFFFFF" />
+                </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Select</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleDeletePrompt} style={styles.actionItem}>
-                <Trash2 size={20} color={palette.error} />
+                <View style={[styles.actionIconCircle, { backgroundColor: '#FF4D5E', borderColor: '#000000' }]}>
+                  <Trash2 size={18} color="#FFFFFF" />
+                </View>
                 <Text style={[styles.actionLabel, { color: palette.error }]}>Delete</Text>
               </TouchableOpacity>
             </View>
@@ -654,21 +667,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       {/* Inline Edit Modal */}
       <Modal visible={showEditModal} transparent animationType="fade" onRequestClose={() => setShowEditModal(false)}>
         <View style={styles.editModalOverlay}>
-          <View style={[styles.editModalContainer, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+          <View style={[styles.editModalContainer, { backgroundColor: palette.surface, borderColor: '#000000' }]}>
             <Text style={[styles.editModalTitle, { color: palette.textPrimary }]}>Edit Message</Text>
             <TextInput
               value={editText}
               onChangeText={setEditText}
-              style={[styles.editModalInput, { color: palette.textPrimary, borderColor: palette.border }]}
+              style={[styles.editModalInput, { color: palette.textPrimary, borderColor: '#000000', backgroundColor: palette.inputBackground }]}
               multiline
               autoFocus
             />
             <View style={styles.editModalButtons}>
               <TouchableOpacity onPress={() => setShowEditModal(false)} style={styles.editModalCancel}>
-                <Text style={{ color: palette.textMuted, fontWeight: '700' }}>Cancel</Text>
+                <Text style={{ color: palette.textMuted, fontWeight: '800' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveEdit} style={[styles.editModalSave, { backgroundColor: palette.primary }]}>
-                <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>Save</Text>
+              <TouchableOpacity onPress={handleSaveEdit} style={[styles.editModalSave, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
+                <Text style={{ color: '#FFFFFF', fontWeight: '900' }}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -716,29 +729,78 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingBottom: 10,
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 14,
+    borderBottomWidth: 2,
+  },
+  headerBackWrapper: {
+    position: 'relative',
+    marginRight: 10,
+  },
+  headerBackShadow: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#000000',
+  },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   selectionHeader: {
-    paddingBottom: 10,
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 14,
+    borderBottomWidth: 2,
   },
-  selectionCount: { fontSize: 16, fontWeight: '800' },
-  selectionActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  backBtn: { padding: 6 },
+  selectionCount: { fontSize: 18, fontWeight: '900', letterSpacing: -0.3 },
+  selectionActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actionIconPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#000000',
+    backgroundColor: '#FFFFFF',
+  },
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 4 },
   headerTextContainer: { marginLeft: 10, flex: 1 },
-  headerName: { fontSize: 16, fontWeight: '700' },
-  headerStatus: { fontSize: 11, fontWeight: '500' },
-  headerActions: { flexDirection: 'row', alignItems: 'center' },
-  actionIcon: { padding: 8, marginLeft: 4 },
+  headerName: { fontSize: 17, fontWeight: '900', letterSpacing: -0.3 },
+  headerStatus: { fontSize: 12, fontWeight: '700', marginTop: 1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerActionBtnWrapper: {
+    position: 'relative',
+  },
+  headerActionBtnShadow: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#000000',
+  },
+  actionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
   disappearingNotice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -746,36 +808,57 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     gap: 6,
+    borderBottomWidth: 1,
   },
-  disappearingText: { fontSize: 12, fontWeight: '500' },
+  disappearingText: { fontSize: 12, fontWeight: '700' },
   messagesList: { paddingVertical: 12 },
-  jumpBtn: {
+  jumpBtnWrapper: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 84,
     right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  },
+  jumpBtnShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#000000',
+  },
+  jumpBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    elevation: 6,
+    zIndex: 1,
   },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   actionSheetContainer: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    borderWidth: 1,
+    borderWidth: 2,
     padding: 20,
   },
   actionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingTop: 10,
+    paddingTop: 14,
   },
   actionItem: { alignItems: 'center', width: '25%', paddingVertical: 10 },
-  actionLabel: { fontSize: 11, fontWeight: '600', marginTop: 6 },
+  actionIconCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  actionLabel: { fontSize: 12, fontWeight: '800' },
   editModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -783,10 +866,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  editModalContainer: { width: '100%', borderRadius: 24, borderWidth: 1.5, padding: 20 },
-  editModalTitle: { fontSize: 17, fontWeight: '800', marginBottom: 12 },
-  editModalInput: { borderWidth: 1, borderRadius: 14, padding: 12, fontSize: 15, minHeight: 80, textAlignVertical: 'top' },
+  editModalContainer: { width: '100%', borderRadius: 24, borderWidth: 2, padding: 20 },
+  editModalTitle: { fontSize: 18, fontWeight: '900', marginBottom: 12, letterSpacing: -0.3 },
+  editModalInput: { borderWidth: 2, borderRadius: 16, padding: 14, fontSize: 15, fontWeight: '600', minHeight: 88, textAlignVertical: 'top' },
   editModalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 14 },
-  editModalCancel: { paddingHorizontal: 16, paddingVertical: 10 },
-  editModalSave: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14 },
+  editModalCancel: { paddingHorizontal: 16, paddingVertical: 10, justifyContent: 'center' },
+  editModalSave: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14, borderWidth: 2 },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,21 +9,20 @@ import Animated, {
   withSpring,
   Easing,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Mic, MicOff, Video, VideoOff, Volume2, PhoneOff, Phone, RefreshCw, Users, AlertCircle } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { triggerHaptic } from '../../utils/haptics';
 
-const ClayRippleRing: React.FC<{ delay: number; color: string }> = ({ delay, color }) => {
+const BoldRippleRing: React.FC<{ delay: number; color: string }> = ({ delay, color }) => {
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.5);
+  const opacity = useSharedValue(0.6);
 
   useEffect(() => {
     scale.value = withDelay(
       delay,
       withRepeat(
-        withTiming(2.2, { duration: 2400, easing: Easing.out(Easing.sin) }),
+        withTiming(2.2, { duration: 2200, easing: Easing.out(Easing.sin) }),
         -1,
         false
       )
@@ -31,7 +30,7 @@ const ClayRippleRing: React.FC<{ delay: number; color: string }> = ({ delay, col
     opacity.value = withDelay(
       delay,
       withRepeat(
-        withTiming(0, { duration: 2400, easing: Easing.out(Easing.sin) }),
+        withTiming(0, { duration: 2200, easing: Easing.out(Easing.sin) }),
         -1,
         false
       )
@@ -47,7 +46,7 @@ const ClayRippleRing: React.FC<{ delay: number; color: string }> = ({ delay, col
     <Animated.View
       style={[
         styles.rippleRing,
-        { borderColor: color, backgroundColor: color },
+        { borderColor: color },
         animatedStyle,
       ]}
     />
@@ -70,8 +69,8 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
 
   const [seconds, setSeconds] = useState(0);
 
-  const acceptScale = useSharedValue(1);
-  const declineScale = useSharedValue(1);
+  const acceptOffset = useSharedValue(0);
+  const declineOffset = useSharedValue(0);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -114,11 +113,17 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const isConnected = activeCall.status === 'connected';
 
   const acceptAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: acceptScale.value }],
+    transform: [
+      { translateX: acceptOffset.value },
+      { translateY: acceptOffset.value },
+    ],
   }));
 
   const declineAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: declineScale.value }],
+    transform: [
+      { translateX: declineOffset.value },
+      { translateY: declineOffset.value },
+    ],
   }));
 
   return (
@@ -135,22 +140,21 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
       <View style={styles.header}>
         {isBusy ? (
           <View style={styles.busyContainer}>
-            <AlertCircle size={64} color="#E57373" style={{ marginBottom: 16 }} />
+            <AlertCircle size={64} color="#FF4D5E" style={{ marginBottom: 16 }} />
             <Text style={styles.peerName}>{activeCall.peerName}</Text>
-            <Text style={[styles.callStatus, { color: '#E57373' }]}>User is busy on another call</Text>
+            <Text style={[styles.callStatus, { color: '#FF4D5E' }]}>User is busy on another call</Text>
           </View>
         ) : (
           <>
             {(!isConnected || activeCall.type === 'voice' || !activeCall.isVideoEnabled) && (
               <View style={styles.avatarHolder}>
-                <ClayRippleRing delay={0} color="rgba(139, 127, 209, 0.22)" />
-                <ClayRippleRing delay={800} color="rgba(123, 147, 214, 0.18)" />
-                <ClayRippleRing delay={1600} color="rgba(111, 175, 160, 0.15)" />
+                <BoldRippleRing delay={0} color="#FF4D5E" />
+                <BoldRippleRing delay={800} color="#C6FF3D" />
 
-                <View style={styles.clayAvatarWrapper}>
+                <View style={styles.avatarWrapper}>
                   {activeCall.isGroupCall ? (
-                    <View style={[styles.avatar, { backgroundColor: '#7C3AED', justifyContent: 'center', alignItems: 'center' }]}>
-                      <Users size={48} color="#FFFFFF" />
+                    <View style={[styles.avatar, { backgroundColor: '#2E4BFF', justifyContent: 'center', alignItems: 'center' }]}>
+                      <Users size={52} color="#FFFFFF" />
                     </View>
                   ) : (
                     <Image
@@ -177,7 +181,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
         )}
       </View>
 
-      {/* Video Canvas Container (Support 1:1 or Group Multi-Tile Grid) */}
+      {/* Video Canvas Container */}
       {!isIncoming && !isBusy && activeCall.type === 'video' && (
         <View style={styles.videoCanvas}>
           {activeCall.isGroupCall ? (
@@ -208,14 +212,14 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
                 style={StyleSheet.absoluteFillObject}
               />
               <View style={styles.videoOverlay}>
-                <Text style={styles.hdBadge}>MeshX RTC HD</Text>
+                <Text style={styles.hdBadge}>MeshX 1080p HD</Text>
               </View>
             </>
           )}
 
           {activeCall.isVideoEnabled && (
             <View style={styles.pipView}>
-              <LinearGradient colors={['#8B7FD1', '#7B93D6']} style={StyleSheet.absoluteFillObject} />
+              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#2E4BFF' }]} />
               <Text style={styles.pipLabel}>You</Text>
             </View>
           )}
@@ -225,82 +229,96 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
       {/* Incoming Call Controls */}
       {isIncoming ? (
         <View style={styles.incomingControlsRow}>
-          <TouchableWithoutFeedback
-            onPressIn={() => (declineScale.value = withSpring(0.92, { damping: 14, stiffness: 240 }))}
-            onPressOut={() => (declineScale.value = withSpring(1, { damping: 12, stiffness: 180 }))}
-            onPress={handleDeclineCall}
-          >
-            <Animated.View style={[styles.declineClayBtn, declineAnimatedStyle]}>
-              <PhoneOff size={28} color="#FFFFFF" />
-              <Text style={styles.btnLabel}>Decline</Text>
-            </Animated.View>
-          </TouchableWithoutFeedback>
+          {/* Decline Button */}
+          <View style={styles.bigBtnWrapper}>
+            <View style={styles.bigBtnShadow} />
+            <Pressable
+              onPressIn={() => (declineOffset.value = withSpring(4, { damping: 14, stiffness: 280 }))}
+              onPressOut={() => (declineOffset.value = withSpring(0, { damping: 12, stiffness: 220 }))}
+              onPress={handleDeclineCall}
+            >
+              <Animated.View style={[styles.declineBtn, declineAnimatedStyle]}>
+                <PhoneOff size={30} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.btnLabel}>Decline</Text>
+              </Animated.View>
+            </Pressable>
+          </View>
 
-          <TouchableWithoutFeedback
-            onPressIn={() => (acceptScale.value = withSpring(0.92, { damping: 14, stiffness: 240 }))}
-            onPressOut={() => (acceptScale.value = withSpring(1, { damping: 12, stiffness: 180 }))}
-            onPress={handleAcceptCall}
-          >
-            <Animated.View style={[styles.acceptClayBtn, acceptAnimatedStyle]}>
-              <Phone size={28} color="#FFFFFF" />
-              <Text style={styles.btnLabel}>Accept</Text>
-            </Animated.View>
-          </TouchableWithoutFeedback>
+          {/* Accept Button */}
+          <View style={styles.bigBtnWrapper}>
+            <View style={styles.bigBtnShadow} />
+            <Pressable
+              onPressIn={() => (acceptOffset.value = withSpring(4, { damping: 14, stiffness: 280 }))}
+              onPressOut={() => (acceptOffset.value = withSpring(0, { damping: 12, stiffness: 220 }))}
+              onPress={handleAcceptCall}
+            >
+              <Animated.View style={[styles.acceptBtn, acceptAnimatedStyle]}>
+                <Phone size={30} color="#100F17" strokeWidth={2.5} />
+                <Text style={[styles.btnLabel, { color: '#100F17' }]}>Accept</Text>
+              </Animated.View>
+            </Pressable>
+          </View>
         </View>
       ) : isBusy ? (
-        <TouchableOpacity style={styles.endClayBtn} onPress={handleEndCall}>
-          <PhoneOff size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.endBtnWrapper}>
+          <View style={styles.endBtnShadow} />
+          <TouchableOpacity style={styles.endBtn} onPress={handleEndCall}>
+            <PhoneOff size={24} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
       ) : (
-        /* Connected / Outgoing Call Controls Bar */
-        <View style={styles.controlsRow}>
-          <TouchableOpacity
-            style={[styles.controlBtn, activeCall.isMuted && styles.controlBtnActive]}
-            onPress={() => {
-              triggerHaptic('selection');
-              toggleMuteCall();
-            }}
-          >
-            {activeCall.isMuted ? <MicOff size={24} color="#E57373" /> : <Mic size={24} color="#FFFFFF" />}
-          </TouchableOpacity>
-
-          {activeCall.type === 'video' && (
+        /* Connected Call Controls Bar */
+        <View style={styles.controlsOuter}>
+          <View style={styles.controlsShadow} />
+          <View style={styles.controlsRow}>
             <TouchableOpacity
-              style={[styles.controlBtn, !activeCall.isVideoEnabled && styles.controlBtnActive]}
+              style={[styles.controlBtn, activeCall.isMuted && styles.controlBtnActive]}
               onPress={() => {
                 triggerHaptic('selection');
-                toggleVideoCall();
+                toggleMuteCall();
               }}
             >
-              {activeCall.isVideoEnabled ? <Video size={24} color="#FFFFFF" /> : <VideoOff size={24} color="#E57373" />}
+              {activeCall.isMuted ? <MicOff size={24} color="#FF4D5E" /> : <Mic size={24} color="#FFFFFF" />}
             </TouchableOpacity>
-          )}
 
-          {activeCall.type === 'video' && activeCall.isVideoEnabled && (
+            {activeCall.type === 'video' && (
+              <TouchableOpacity
+                style={[styles.controlBtn, !activeCall.isVideoEnabled && styles.controlBtnActive]}
+                onPress={() => {
+                  triggerHaptic('selection');
+                  toggleVideoCall();
+                }}
+              >
+                {activeCall.isVideoEnabled ? <Video size={24} color="#FFFFFF" /> : <VideoOff size={24} color="#FF4D5E" />}
+              </TouchableOpacity>
+            )}
+
+            {activeCall.type === 'video' && activeCall.isVideoEnabled && (
+              <TouchableOpacity
+                style={styles.controlBtn}
+                onPress={() => {
+                  triggerHaptic('selection');
+                  toggleCameraFlip();
+                }}
+              >
+                <RefreshCw size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
-              style={styles.controlBtn}
+              style={[styles.controlBtn, activeCall.isSpeakerOn && styles.controlBtnActive]}
               onPress={() => {
                 triggerHaptic('selection');
-                toggleCameraFlip();
+                toggleSpeakerCall();
               }}
             >
-              <RefreshCw size={22} color="#FFFFFF" />
+              <Volume2 size={24} color={activeCall.isSpeakerOn ? '#C6FF3D' : '#FFFFFF'} />
             </TouchableOpacity>
-          )}
 
-          <TouchableOpacity
-            style={[styles.controlBtn, activeCall.isSpeakerOn && styles.controlBtnActive]}
-            onPress={() => {
-              triggerHaptic('selection');
-              toggleSpeakerCall();
-            }}
-          >
-            <Volume2 size={24} color={activeCall.isSpeakerOn ? '#8B7FD1' : '#FFFFFF'} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.endClayBtn} onPress={handleEndCall}>
-            <PhoneOff size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.endBtn} onPress={handleEndCall}>
+              <PhoneOff size={24} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -310,7 +328,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#12121A',
+    backgroundColor: '#100F17',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -336,48 +354,42 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    borderWidth: 2.5,
+    borderWidth: 3,
   },
-  clayAvatarWrapper: {
+  avatarWrapper: {
     width: 130,
     height: 130,
     borderRadius: 65,
     borderWidth: 3,
-    borderTopColor: 'rgba(255, 255, 255, 0.25)',
-    borderLeftColor: 'rgba(255, 255, 255, 0.20)',
-    borderBottomColor: 'rgba(0, 0, 0, 0.50)',
-    borderRightColor: 'rgba(0, 0, 0, 0.35)',
+    borderColor: '#000000',
     overflow: 'hidden',
-    elevation: 12,
+    zIndex: 1,
   },
   avatar: {
     width: '100%',
     height: '100%',
   },
   peerName: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '900',
     color: '#FFFFFF',
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   callStatus: {
     fontSize: 16,
     color: '#A5A5BA',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   videoCanvas: {
     width: '100%',
     height: 380,
-    borderRadius: 32,
+    borderRadius: 24,
     borderWidth: 2,
-    borderTopColor: 'rgba(255,255,255,0.2)',
-    borderLeftColor: 'rgba(255,255,255,0.15)',
-    borderBottomColor: 'rgba(0,0,0,0.5)',
-    borderRightColor: 'rgba(0,0,0,0.3)',
+    borderColor: '#000000',
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#1E1E2C',
-    elevation: 8,
+    backgroundColor: '#1C1A2E',
   },
   groupVideoGrid: {
     flex: 1,
@@ -395,12 +407,12 @@ const styles = StyleSheet.create({
     bottom: 8,
     left: 8,
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: '900',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   videoOverlay: {
     position: 'absolute',
@@ -408,13 +420,15 @@ const styles = StyleSheet.create({
     left: 14,
   },
   hdBadge: {
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: '#000000',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 10,
-    color: '#6FAFA0',
+    borderWidth: 1.5,
+    borderColor: '#C6FF3D',
+    color: '#C6FF3D',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   pipView: {
     position: 'absolute',
@@ -425,66 +439,100 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pipLabel: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  pipLabel: { color: '#FFFFFF', fontWeight: '900', fontSize: 13 },
+  controlsOuter: {
+    position: 'relative',
+    marginBottom: 30,
+  },
+  controlsShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 36,
+    backgroundColor: '#000000',
+  },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 30,
-    backgroundColor: '#1B1B26',
-    paddingHorizontal: 18,
+    backgroundColor: '#1C1A2E',
+    paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 36,
-    borderWidth: 1.8,
-    borderTopColor: 'rgba(255,255,255,0.16)',
-    borderBottomColor: 'rgba(0,0,0,0.4)',
-    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#000000',
+    zIndex: 1,
   },
   controlBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 2,
+    borderColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
   },
   controlBtnActive: { backgroundColor: '#FFFFFF' },
-  endClayBtn: {
+  endBtnWrapper: { position: 'relative' },
+  endBtnShadow: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#000000',
+  },
+  endBtn: {
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: '#E57373',
-    borderWidth: 1.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-  },
-  incomingControlsRow: { flexDirection: 'row', gap: 60, marginBottom: 50 },
-  declineClayBtn: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#E57373',
+    backgroundColor: '#FF4D5E', // Hot Coral
     borderWidth: 2,
+    borderColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
+    zIndex: 1,
   },
-  acceptClayBtn: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: '#6FAFA0',
+  incomingControlsRow: { flexDirection: 'row', gap: 50, marginBottom: 50 },
+  bigBtnWrapper: { position: 'relative' },
+  bigBtnShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: '#000000',
+  },
+  declineBtn: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: '#FF4D5E', // Hot Coral
     borderWidth: 2,
+    borderColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
+    zIndex: 1,
   },
-  btnLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', marginTop: 4 },
+  acceptBtn: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: '#C6FF3D', // Electric Lime
+    borderWidth: 2,
+    borderColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  btnLabel: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', marginTop: 4 },
 });

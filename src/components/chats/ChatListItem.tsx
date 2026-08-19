@@ -1,18 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   FadeInRight,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BellOff } from 'lucide-react-native';
 import { Chat } from '../../types';
 import { Avatar } from '../common/Avatar';
 import { useThemeStore } from '../../store/useThemeStore';
 import { formatChatTimestamp } from '../../utils/dateUtils';
 import { triggerHaptic } from '../../utils/haptics';
+import { getContactAccent } from '../../theme/colors';
 
 interface ChatListItemProps {
   chat: Chat;
@@ -29,7 +29,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   onPress,
 }) => {
   const palette = useThemeStore((state) => state.palette);
-  const scale = useSharedValue(1);
+  const pressedOffset = useSharedValue(0);
 
   const isGroup = chat.type === 'group';
   const recipient =
@@ -47,6 +47,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   const displayName = isGroup ? (chat.groupName || 'Group') : (recipient?.name || 'Direct Chat');
   const avatarUrl = isGroup ? (chat.groupAvatar || chat.groupAvatarUrl) : recipient?.avatarUrl;
   const isOnline = !isGroup && !!recipient?.isOnline;
+  const assignedAccent = getContactAccent(displayName);
 
   const unreadCount = Number(chat.unreadCount) || 0;
   const hasUnread = unreadCount > 0;
@@ -63,45 +64,58 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   };
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.965, { damping: 14, stiffness: 240 });
+    triggerHaptic('light');
+    pressedOffset.value = withSpring(3, { damping: 14, stiffness: 280 });
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 180 });
+    pressedOffset.value = withSpring(0, { damping: 12, stiffness: 220 });
   };
 
   const handlePress = () => {
-    triggerHaptic('light');
     onPress();
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { translateX: pressedOffset.value },
+      { translateY: pressedOffset.value },
+    ],
+  }));
+
+  const animatedShadowStyle = useAnimatedStyle(() => ({
+    opacity: pressedOffset.value >= 2 ? 0 : 1,
   }));
 
   const timeVal = Number(chat.lastMessage?.timestamp || chat.lastMessage?.createdAt) || (typeof chat.updatedAt === 'number' ? chat.updatedAt : Date.now());
 
   return (
-    <Animated.View entering={FadeInRight.duration(250)} style={{ marginHorizontal: 12, marginVertical: 4 }}>
-      <TouchableWithoutFeedback
+    <Animated.View entering={FadeInRight.duration(250)} style={styles.container}>
+      {/* Hard Offset Comic Shadow */}
+      <Animated.View style={[styles.hardShadow, animatedShadowStyle]} />
+
+      <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
       >
         <Animated.View
           style={[
-            styles.clayRow,
+            styles.cardBody,
             {
               backgroundColor: palette.surface,
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0, 0, 0, 0.35)',
-              borderRightColor: 'rgba(0, 0, 0, 0.22)',
+              borderColor: hasUnread ? assignedAccent : '#000000',
             },
             animatedStyle,
           ]}
         >
-          <Avatar url={avatarUrl} name={displayName} size="md" isOnline={isOnline} />
+          <Avatar
+            url={avatarUrl}
+            name={displayName}
+            size="md"
+            isOnline={isOnline}
+            accentColor={assignedAccent}
+          />
 
           <View style={styles.content}>
             <View style={styles.topRow}>
@@ -110,7 +124,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
                   styles.name,
                   {
                     color: palette.textPrimary,
-                    fontWeight: hasUnread ? '800' : '600',
+                    fontWeight: hasUnread ? '900' : '700',
                   },
                 ]}
                 numberOfLines={1}
@@ -122,8 +136,8 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
                   style={[
                     styles.timestamp,
                     {
-                      color: hasUnread ? palette.primaryLight : palette.textMuted,
-                      fontWeight: hasUnread ? '700' : '500',
+                      color: hasUnread ? assignedAccent : palette.textMuted,
+                      fontWeight: hasUnread ? '800' : '600',
                     },
                   ]}
                 >
@@ -138,7 +152,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
                   styles.preview,
                   {
                     color: hasUnread ? palette.textPrimary : palette.textSecondary,
-                    fontWeight: hasUnread ? '700' : '400',
+                    fontWeight: hasUnread ? '700' : '500',
                   },
                 ]}
                 numberOfLines={1}
@@ -149,67 +163,73 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
               <View style={styles.actionsBadgeGroup}>
                 {chat.isMuted && <BellOff size={14} color={palette.textMuted} style={{ marginRight: 6 }} />}
                 {hasUnread && (
-                  <View
-                    style={[
-                      styles.unreadClayBadge,
-                      {
-                        borderTopColor: palette.clayHighlight,
-                        borderLeftColor: palette.clayHighlight,
-                        borderBottomColor: 'rgba(0,0,0,0.3)',
-                        borderRightColor: 'rgba(0,0,0,0.2)',
-                      },
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={['#8B7FD1', '#7B93D6']}
-                      style={styles.unreadBadgeGradient}
+                  <View style={styles.unreadWrapper}>
+                    <View style={styles.unreadShadow} />
+                    <View
+                      style={[
+                        styles.unreadBadge,
+                        {
+                          backgroundColor: palette.primary, // Hot Coral #FF4D5E
+                          borderColor: '#000000',
+                        },
+                      ]}
                     >
                       <Text style={styles.unreadText}>{unreadDisplay}</Text>
-                    </LinearGradient>
+                    </View>
                   </View>
                 )}
               </View>
             </View>
           </View>
         </Animated.View>
-      </TouchableWithoutFeedback>
+      </Pressable>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  clayRow: {
+  container: {
+    position: 'relative',
+    marginHorizontal: 14,
+    marginVertical: 4,
+  },
+  hardShadow: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 20,
+    backgroundColor: '#000000',
+    zIndex: 0,
+  },
+  cardBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    shadowColor: '#000000',
-    shadowOffset: { width: 4, height: 6 },
-    shadowOpacity: 0.32,
-    shadowRadius: 10,
-    elevation: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 2,
+    zIndex: 1,
   },
   content: {
     flex: 1,
-    marginLeft: 14,
+    marginLeft: 12,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    letterSpacing: -0.3,
     flex: 1,
     marginRight: 8,
   },
   timestamp: {
     fontSize: 12,
-    fontWeight: '500',
   },
   bottomRow: {
     flexDirection: 'row',
@@ -225,27 +245,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  unreadClayBadge: {
+  unreadWrapper: {
+    position: 'relative',
+  },
+  unreadShadow: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#000000',
+  },
+  unreadBadge: {
     minWidth: 22,
     height: 22,
     borderRadius: 11,
-    borderWidth: 1.2,
-    overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  unreadBadgeGradient: {
-    flex: 1,
+    borderWidth: 1.5,
     paddingHorizontal: 6,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
   },
   unreadText: {
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
   },
 });

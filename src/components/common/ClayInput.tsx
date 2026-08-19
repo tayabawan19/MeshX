@@ -12,37 +12,60 @@ interface ClayInputProps {
 export const ClayInput: React.FC<ClayInputProps> = ({
   children,
   style,
-  borderRadius = 22,
+  borderRadius = 18,
   isFocused = false,
 }) => {
   const palette = useThemeStore((state) => state.palette);
 
   return (
-    <View
-      style={[
-        styles.recessedSlot,
-        {
-          backgroundColor: palette.inputBackground,
-          borderRadius,
-          borderTopColor: isFocused ? palette.primary : palette.clayInsetDark,
-          borderLeftColor: isFocused ? palette.primary : palette.clayInsetDark,
-          borderBottomColor: isFocused ? palette.primaryLight : palette.clayInsetLight,
-          borderRightColor: isFocused ? palette.primaryLight : palette.clayInsetLight,
-        },
-        style,
-      ]}
-    >
-      {children}
+    <View style={styles.outerWrapper}>
+      {isFocused && (
+        <View
+          style={[
+            styles.hardShadow,
+            {
+              backgroundColor: palette.secondary, // Electric lime shadow on focus
+              borderRadius,
+            },
+          ]}
+        />
+      )}
+      <View
+        style={[
+          styles.inputSlot,
+          {
+            backgroundColor: palette.inputBackground,
+            borderRadius,
+            borderColor: isFocused ? palette.secondary : '#000000',
+            borderWidth: 2,
+          },
+          style,
+        ]}
+      >
+        {children}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  recessedSlot: {
-    borderWidth: 1.8,
+  outerWrapper: {
+    position: 'relative',
+    marginVertical: 4,
+  },
+  hardShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    right: -3,
+    bottom: -3,
+    zIndex: 0,
+  },
+  inputSlot: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    height: 52,
+    paddingHorizontal: 16,
+    height: 54,
+    zIndex: 1,
   },
 });

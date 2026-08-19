@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
 import { useThemeStore } from '../../store/useThemeStore';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface ClaySwitchProps {
   value: boolean;
@@ -19,12 +20,12 @@ export const ClaySwitch: React.FC<ClaySwitchProps> = ({
   disabled = false,
 }) => {
   const palette = useThemeStore((state) => state.palette);
-  const translateX = useSharedValue(value ? 22 : 2);
+  const translateX = useSharedValue(value ? 24 : 3);
 
   useEffect(() => {
-    translateX.value = withSpring(value ? 22 : 2, {
-      damping: 14,
-      stiffness: 220,
+    translateX.value = withSpring(value ? 24 : 3, {
+      damping: 12,
+      stiffness: 280,
     });
   }, [value]);
 
@@ -34,20 +35,21 @@ export const ClaySwitch: React.FC<ClaySwitchProps> = ({
 
   const handleToggle = () => {
     if (disabled) return;
+    triggerHaptic('light');
     onValueChange(!value);
   };
 
   return (
-    <TouchableWithoutFeedback onPress={handleToggle} disabled={disabled}>
+    <Pressable onPress={handleToggle} disabled={disabled} style={styles.container}>
+      {/* Hard Offset Shadow */}
+      <View style={styles.hardShadow} />
+
       <View
         style={[
           styles.track,
           {
-            backgroundColor: value ? palette.primary : palette.inputBackground,
-            borderTopColor: value ? palette.primaryLight : palette.clayInsetDark,
-            borderLeftColor: value ? palette.primaryLight : palette.clayInsetDark,
-            borderBottomColor: value ? palette.primary : palette.clayInsetLight,
-            borderRightColor: value ? palette.primary : palette.clayInsetLight,
+            backgroundColor: value ? palette.secondary : palette.surfaceLight, // Electric lime when ON
+            borderColor: '#000000',
           },
         ]}
       >
@@ -55,37 +57,45 @@ export const ClaySwitch: React.FC<ClaySwitchProps> = ({
           style={[
             styles.thumb,
             {
-              backgroundColor: '#FFFFFF',
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0, 0, 0, 0.35)',
-              borderRightColor: 'rgba(0, 0, 0, 0.20)',
+              backgroundColor: value ? '#100F17' : '#FFFFFF',
+              borderColor: '#000000',
             },
             thumbAnimatedStyle,
           ]}
         />
       </View>
-    </TouchableWithoutFeedback>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+    width: 56,
+    height: 32,
+  },
+  hardShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    width: 54,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#000000',
+    zIndex: 0,
+  },
   track: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1.5,
+    width: 54,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
     justifyContent: 'center',
+    zIndex: 1,
   },
   thumb: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    borderWidth: 1.2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.38,
-    shadowRadius: 5,
-    elevation: 4,
+    borderWidth: 2,
   },
 });

@@ -8,7 +8,7 @@ interface ReactionPickerProps {
   onSelectEmoji: (emoji: string) => void;
 }
 
-const EMOJIS = ['❤️', '🔥', '👍', '😂', '😮', '🙏', '🎉'];
+const EMOJIS = ['❤️', '🔥', '👍', '😂', '😮', '🙏', '🎉', '⚡'];
 
 export const ReactionPicker: React.FC<ReactionPickerProps> = ({ onSelectEmoji }) => {
   const palette = useThemeStore((state) => state.palette);
@@ -19,44 +19,56 @@ export const ReactionPicker: React.FC<ReactionPickerProps> = ({ onSelectEmoji })
   };
 
   return (
-    <Animated.View
-      entering={ZoomIn.duration(200)}
-      style={[styles.container, { backgroundColor: palette.surfaceElevated, borderColor: palette.glassBorder }]}
-    >
-      {EMOJIS.map((emoji) => (
-        <TouchableOpacity
-          key={emoji}
-          activeOpacity={0.7}
-          onPress={() => handleSelect(emoji)}
-          style={styles.emojiButton}
-        >
-          <Text style={styles.emojiText}>{emoji}</Text>
-        </TouchableOpacity>
-      ))}
-    </Animated.View>
+    <View style={styles.wrapper}>
+      <View style={styles.hardShadow} />
+      <Animated.View
+        entering={ZoomIn.duration(200)}
+        style={[styles.container, { backgroundColor: palette.surface, borderColor: '#000000' }]}
+      >
+        {EMOJIS.map((emoji) => (
+          <TouchableOpacity
+            key={emoji}
+            activeOpacity={0.7}
+            onPress={() => handleSelect(emoji)}
+            style={styles.emojiButton}
+          >
+            <Text style={styles.emojiText}>{emoji}</Text>
+          </TouchableOpacity>
+        ))}
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    position: 'relative',
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  hardShadow: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+    zIndex: 0,
+  },
   container: {
     flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 28,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
-    alignSelf: 'center',
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 24,
+    borderWidth: 2,
+    zIndex: 1,
   },
   emojiButton: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 4,
   },
   emojiText: {
-    fontSize: 22,
+    fontSize: 26,
   },
 });

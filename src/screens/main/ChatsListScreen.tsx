@@ -5,7 +5,7 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
-  TouchableWithoutFeedback,
+  Pressable,
   StyleSheet,
   RefreshControl,
   Alert,
@@ -16,7 +16,6 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Search, Users, MessageSquarePlus, X, Archive, Star, Radio } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -24,6 +23,7 @@ import { ChatListItem } from '../../components/chats/ChatListItem';
 import { StoryAvatarRow } from '../../components/chats/StoryAvatarRow';
 import { ChatListItemSkeleton } from '../../components/common/SkeletonLoader';
 import { ClayInput } from '../../components/common/ClayInput';
+import { BoldButton } from '../../components/common/BoldButton';
 import { triggerHaptic } from '../../utils/haptics';
 import { CreateStoryModal } from '../modals/CreateStoryModal';
 import { StoryViewerModal } from '../modals/StoryViewerModal';
@@ -58,7 +58,7 @@ export const ChatsListScreen: React.FC<{
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [activeStoryGroup, setActiveStoryGroup] = useState<{ user: any; stories: any[]; isMine?: boolean } | null>(null);
 
-  const fabScale = useSharedValue(1);
+  const fabPressedOffset = useSharedValue(0);
 
   useEffect(() => {
     loadData();
@@ -158,8 +158,24 @@ export const ChatsListScreen: React.FC<{
 
   const insets = useSafeAreaInsets();
 
+  const handleFabPressIn = () => {
+    triggerHaptic('medium');
+    fabPressedOffset.value = withSpring(4, { damping: 14, stiffness: 280 });
+  };
+
+  const handleFabPressOut = () => {
+    fabPressedOffset.value = withSpring(0, { damping: 12, stiffness: 220 });
+  };
+
   const fabAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: fabScale.value }],
+    transform: [
+      { translateX: fabPressedOffset.value },
+      { translateY: fabPressedOffset.value },
+    ],
+  }));
+
+  const fabShadowAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fabPressedOffset.value >= 3 ? 0 : 1,
   }));
 
   return (
@@ -169,9 +185,9 @@ export const ChatsListScreen: React.FC<{
         style={[
           styles.header,
           {
-            paddingTop: Math.max(insets.top, 12),
-            backgroundColor: palette.surface,
-            borderBottomColor: palette.border,
+            paddingTop: Math.max(insets.top, 14),
+            backgroundColor: palette.background,
+            borderBottomColor: '#000000',
           },
         ]}
       >
@@ -180,32 +196,41 @@ export const ChatsListScreen: React.FC<{
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={handleOpenStarred}
-            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated }]}
-          >
-            <Star size={18} color="#E6A868" />
-          </TouchableOpacity>
+          <View style={styles.headerBtnWrapper}>
+            <View style={styles.headerBtnShadow} />
+            <TouchableOpacity
+              onPress={handleOpenStarred}
+              style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+            >
+              <Star size={18} color={palette.highlight} />
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            onPress={handleOpenBroadcast}
-            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated }]}
-          >
-            <Radio size={18} color={palette.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.headerBtnWrapper}>
+            <View style={styles.headerBtnShadow} />
+            <TouchableOpacity
+              onPress={handleOpenBroadcast}
+              style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+            >
+              <Radio size={18} color={palette.secondary} />
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            onPress={handleOpenGroup}
-            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated }]}
-          >
-            <Users size={19} color={palette.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.headerBtnWrapper}>
+            <View style={styles.headerBtnShadow} />
+            <TouchableOpacity
+              onPress={handleOpenGroup}
+              style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+            >
+              <Users size={19} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
-      {/* Recessed Clay Search Slot */}
+      {/* Bold Search Slot */}
       <View style={styles.searchWrapper}>
-        <ClayInput borderRadius={24} style={styles.searchBar}>
+        <ClayInput borderRadius={18} style={styles.searchBar}>
           <Search size={18} color={palette.textMuted} style={{ marginRight: 8 }} />
           <TextInput
             value={searchQuery}
@@ -222,7 +247,7 @@ export const ChatsListScreen: React.FC<{
         </ClayInput>
       </View>
 
-      {/* Active Stories Row with Puffy Donut Rings */}
+      {/* Active Stories Row */}
       <StoryAvatarRow
         storyGroups={storyGroups}
         myStories={myStories}
@@ -230,20 +255,23 @@ export const ChatsListScreen: React.FC<{
         onCreateStory={() => setIsCreateStoryOpen(true)}
       />
 
-      {/* Archived Chats Quick Row (if any archived) */}
+      {/* Archived Chats Quick Row */}
       {archivedChats.length > 0 && (
-        <TouchableOpacity
-          onPress={handleOpenArchived}
-          style={[styles.archivedRow, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
-        >
-          <View style={styles.archivedLeft}>
-            <Archive size={18} color={palette.primaryLight} style={{ marginRight: 10 }} />
-            <Text style={[styles.archivedLabel, { color: palette.textPrimary }]}>Archived</Text>
-          </View>
-          <View style={[styles.archivedBadge, { backgroundColor: palette.primary }]}>
-            <Text style={styles.archivedBadgeText}>{archivedChats.length}</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.archivedWrapper}>
+          <View style={styles.archivedShadow} />
+          <TouchableOpacity
+            onPress={handleOpenArchived}
+            style={[styles.archivedRow, { backgroundColor: palette.surface, borderColor: '#000000' }]}
+          >
+            <View style={styles.archivedLeft}>
+              <Archive size={18} color={palette.secondary} style={{ marginRight: 10 }} />
+              <Text style={[styles.archivedLabel, { color: palette.textPrimary }]}>Archived</Text>
+            </View>
+            <View style={[styles.archivedBadge, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
+              <Text style={styles.archivedBadgeText}>{archivedChats.length}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Chats List */}
@@ -264,7 +292,7 @@ export const ChatsListScreen: React.FC<{
               tintColor={palette.primary}
             />
           }
-          contentContainerStyle={{ paddingBottom: 90 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
           renderItem={({ item }) => {
             const cId = item.chatId || (item as any).id || (item as any)._id;
             return (
@@ -280,54 +308,48 @@ export const ChatsListScreen: React.FC<{
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={{ fontSize: 48, marginBottom: 12 }}>💬</Text>
+              <Text style={{ fontSize: 52, marginBottom: 12 }}>⚡</Text>
               <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>
-                No chats yet
+                No Conversations Yet
               </Text>
               <Text style={[styles.emptySub, { color: palette.textMuted }]}>
                 {searchQuery
                   ? 'No conversations match your search.'
-                  : 'Add someone to start chatting on MeshX!'}
+                  : 'Start a bold new chat on MeshX!'}
               </Text>
-              <TouchableOpacity
-                style={[styles.emptyBtn, { backgroundColor: palette.primary }]}
+              <BoldButton
+                title="Start New Chat"
+                variant="primary"
                 onPress={handleOpenNewChat}
-              >
-                <Text style={styles.emptyBtnText}>Start New Chat</Text>
-              </TouchableOpacity>
+                style={{ marginTop: 8 }}
+              />
             </View>
           }
         />
       )}
 
-      {/* Prominent Puffy Clay FAB */}
-      <TouchableWithoutFeedback
-        onPressIn={() => (fabScale.value = withSpring(0.92, { damping: 14, stiffness: 260 }))}
-        onPressOut={() => (fabScale.value = withSpring(1, { damping: 12, stiffness: 180 }))}
-        onPress={handleOpenNewChat}
-      >
-        <Animated.View
-          style={[
-            styles.fabClayButton,
-            {
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0, 0, 0, 0.45)',
-              borderRightColor: 'rgba(0, 0, 0, 0.30)',
-            },
-            fabAnimatedStyle,
-          ]}
+      {/* Bold Floating Action Button (FAB) */}
+      <View style={styles.fabWrapper}>
+        <Animated.View style={[styles.fabHardShadow, fabShadowAnimatedStyle]} />
+        <Pressable
+          onPressIn={handleFabPressIn}
+          onPressOut={handleFabPressOut}
+          onPress={handleOpenNewChat}
         >
-          <LinearGradient
-            colors={[palette.primary, palette.accent]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.fabGradient}
+          <Animated.View
+            style={[
+              styles.fabButton,
+              {
+                backgroundColor: palette.primary, // Hot Coral #FF4D5E
+                borderColor: '#000000',
+              },
+              fabAnimatedStyle,
+            ]}
           >
             <MessageSquarePlus size={26} color="#FFFFFF" />
-          </LinearGradient>
-        </Animated.View>
-      </TouchableWithoutFeedback>
+          </Animated.View>
+        </Pressable>
+      </View>
 
       {/* Create Story Modal */}
       <CreateStoryModal visible={isCreateStoryOpen} onClose={() => setIsCreateStoryOpen(false)} />
@@ -345,58 +367,98 @@ export const ChatsListScreen: React.FC<{
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingBottom: 10,
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerTitle: { fontSize: 28, fontWeight: '900', letterSpacing: -0.8 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerBtnWrapper: { position: 'relative' },
+  headerBtnShadow: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#000000',
+  },
   headerIconBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    borderWidth: 1.2,
+    borderRadius: 12,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
+    zIndex: 1,
   },
-  searchWrapper: { paddingHorizontal: 16, paddingVertical: 10 },
-  searchBar: { height: 46 },
-  searchInput: { flex: 1, fontSize: 14 },
+  searchWrapper: { paddingHorizontal: 16, paddingVertical: 8 },
+  searchBar: { height: 50 },
+  searchInput: { flex: 1, fontSize: 15, fontWeight: '600' },
+  archivedWrapper: {
+    position: 'relative',
+    marginHorizontal: 14,
+    marginBottom: 8,
+  },
+  archivedShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    right: -3,
+    bottom: -3,
+    borderRadius: 16,
+    backgroundColor: '#000000',
+    zIndex: 0,
+  },
   archivedRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginHorizontal: 16,
-    marginBottom: 8,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 2,
+    zIndex: 1,
   },
   archivedLeft: { flexDirection: 'row', alignItems: 'center' },
-  archivedLabel: { fontSize: 14, fontWeight: '700' },
-  archivedBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  archivedBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  archivedLabel: { fontSize: 15, fontWeight: '800' },
+  archivedBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  archivedBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
   emptyContainer: { padding: 40, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '800', marginBottom: 6 },
-  emptySub: { fontSize: 14, textAlign: 'center', marginBottom: 20 },
-  emptyBtn: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 22, elevation: 4 },
-  emptyBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
-  fabClayButton: {
+  emptyTitle: { fontSize: 20, fontWeight: '900', marginBottom: 6, letterSpacing: -0.3 },
+  emptySub: { fontSize: 14, textAlign: 'center', marginBottom: 16, fontWeight: '500' },
+  fabWrapper: {
     position: 'absolute',
     bottom: 24,
     right: 20,
+    zIndex: 10,
+  },
+  fabHardShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: '#000000',
+    zIndex: 0,
+  },
+  fabButton: {
     width: 62,
     height: 62,
     borderRadius: 31,
     borderWidth: 2,
-    overflow: 'hidden',
-    elevation: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
-  fabGradient: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
 });

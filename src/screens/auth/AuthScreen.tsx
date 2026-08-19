@@ -7,10 +7,9 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MessageSquare, Mail, Lock, User, Phone } from 'lucide-react-native';
-import { GradientButton } from '../../components/common/GradientButton';
-import { ClayCard } from '../../components/common/ClayCard';
+import { BoldButton } from '../../components/common/BoldButton';
+import { BoldCard } from '../../components/common/BoldCard';
 import { ClayInput } from '../../components/common/ClayInput';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -72,27 +71,13 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   return (
     <View style={[styles.screen, { backgroundColor: palette.background }]}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        {/* Header Clay Logo */}
+        {/* Header Logo Badge with Hard Shadow */}
         <View style={styles.header}>
-          <View
-            style={[
-              styles.clayLogoBadge,
-              {
-                borderTopColor: palette.clayHighlight,
-                borderLeftColor: palette.clayHighlight,
-                borderBottomColor: 'rgba(0,0,0,0.45)',
-                borderRightColor: 'rgba(0,0,0,0.30)',
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={[palette.primary, palette.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.logoGradient}
-            >
-              <MessageSquare size={38} color="#FFFFFF" />
-            </LinearGradient>
+          <View style={styles.logoShadowWrapper}>
+            <View style={styles.logoHardShadow} />
+            <View style={[styles.logoBadge, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
+              <MessageSquare size={38} color="#FFFFFF" strokeWidth={2.5} />
+            </View>
           </View>
 
           <Text style={[styles.appTitle, { color: palette.textPrimary }]}>MESHX</Text>
@@ -101,21 +86,10 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
           </Text>
         </View>
 
-        {/* Raised Clay Form Card */}
-        <ClayCard borderRadius={32} elevationLevel="high" style={styles.formCard}>
-          {/* Recessed Clay Toggle Track */}
-          <View
-            style={[
-              styles.toggleTrack,
-              {
-                backgroundColor: palette.inputBackground,
-                borderTopColor: palette.clayInsetDark,
-                borderLeftColor: palette.clayInsetDark,
-                borderBottomColor: palette.clayInsetLight,
-                borderRightColor: palette.clayInsetLight,
-              },
-            ]}
-          >
+        {/* Bold Form Card */}
+        <BoldCard borderRadius={24} style={styles.formCard}>
+          {/* Segmented Toggle Track */}
+          <View style={[styles.toggleTrack, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => {
@@ -128,13 +102,13 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
                 isLogin && [
                   styles.togglePillActive,
                   {
-                    backgroundColor: palette.primary,
-                    borderTopColor: palette.clayHighlight,
+                    backgroundColor: palette.secondary, // Electric Lime #C6FF3D
+                    borderColor: '#000000',
                   },
                 ],
               ]}
             >
-              <Text style={[styles.toggleText, isLogin ? styles.toggleTextActive : { color: palette.textMuted }]}>
+              <Text style={[styles.toggleText, { color: isLogin ? '#100F17' : palette.textMuted }]}>
                 Login
               </Text>
             </TouchableOpacity>
@@ -151,25 +125,25 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
                 !isLogin && [
                   styles.togglePillActive,
                   {
-                    backgroundColor: palette.primary,
-                    borderTopColor: palette.clayHighlight,
+                    backgroundColor: palette.secondary, // Electric Lime #C6FF3D
+                    borderColor: '#000000',
                   },
                 ],
               ]}
             >
-              <Text style={[styles.toggleText, !isLogin ? styles.toggleTextActive : { color: palette.textMuted }]}>
+              <Text style={[styles.toggleText, { color: !isLogin ? '#100F17' : palette.textMuted }]}>
                 Sign Up
               </Text>
             </TouchableOpacity>
           </View>
 
           {(localError || error) ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorText}>{localError || error}</Text>
+            <View style={[styles.errorBanner, { borderColor: palette.error }]}>
+              <Text style={[styles.errorText, { color: palette.error }]}>{localError || error}</Text>
             </View>
           ) : null}
 
-          {/* Recessed Clay Input Slots */}
+          {/* Bold Input Slots */}
           {!isLogin && (
             <>
               <ClayInput style={styles.inputSlot}>
@@ -228,17 +202,19 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
               onPress={() => navigation.navigate('ForgotPassword')}
               style={styles.forgotBtn}
             >
-              <Text style={[styles.forgotText, { color: palette.primaryLight }]}>Forgot Password?</Text>
+              <Text style={[styles.forgotText, { color: palette.secondary }]}>Forgot Password?</Text>
             </TouchableOpacity>
           )}
 
-          <GradientButton
+          <BoldButton
             title={isLogin ? 'Sign In' : 'Create Account'}
             onPress={handleAuthSubmit}
-            isLoading={isLoading}
-            style={{ marginTop: 8 }}
+            loading={isLoading}
+            variant="primary"
+            size="lg"
+            style={{ marginTop: 10 }}
           />
-        </ClayCard>
+        </BoldCard>
       </ScrollView>
     </View>
   );
@@ -258,32 +234,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  clayLogoBadge: {
+  logoShadowWrapper: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  logoHardShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
     width: 80,
     height: 80,
-    borderRadius: 32,
-    borderWidth: 2,
-    overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 6, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 10,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+    zIndex: 0,
   },
-  logoGradient: {
-    width: '100%',
-    height: '100%',
+  logoBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
   },
   appTitle: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 14,
+    fontWeight: '600',
     marginTop: 6,
     textAlign: 'center',
   },
@@ -292,8 +273,8 @@ const styles = StyleSheet.create({
   },
   toggleTrack: {
     flexDirection: 'row',
-    borderRadius: 20,
-    borderWidth: 1.5,
+    borderRadius: 16,
+    borderWidth: 2,
     padding: 4,
     marginBottom: 20,
   },
@@ -301,40 +282,30 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 12,
   },
   togglePillActive: {
-    borderWidth: 1.2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 4,
+    borderWidth: 1.5,
   },
   toggleText: {
-    fontWeight: '600',
+    fontWeight: '900',
     fontSize: 14,
-  },
-  toggleTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   errorBanner: {
-    backgroundColor: 'rgba(229, 115, 115, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(229, 115, 115, 0.35)',
+    backgroundColor: 'rgba(255, 77, 94, 0.15)',
+    borderWidth: 1.5,
     borderRadius: 14,
     padding: 10,
     marginBottom: 14,
   },
   errorText: {
-    color: '#E57373',
     fontSize: 13,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '800',
   },
   inputSlot: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
   inputIcon: {
     marginRight: 10,
@@ -342,15 +313,16 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 15,
+    fontWeight: '600',
     height: '100%',
   },
   forgotBtn: {
     alignSelf: 'flex-end',
-    marginBottom: 14,
+    marginBottom: 12,
     marginTop: -2,
   },
   forgotText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

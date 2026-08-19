@@ -13,22 +13,22 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
-import { X, Camera, ImageIcon, Type, Check, Send, Lock, Globe, Users, ShieldAlert } from 'lucide-react-native';
+import { X, Camera, ImageIcon, Type, Check, Send, Lock } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { apiClient } from '../../config/api';
 import { triggerHaptic } from '../../utils/haptics';
+import { BoldButton } from '../../components/common/BoldButton';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const COLOR_PALETTES: [string, string][] = [
-  ['#8B7FD1', '#7B93D6'],
-  ['#6FAFA0', '#7B93D6'],
-  ['#E58A8A', '#8B7FD1'],
-  ['#D4A373', '#E6A868'],
-  ['#7EA68B', '#6FAFA0'],
-  ['#7B93D6', '#8B7FD1'],
+const FLAT_PALETTES: string[] = [
+  '#FF4D5E', // Hot Coral
+  '#2E4BFF', // Cobalt Blue
+  '#C6FF3D', // Electric Lime
+  '#A855F7', // Bubblegum Violet
+  '#00F0FF', // Cyber Cyan
+  '#FFD23F', // Sunshine Yellow
 ];
 
 interface CreateStoryModalProps {
@@ -41,7 +41,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
   const { contacts, postStory } = useChatStore();
 
   const [mode, setMode] = useState<'picker' | 'text' | 'media'>('picker');
-  const [selectedGradient, setSelectedGradient] = useState<[string, string]>(COLOR_PALETTES[0]);
+  const [selectedColor, setSelectedColor] = useState<string>(FLAT_PALETTES[0]);
   const [text, setText] = useState('');
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
@@ -151,7 +151,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
         await postStory({
           type: 'text',
           caption: text.trim(),
-          backgroundColor: selectedGradient[0],
+          backgroundColor: selectedColor,
           ...privacyPayload,
         });
       } else if (mode === 'media' && mediaUri) {
@@ -201,7 +201,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
         {/* Mode: Picker Sheet */}
         {mode === 'picker' && (
           <TouchableOpacity activeOpacity={1} onPress={handleClose} style={styles.modalOverlay}>
-            <View style={[styles.pickerSheet, { backgroundColor: palette.surfaceElevated }]}>
+            <View style={[styles.pickerSheet, { backgroundColor: palette.surface, borderColor: '#000000' }]}>
               <View style={styles.sheetHeader}>
                 <Text style={[styles.sheetTitle, { color: palette.textPrimary }]}>Create Story</Text>
                 <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
@@ -212,9 +212,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
               {/* Privacy Trigger Pill */}
               <TouchableOpacity
                 onPress={() => setShowPrivacySheet(true)}
-                style={[styles.privacyTrigger, { backgroundColor: palette.surface, borderColor: palette.border }]}
+                style={[styles.privacyTrigger, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
               >
-                <Lock size={14} color={palette.primaryLight} style={{ marginRight: 6 }} />
+                <Lock size={14} color={palette.secondary} style={{ marginRight: 6 }} />
                 <Text style={[styles.privacyTriggerText, { color: palette.textPrimary }]}>
                   {visibility === 'contacts'
                     ? 'My contacts'
@@ -226,16 +226,18 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
 
               <View style={styles.optionsRow}>
                 <TouchableOpacity onPress={() => pickMedia('camera')} style={styles.optionBtn}>
-                  <LinearGradient colors={['#EC4899', '#8B5CF6']} style={styles.optionIcon}>
+                  <View style={styles.optionIconShadow} />
+                  <View style={[styles.optionIcon, { backgroundColor: '#FF4D5E', borderColor: '#000000' }]}>
                     <Camera size={28} color="#FFFFFF" />
-                  </LinearGradient>
+                  </View>
                   <Text style={[styles.optionLabel, { color: palette.textPrimary }]}>Camera</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => pickMedia('gallery')} style={styles.optionBtn}>
-                  <LinearGradient colors={['#3B82F6', '#06B6D4']} style={styles.optionIcon}>
+                  <View style={styles.optionIconShadow} />
+                  <View style={[styles.optionIcon, { backgroundColor: '#2E4BFF', borderColor: '#000000' }]}>
                     <ImageIcon size={28} color="#FFFFFF" />
-                  </LinearGradient>
+                  </View>
                   <Text style={[styles.optionLabel, { color: palette.textPrimary }]}>Gallery</Text>
                 </TouchableOpacity>
 
@@ -246,9 +248,10 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                   }}
                   style={styles.optionBtn}
                 >
-                  <LinearGradient colors={['#7C3AED', '#3B82F6']} style={styles.optionIcon}>
-                    <Type size={28} color="#FFFFFF" />
-                  </LinearGradient>
+                  <View style={styles.optionIconShadow} />
+                  <View style={[styles.optionIcon, { backgroundColor: '#C6FF3D', borderColor: '#000000' }]}>
+                    <Type size={28} color="#100F17" strokeWidth={2.5} />
+                  </View>
                   <Text style={[styles.optionLabel, { color: palette.textPrimary }]}>Text Story</Text>
                 </TouchableOpacity>
               </View>
@@ -258,21 +261,21 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
 
         {/* Mode: Text Story Creator */}
         {mode === 'text' && (
-          <LinearGradient colors={selectedGradient} style={styles.fullScreenContent}>
+          <View style={[styles.fullScreenContent, { backgroundColor: selectedColor }]}>
             <View style={styles.topHeader}>
-              <TouchableOpacity onPress={handleReset} style={styles.iconCircle}>
+              <TouchableOpacity onPress={handleReset} style={[styles.iconCircle, { backgroundColor: '#000000', borderColor: '#FFFFFF' }]}>
                 <X size={22} color="#FFFFFF" />
               </TouchableOpacity>
 
               <View style={styles.swatchRow}>
-                {COLOR_PALETTES.map((colors, idx) => (
+                {FLAT_PALETTES.map((color, idx) => (
                   <TouchableOpacity
                     key={idx}
-                    onPress={() => setSelectedGradient(colors)}
+                    onPress={() => setSelectedColor(color)}
                     style={[
                       styles.swatch,
-                      { backgroundColor: colors[0] },
-                      selectedGradient[0] === colors[0] && styles.swatchActive,
+                      { backgroundColor: color, borderColor: '#000000' },
+                      selectedColor === color && styles.swatchActive,
                     ]}
                   />
                 ))}
@@ -281,9 +284,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
               <TouchableOpacity
                 onPress={handlePost}
                 disabled={isPosting || !text.trim()}
-                style={[styles.postBtn, { opacity: text.trim() ? 1 : 0.5 }]}
+                style={[styles.postBtn, { backgroundColor: '#000000', borderColor: '#FFFFFF', opacity: text.trim() ? 1 : 0.5 }]}
               >
-                {isPosting ? <ActivityIndicator color="#FFFFFF" /> : <Send size={18} color="#FFFFFF" />}
+                {isPosting ? <ActivityIndicator color="#FFFFFF" /> : <Send size={18} color="#FFFFFF" strokeWidth={2.5} />}
               </TouchableOpacity>
             </View>
 
@@ -292,112 +295,126 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                 value={text}
                 onChangeText={setText}
                 placeholder="Tap to type a story..."
-                placeholderTextColor="rgba(255,255,255,0.6)"
+                placeholderTextColor={selectedColor === '#C6FF3D' || selectedColor === '#FFD23F' ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)'}
                 multiline
                 autoFocus
-                style={styles.textStoryInput}
-              />
-            </View>
-          </LinearGradient>
-        )}
-
-        {/* Mode: Media Story Preview */}
-        {mode === 'media' && mediaUri && (
-          <View style={styles.fullScreenContent}>
-            <Image source={{ uri: mediaUri }} style={styles.mediaPreview} />
-
-            <View style={styles.topHeaderOverlay}>
-              <TouchableOpacity onPress={handleReset} style={styles.iconCircle}>
-                <X size={22} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={handlePost} disabled={isPosting} style={styles.postBtn}>
-                {isPosting ? <ActivityIndicator color="#FFFFFF" /> : <Send size={18} color="#FFFFFF" />}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.captionInputContainer}>
-              <TextInput
-                value={caption}
-                onChangeText={setCaption}
-                placeholder="Add a caption..."
-                placeholderTextColor="rgba(255,255,255,0.7)"
-                style={styles.captionInput}
+                style={[
+                  styles.textStoryInput,
+                  { color: selectedColor === '#C6FF3D' || selectedColor === '#FFD23F' ? '#100F17' : '#FFFFFF' },
+                ]}
               />
             </View>
           </View>
         )}
 
-        {/* Privacy Selector Bottom Sheet */}
-        <Modal visible={showPrivacySheet} transparent animationType="slide" onRequestClose={() => setShowPrivacySheet(false)}>
-          <TouchableOpacity activeOpacity={1} onPress={() => setShowPrivacySheet(false)} style={styles.modalOverlay}>
-            <View style={[styles.privacySheetContainer, { backgroundColor: palette.surfaceElevated }]}>
-              <View style={styles.sheetHeader}>
-                <Text style={[styles.sheetTitle, { color: palette.textPrimary }]}>Story Privacy</Text>
-                <TouchableOpacity onPress={() => setShowPrivacySheet(false)}>
-                  <Check size={22} color={palette.primary} />
+        {/* Mode: Media Story Preview & Caption */}
+        {mode === 'media' && mediaUri && (
+          <View style={styles.fullScreenContent}>
+            <Image source={{ uri: mediaUri }} style={StyleSheet.absoluteFillObject} resizeMode="contain" />
+
+            <View style={styles.topHeader}>
+              <TouchableOpacity onPress={handleReset} style={[styles.iconCircle, { backgroundColor: '#000000', borderColor: '#000000' }]}>
+                <X size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.bottomCaptionRow}>
+              <View style={styles.captionInputShadow} />
+              <View style={styles.captionInputSlot}>
+                <TextInput
+                  value={caption}
+                  onChangeText={setCaption}
+                  placeholder="Add a caption..."
+                  placeholderTextColor="#A5A5BA"
+                  style={styles.captionTextInput}
+                />
+                <TouchableOpacity onPress={handlePost} disabled={isPosting} style={styles.sendMediaBtn}>
+                  {isPosting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Send size={18} color="#FFFFFF" strokeWidth={2.5} />}
                 </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                onPress={() => setVisibility('contacts')}
-                style={[styles.privacyOption, visibility === 'contacts' && { backgroundColor: 'rgba(255,255,255,0.06)' }]}
-              >
-                <Globe size={18} color={palette.primary} style={{ marginRight: 12 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.privacyTitle, { color: palette.textPrimary }]}>My contacts</Text>
-                  <Text style={[styles.privacyDesc, { color: palette.textMuted }]}>Share with all contacts</Text>
-                </View>
-                {visibility === 'contacts' && <Check size={16} color={palette.primary} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setVisibility('except')}
-                style={[styles.privacyOption, visibility === 'except' && { backgroundColor: 'rgba(255,255,255,0.06)' }]}
-              >
-                <ShieldAlert size={18} color={palette.error} style={{ marginRight: 12 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.privacyTitle, { color: palette.textPrimary }]}>My contacts except...</Text>
-                  <Text style={[styles.privacyDesc, { color: palette.textMuted }]}>Hide from selected people</Text>
-                </View>
-                {visibility === 'except' && <Check size={16} color={palette.primary} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setVisibility('only')}
-                style={[styles.privacyOption, visibility === 'only' && { backgroundColor: 'rgba(255,255,255,0.06)' }]}
-              >
-                <Users size={18} color={palette.primaryLight} style={{ marginRight: 12 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.privacyTitle, { color: palette.textPrimary }]}>Only share with...</Text>
-                  <Text style={[styles.privacyDesc, { color: palette.textMuted }]}>Share with selected people only</Text>
-                </View>
-                {visibility === 'only' && <Check size={16} color={palette.primary} />}
-              </TouchableOpacity>
-
-              {/* Multi-Select Contact List for Except / Only */}
-              {(visibility === 'except' || visibility === 'only') && (
-                <FlatList
-                  data={contacts}
-                  keyExtractor={(item) => item.id || item._id || ''}
-                  style={styles.privacyContactsList}
-                  renderItem={({ item }) => {
-                    const uId = item.id || item._id || '';
-                    const isSelected = selectedContactIds.includes(uId);
-                    return (
-                      <TouchableOpacity onPress={() => toggleSelectPrivacyContact(uId)} style={styles.privacyContactRow}>
-                        <Image source={{ uri: item.avatarUrl }} style={styles.contactAvatar} />
-                        <Text style={[styles.contactName, { color: palette.textPrimary }]}>{item.name}</Text>
-                        <View style={[styles.checkbox, isSelected && { backgroundColor: palette.primary, borderColor: palette.primary }]}>
-                          {isSelected && <Check size={12} color="#FFFFFF" />}
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              )}
             </View>
-          </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Privacy Selector Modal Sheet */}
+        <Modal visible={showPrivacySheet} transparent animationType="slide" onRequestClose={() => setShowPrivacySheet(false)}>
+          <View style={styles.privacyModalOverlay}>
+            <View style={[styles.privacySheetCard, { backgroundColor: palette.surface, borderColor: '#000000' }]}>
+              <Text style={[styles.privacySheetTitle, { color: palette.textPrimary }]}>Status Privacy</Text>
+              <Text style={[styles.privacySheetSub, { color: palette.textMuted }]}>
+                Who can see my status updates:
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHaptic('selection');
+                  setVisibility('contacts');
+                }}
+                style={[styles.privacyOption, visibility === 'contacts' && styles.privacyOptionActive]}
+              >
+                <Text style={[styles.privacyOptionText, { color: palette.textPrimary }]}>My contacts</Text>
+                {visibility === 'contacts' && <Check size={18} color={palette.secondary} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHaptic('selection');
+                  setVisibility('except');
+                }}
+                style={[styles.privacyOption, visibility === 'except' && styles.privacyOptionActive]}
+              >
+                <Text style={[styles.privacyOptionText, { color: palette.textPrimary }]}>My contacts except...</Text>
+                {visibility === 'except' && <Check size={18} color={palette.secondary} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHaptic('selection');
+                  setVisibility('only');
+                }}
+                style={[styles.privacyOption, visibility === 'only' && styles.privacyOptionActive]}
+              >
+                <Text style={[styles.privacyOptionText, { color: palette.textPrimary }]}>Only share with...</Text>
+                {visibility === 'only' && <Check size={18} color={palette.secondary} />}
+              </TouchableOpacity>
+
+              {/* Contacts Selection List */}
+              {(visibility === 'except' || visibility === 'only') && (
+                <View style={styles.contactListWrapper}>
+                  <Text style={[styles.contactListHeader, { color: palette.secondary }]}>
+                    {visibility === 'except' ? 'Hide status from:' : 'Share status only with:'}
+                  </Text>
+                  <FlatList
+                    data={contacts}
+                    keyExtractor={(item) => item.id || item._id || ''}
+                    style={{ maxHeight: 180 }}
+                    renderItem={({ item }) => {
+                      const cId = item.id || item._id || '';
+                      const isSelected = selectedContactIds.includes(cId);
+                      return (
+                        <TouchableOpacity
+                          onPress={() => toggleSelectPrivacyContact(cId)}
+                          style={styles.contactRow}
+                        >
+                          <Text style={[styles.contactName, { color: palette.textPrimary }]}>{item.name}</Text>
+                          <View style={[styles.checkbox, isSelected && { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
+                            {isSelected && <Check size={14} color="#100F17" strokeWidth={3} />}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    }}
+                  />
+                </View>
+              )}
+
+              <BoldButton
+                title="Save Privacy"
+                variant="primary"
+                onPress={() => setShowPrivacySheet(false)}
+                style={{ marginTop: 16 }}
+              />
+            </View>
+          </View>
         </Modal>
       </View>
     </Modal>
@@ -405,38 +422,165 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  pickerSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sheetTitle: { fontSize: 20, fontWeight: '700' },
+  container: { flex: 1, backgroundColor: '#000000' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  pickerSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 2,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sheetTitle: { fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
   closeBtn: { padding: 4 },
-  privacyTrigger: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, borderWidth: 1, marginBottom: 20 },
-  privacyTriggerText: { fontSize: 12, fontWeight: '600' },
-  optionsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingBottom: 16 },
+  privacyTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 2,
+    marginBottom: 24,
+  },
+  privacyTriggerText: { fontSize: 13, fontWeight: '800' },
+  optionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   optionBtn: { alignItems: 'center' },
-  optionIcon: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 8, elevation: 4 },
-  optionLabel: { fontSize: 13, fontWeight: '600' },
-  fullScreenContent: { flex: 1, width: SCREEN_WIDTH, height: SCREEN_HEIGHT, justifyContent: 'space-between' },
-  topHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20 },
-  topHeaderOverlay: { position: 'absolute', top: 50, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', zIndex: 10 },
-  iconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  optionIconShadow: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: '#000000',
+  },
+  optionIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    zIndex: 1,
+  },
+  optionLabel: { fontSize: 13, fontWeight: '800' },
+  fullScreenContent: { flex: 1, justifyContent: 'space-between' },
+  topHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   swatchRow: { flexDirection: 'row', gap: 8 },
-  swatch: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#FFFFFF' },
-  swatchActive: { transform: [{ scale: 1.2 }], borderColor: '#F59E0B' },
-  postBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#7C3AED', justifyContent: 'center', alignItems: 'center', elevation: 4 },
-  textCenterWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
-  textStoryInput: { color: '#FFFFFF', fontSize: 28, fontWeight: '800', textAlign: 'center', width: '100%' },
-  mediaPreview: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, resizeMode: 'contain', backgroundColor: '#000000' },
-  captionInputContainer: { position: 'absolute', bottom: 40, left: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 24, paddingHorizontal: 18, paddingVertical: 8 },
-  captionInput: { color: '#FFFFFF', fontSize: 16, height: 44 },
-  privacySheetContainer: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, maxHeight: SCREEN_HEIGHT * 0.7 },
-  privacyOption: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, marginBottom: 8 },
-  privacyTitle: { fontSize: 15, fontWeight: '700' },
-  privacyDesc: { fontSize: 12, marginTop: 2 },
-  privacyContactsList: { maxHeight: 200, marginTop: 10 },
-  privacyContactRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 6 },
-  contactAvatar: { width: 34, height: 34, borderRadius: 17, marginRight: 10 },
-  contactName: { fontSize: 14, fontWeight: '600', flex: 1 },
-  checkbox: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#666', justifyContent: 'center', alignItems: 'center' },
+  swatch: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+  },
+  swatchActive: {
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  postBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textCenterWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  textStoryInput: {
+    fontSize: 32,
+    fontWeight: '900',
+    textAlign: 'center',
+    width: '100%',
+    lineHeight: 42,
+  },
+  bottomCaptionRow: {
+    padding: 16,
+    paddingBottom: 34,
+    position: 'relative',
+  },
+  captionInputShadow: {
+    position: 'absolute',
+    top: 19,
+    left: 19,
+    right: 13,
+    bottom: 31,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+  },
+  captionInputSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1C1A2E',
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#000000',
+    paddingHorizontal: 14,
+    height: 50,
+    zIndex: 1,
+  },
+  captionTextInput: { flex: 1, color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  sendMediaBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FF4D5E', // Hot Coral
+    borderWidth: 2,
+    borderColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  privacyModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 20 },
+  privacySheetCard: { borderRadius: 24, borderWidth: 2, padding: 20 },
+  privacySheetTitle: { fontSize: 20, fontWeight: '900', marginBottom: 4, letterSpacing: -0.3 },
+  privacySheetSub: { fontSize: 13, fontWeight: '600', marginBottom: 16 },
+  privacyOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  privacyOptionActive: { backgroundColor: 'rgba(198, 255, 61, 0.08)', borderRadius: 12, paddingHorizontal: 8 },
+  privacyOptionText: { fontSize: 15, fontWeight: '800' },
+  contactListWrapper: { marginTop: 12 },
+  contactListHeader: { fontSize: 12, fontWeight: '900', marginBottom: 8 },
+  contactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  contactName: { fontSize: 14, fontWeight: '700' },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#A5A5BA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

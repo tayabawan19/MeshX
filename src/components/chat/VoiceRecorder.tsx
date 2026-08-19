@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Audio } from 'expo-av';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Mic, Trash2, Send } from 'lucide-react-native';
+import { Trash2, Send } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
 import { formatCallDuration } from '../../utils/dateUtils';
@@ -67,12 +67,13 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSendVoiceNote, o
       }
     }
 
-    // Reset audio mode back to playback
     try {
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
       });
     } catch (e) {}
 
@@ -91,6 +92,8 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSendVoiceNote, o
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
       });
     } catch (e) {}
     onCancel();
@@ -100,35 +103,60 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSendVoiceNote, o
     <Animated.View
       entering={FadeIn.duration(200)}
       exiting={FadeOut.duration(200)}
-      style={[styles.container, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
+      style={styles.container}
     >
-      <TouchableOpacity onPress={handleCancel} style={styles.trashBtn}>
-        <Trash2 size={22} color={palette.error} />
-      </TouchableOpacity>
+      <View style={styles.hardShadow} />
+      <View
+        style={[
+          styles.recorderBody,
+          {
+            backgroundColor: palette.surface,
+            borderColor: '#000000',
+          },
+        ]}
+      >
+        <TouchableOpacity onPress={handleCancel} style={styles.trashBtn}>
+          <Trash2 size={22} color={palette.error} />
+        </TouchableOpacity>
 
-      <View style={styles.recordingStatus}>
-        <View style={styles.redDot} />
-        <Text style={[styles.timerText, { color: palette.textPrimary }]}>{formatCallDuration(seconds)}</Text>
-        <Text style={[styles.slideText, { color: palette.textMuted }]}>Release or tap trash to cancel</Text>
+        <View style={styles.recordingStatus}>
+          <View style={[styles.redDot, { backgroundColor: palette.primary }]} />
+          <Text style={[styles.timerText, { color: palette.textPrimary }]}>{formatCallDuration(seconds)}</Text>
+          <Text style={[styles.slideText, { color: palette.textMuted }]}>Tap trash to cancel</Text>
+        </View>
+
+        <TouchableOpacity onPress={handleSend} style={[styles.sendBtn, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
+          <Send size={18} color="#FFFFFF" strokeWidth={2.5} />
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity onPress={handleSend} style={[styles.sendBtn, { backgroundColor: palette.primary }]}>
-        <Send size={18} color="#FFFFFF" />
-      </TouchableOpacity>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    position: 'relative',
+    marginHorizontal: 12,
+    marginBottom: 8,
+  },
+  hardShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    right: -3,
+    bottom: -3,
+    borderRadius: 22,
+    backgroundColor: '#000000',
+    zIndex: 0,
+  },
+  recorderBody: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 26,
-    borderWidth: 1,
-    marginHorizontal: 12,
-    marginBottom: 8,
+    borderRadius: 22,
+    borderWidth: 2,
+    zIndex: 1,
   },
   trashBtn: {
     padding: 8,
@@ -143,21 +171,23 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#EF4444',
     marginRight: 8,
   },
   timerText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '900',
+    letterSpacing: -0.3,
   },
   slideText: {
     fontSize: 12,
+    fontWeight: '600',
     marginLeft: 12,
   },
   sendBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },

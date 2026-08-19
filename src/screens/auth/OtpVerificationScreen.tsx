@@ -11,15 +11,13 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { ArrowLeft, ShieldCheck, RefreshCw } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { GradientButton } from '../../components/common/GradientButton';
+import { BoldButton } from '../../components/common/BoldButton';
 import { triggerHaptic } from '../../utils/haptics';
 
 export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = ({
@@ -126,105 +124,69 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
         style={{ flex: 1, justifyContent: 'space-between' }}
       >
         <View>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={[
-              styles.clayBackBtn,
-              {
-                backgroundColor: palette.surfaceElevated,
-                borderTopColor: palette.clayHighlight,
-                borderLeftColor: palette.clayHighlight,
-                borderBottomColor: 'rgba(0,0,0,0.35)',
-                borderRightColor: 'rgba(0,0,0,0.2)',
-              },
-            ]}
-          >
-            <ArrowLeft size={22} color={palette.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.backWrapper}>
+            <View style={styles.backShadow} />
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={[styles.backBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+            >
+              <ArrowLeft size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.header}>
-            <View
-              style={[
-                styles.clayIconCircle,
-                {
-                  borderTopColor: palette.clayHighlight,
-                  borderLeftColor: palette.clayHighlight,
-                  borderBottomColor: 'rgba(0,0,0,0.45)',
-                  borderRightColor: 'rgba(0,0,0,0.3)',
-                },
-              ]}
-            >
-              <LinearGradient
-                colors={[palette.primary, palette.accent]}
-                style={styles.iconGradient}
-              >
-                <ShieldCheck size={40} color="#FFFFFF" />
-              </LinearGradient>
+            <View style={styles.iconShadowWrapper}>
+              <View style={styles.iconHardShadow} />
+              <View style={[styles.iconBadge, { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
+                <ShieldCheck size={40} color="#100F17" strokeWidth={2.5} />
+              </View>
             </View>
 
             <Text style={[styles.title, { color: palette.textPrimary }]}>Verification Code</Text>
             <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
               We sent a 6-digit verification code to{'\n'}
-              <Text style={{ color: palette.primaryLight, fontWeight: '700' }}>{email}</Text>
+              <Text style={{ color: palette.secondary, fontWeight: '800' }}>{email}</Text>
             </Text>
           </View>
 
           {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+            <View style={[styles.errorBox, { borderColor: palette.error }]}>
+              <Text style={[styles.errorText, { color: palette.error }]}>{error}</Text>
             </View>
           ) : null}
 
-          {/* Inset Clay Digit Boxes that pop into raised nubs */}
+          {/* Chunky Digit Boxes with Hard Shadows */}
           <Animated.View style={[styles.digitsRow, shakeAnimatedStyle]}>
             {otpDigits.map((digit, idx) => {
               const isFilled = !!digit;
               return (
-                <View
-                  key={idx}
-                  style={[
-                    styles.digitBoxBase,
-                    isFilled
-                      ? [
-                          styles.digitBoxRaised,
-                          {
-                            backgroundColor: palette.surfaceElevated,
-                            borderTopColor: palette.clayHighlight,
-                            borderLeftColor: palette.clayHighlight,
-                            borderBottomColor: 'rgba(0,0,0,0.4)',
-                            borderRightColor: 'rgba(0,0,0,0.25)',
-                          },
-                        ]
-                      : [
-                          styles.digitBoxInset,
-                          {
-                            backgroundColor: palette.inputBackground,
-                            borderTopColor: palette.clayInsetDark,
-                            borderLeftColor: palette.clayInsetDark,
-                            borderBottomColor: palette.clayInsetLight,
-                            borderRightColor: palette.clayInsetLight,
-                          },
-                        ],
-                  ]}
-                >
-                  <TextInput
-                    ref={(r) => {
-                      inputRefs.current[idx] = r;
-                    }}
+                <View key={idx} style={styles.digitBoxWrapper}>
+                  <View style={styles.digitBoxShadow} />
+                  <View
                     style={[
-                      styles.digitInput,
-                      { color: isFilled ? palette.primary : palette.textPrimary },
+                      styles.digitBox,
+                      {
+                        backgroundColor: isFilled ? palette.surfaceElevated : palette.surface,
+                        borderColor: isFilled ? palette.secondary : '#000000',
+                      },
                     ]}
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    value={digit}
-                    onChangeText={(t) => handleDigitChange(t, idx)}
-                    onKeyPress={(e) => handleKeyPress(e, idx)}
-                    selectTextOnFocus
-                  />
-                  {isFilled && (
-                    <View style={[styles.activeNubDot, { backgroundColor: palette.primary }]} />
-                  )}
+                  >
+                    <TextInput
+                      ref={(r) => {
+                        inputRefs.current[idx] = r;
+                      }}
+                      style={[
+                        styles.digitInput,
+                        { color: isFilled ? palette.secondary : palette.textPrimary },
+                      ]}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      value={digit}
+                      onChangeText={(t) => handleDigitChange(t, idx)}
+                      onKeyPress={(e) => handleKeyPress(e, idx)}
+                      selectTextOnFocus
+                    />
+                  </View>
                 </View>
               );
             })}
@@ -234,22 +196,24 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
           <View style={styles.resendRow}>
             {canResend ? (
               <TouchableOpacity onPress={handleResend} style={styles.resendBtn}>
-                <RefreshCw size={15} color={palette.primaryLight} style={{ marginRight: 6 }} />
-                <Text style={[styles.resendText, { color: palette.primaryLight }]}>Resend Code</Text>
+                <RefreshCw size={15} color={palette.secondary} style={{ marginRight: 6 }} />
+                <Text style={[styles.resendText, { color: palette.secondary }]}>Resend Code</Text>
               </TouchableOpacity>
             ) : (
               <Text style={[styles.cooldownText, { color: palette.textSecondary }]}>
-                Resend code in <Text style={{ color: palette.primaryLight, fontWeight: '800' }}>{cooldown}s</Text>
+                Resend code in <Text style={{ color: palette.secondary, fontWeight: '900' }}>{cooldown}s</Text>
               </Text>
             )}
           </View>
         </View>
 
         <View style={styles.footer}>
-          <GradientButton
+          <BoldButton
             title="Verify & Continue"
             onPress={() => submitOtp()}
-            isLoading={isLoading}
+            loading={isLoading}
+            variant="primary"
+            size="lg"
             disabled={otpDigits.some((d) => d === '')}
           />
         </View>
@@ -264,67 +228,79 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 54,
   },
-  clayBackBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1.5,
+  backWrapper: {
+    position: 'relative',
+    marginBottom: 20,
+  },
+  backShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#000000',
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 5 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
+    zIndex: 1,
   },
   header: {
     alignItems: 'center',
     marginBottom: 28,
   },
-  clayIconCircle: {
+  iconShadowWrapper: {
+    position: 'relative',
+    marginBottom: 20,
+  },
+  iconHardShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
     width: 80,
     height: 80,
-    borderRadius: 32,
-    borderWidth: 2,
-    overflow: 'hidden',
-    marginBottom: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 6, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 8,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+    zIndex: 0,
   },
-  iconGradient: {
-    width: '100%',
-    height: '100%',
+  iconBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 21,
+    fontWeight: '600',
   },
   errorBox: {
-    backgroundColor: 'rgba(229, 115, 115, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(229, 115, 115, 0.35)',
+    backgroundColor: 'rgba(255, 77, 94, 0.15)',
+    borderWidth: 1.5,
     borderRadius: 14,
     padding: 10,
     marginBottom: 16,
   },
   errorText: {
-    color: '#E57373',
     fontSize: 13,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '800',
   },
   digitsRow: {
     flexDirection: 'row',
@@ -332,38 +308,33 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 8,
   },
-  digitBoxBase: {
+  digitBoxWrapper: {
     flex: 1,
-    height: 58,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
     position: 'relative',
   },
-  digitBoxInset: {
-    borderWidth: 1.8,
+  digitBoxShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    width: '100%',
+    height: 58,
+    borderRadius: 16,
+    backgroundColor: '#000000',
   },
-  digitBoxRaised: {
-    borderWidth: 1.8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 3, height: 5 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
+  digitBox: {
+    height: 58,
+    borderRadius: 16,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   digitInput: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
     textAlign: 'center',
     width: '100%',
     height: '100%',
-  },
-  activeNubDot: {
-    position: 'absolute',
-    bottom: 5,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
   },
   resendRow: {
     alignItems: 'center',
@@ -376,10 +347,11 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   cooldownText: {
     fontSize: 14,
+    fontWeight: '600',
   },
   footer: {
     marginBottom: 20,

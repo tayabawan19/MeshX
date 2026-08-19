@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { X, Check, CheckCheck, Clock, ShieldCheck } from 'lucide-react-native';
+import { X, Check, CheckCheck } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { formatMessageTime } from '../../utils/dateUtils';
@@ -61,8 +61,8 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
           style={[
             styles.container,
             {
-              backgroundColor: palette.surfaceElevated,
-              borderTopColor: palette.clayHighlight,
+              backgroundColor: palette.surface,
+              borderColor: '#000000',
             },
           ]}
         >
@@ -70,16 +70,16 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
           <View style={styles.header}>
             <Text style={[styles.title, { color: palette.textPrimary }]}>Message Info</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color={palette.textMuted} />
+              <X size={22} color={palette.textMuted} />
             </TouchableOpacity>
           </View>
 
           {/* Message Preview Snippet */}
-          <View style={[styles.previewBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+          <View style={[styles.previewBox, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
             <Text style={[styles.previewText, { color: palette.textPrimary }]} numberOfLines={2}>
               {message.text || `[${message.type}]`}
             </Text>
-            <Text style={[styles.previewTime, { color: palette.textMuted }]}>
+            <Text style={[styles.previewTime, { color: palette.secondary }]}>
               Sent {formatMessageTime(Number(message.createdAt) || Date.now())}
             </Text>
           </View>
@@ -92,7 +92,7 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
             <ScrollView style={styles.content}>
               {/* Read Section */}
               <View style={styles.sectionHeader}>
-                <CheckCheck size={18} color={palette.readReceiptBlue} />
+                <CheckCheck size={20} color={palette.readReceiptBlue} />
                 <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Read by</Text>
               </View>
               {readList.length === 0 ? (
@@ -116,7 +116,7 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
 
               {/* Delivered Section */}
               <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-                <Check size={18} color="#A5A5BA" />
+                <Check size={20} color="#FFFFFF" />
                 <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Delivered to</Text>
               </View>
               {deliveredList.length === 0 ? (
@@ -146,33 +146,33 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   container: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    borderWidth: 1.5,
-    padding: 20,
+    borderWidth: 2,
+    padding: 22,
     maxHeight: SCREEN_HEIGHT * 0.7,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  title: { fontSize: 18, fontWeight: '800' },
-  closeBtn: { padding: 6 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  title: { fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
+  closeBtn: { padding: 4 },
   previewBox: {
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 2,
     marginBottom: 16,
   },
-  previewText: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  previewTime: { fontSize: 11, fontWeight: '500' },
+  previewText: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  previewTime: { fontSize: 12, fontWeight: '800' },
   loadingContainer: { padding: 40, alignItems: 'center' },
   content: { maxHeight: SCREEN_HEIGHT * 0.45 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  sectionTitle: { fontSize: 14, fontWeight: '700' },
+  sectionTitle: { fontSize: 15, fontWeight: '900', letterSpacing: -0.2 },
   emptyText: { fontSize: 13, fontStyle: 'italic', marginHorizontal: 12, marginBottom: 8 },
   recipientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4 },
-  avatar: { width: 36, height: 36, borderRadius: 18, marginRight: 10 },
+  avatar: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#000000', marginRight: 10 },
   meta: { flex: 1 },
-  name: { fontSize: 14, fontWeight: '600' },
-  time: { fontSize: 11, marginTop: 2 },
+  name: { fontSize: 15, fontWeight: '800' },
+  time: { fontSize: 12, fontWeight: '600', marginTop: 2 },
 });

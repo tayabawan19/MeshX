@@ -26,7 +26,7 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
   const hasMyStories = myStories && myStories.length > 0;
 
   return (
-    <View style={[styles.container, { borderBottomColor: palette.border }]}>
+    <View style={[styles.container, { borderBottomColor: '#000000' }]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Your Story Avatar */}
         <TouchableOpacity
@@ -44,16 +44,8 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
           <View style={styles.avatarWrapper}>
             {hasMyStories ? (
               <LinearGradient
-                colors={['#8B7FD1', '#7B93D6']}
-                style={[
-                  styles.clayDonutRing,
-                  {
-                    borderTopColor: palette.clayHighlight,
-                    borderLeftColor: palette.clayHighlight,
-                    borderBottomColor: 'rgba(0,0,0,0.40)',
-                    borderRightColor: 'rgba(0,0,0,0.25)',
-                  },
-                ]}
+                colors={['#FF4D5E', '#C6FF3D']}
+                style={styles.storyDonutRing}
               >
                 <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
                   <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
@@ -62,17 +54,17 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
             ) : (
               <View style={styles.addWrapper}>
                 <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
+                <View style={styles.plusShadow} />
                 <View
                   style={[
-                    styles.plusClayBadge,
+                    styles.plusBadge,
                     {
                       backgroundColor: palette.primary,
-                      borderTopColor: palette.clayHighlight,
-                      borderColor: palette.background,
+                      borderColor: '#000000',
                     },
                   ]}
                 >
-                  <Plus size={14} color="#FFFFFF" />
+                  <Plus size={14} color="#FFFFFF" strokeWidth={3} />
                 </View>
               </View>
             )}
@@ -98,16 +90,8 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
               <View style={styles.avatarWrapper}>
                 {isUnviewed ? (
                   <LinearGradient
-                    colors={['#8B7FD1', '#7B93D6']}
-                    style={[
-                      styles.clayDonutRing,
-                      {
-                        borderTopColor: palette.clayHighlight,
-                        borderLeftColor: palette.clayHighlight,
-                        borderBottomColor: 'rgba(0,0,0,0.40)',
-                        borderRightColor: 'rgba(0,0,0,0.25)',
-                      },
-                    ]}
+                    colors={['#FF4D5E', '#C6FF3D']}
+                    style={styles.storyDonutRing}
                   >
                     <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
                       <Avatar size="lg" url={u.avatarUrl} name={u.name || 'User'} />
@@ -118,7 +102,7 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
                     style={[
                       styles.viewedDonutRing,
                       {
-                        borderColor: palette.border,
+                        borderColor: '#000000',
                         backgroundColor: palette.surfaceElevated,
                       },
                     ]}
@@ -140,8 +124,8 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -157,39 +141,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clayDonutRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    padding: 3.5,
-    borderWidth: 1.8,
+  storyDonutRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 4, height: 6 },
-    shadowOpacity: 0.38,
-    shadowRadius: 10,
-    elevation: 6,
   },
   viewedDonutRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   innerBorder: {
-    width: 59,
-    height: 59,
-    borderRadius: 29.5,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addWrapper: {
     position: 'relative',
   },
-  plusClayBadge: {
+  plusShadow: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#000000',
+    zIndex: 1,
+  },
+  plusBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
@@ -198,17 +188,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2.2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 4,
+    borderWidth: 2,
+    zIndex: 2,
   },
   nameText: {
     fontSize: 12,
-    fontWeight: '600',
-    marginTop: 7,
+    fontWeight: '800',
+    marginTop: 6,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
 });

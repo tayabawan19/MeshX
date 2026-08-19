@@ -25,7 +25,7 @@ interface CustomTabBarProps {
   totalUnread: number;
 }
 
-const CustomClayTabBar: React.FC<CustomTabBarProps> = ({
+const CustomBoldTabBar: React.FC<CustomTabBarProps> = ({
   state,
   navigation,
   totalUnread,
@@ -40,9 +40,9 @@ const CustomClayTabBar: React.FC<CustomTabBarProps> = ({
 
   useEffect(() => {
     indicatorX.value = withSpring(state.index * tabWidth, {
-      damping: 16,
-      stiffness: 200,
-      mass: 0.8,
+      damping: 14,
+      stiffness: 240,
+      mass: 0.7,
     });
   }, [state.index, tabWidth]);
 
@@ -60,85 +60,85 @@ const CustomClayTabBar: React.FC<CustomTabBarProps> = ({
 
   return (
     <View style={[styles.bottomContainer, { backgroundColor: palette.background, paddingBottom: bottomInsetPadding }]}>
-      {/* Raised Clay Pill Dock */}
-      <View
-        style={[
-          styles.clayDock,
-          {
-            backgroundColor: palette.surfaceElevated,
-            borderTopColor: palette.clayHighlight,
-            borderLeftColor: palette.clayHighlight,
-            borderBottomColor: 'rgba(0, 0, 0, 0.40)',
-            borderRightColor: 'rgba(0, 0, 0, 0.25)',
-          },
-        ]}
-      >
-        {/* Recessed Inset Pressed Slot for Active Tab */}
-        <Animated.View style={[styles.recessedSlotWrapper, { width: tabWidth }, indicatorAnimatedStyle]}>
-          <View
-            style={[
-              styles.recessedSlot,
-              {
-                backgroundColor: palette.inputBackground,
-                borderTopColor: palette.clayInsetDark,
-                borderLeftColor: palette.clayInsetDark,
-                borderBottomColor: palette.clayInsetLight,
-                borderRightColor: palette.clayInsetLight,
-              },
-            ]}
-          />
-        </Animated.View>
+      {/* Outer Dock Container with Hard Shadow */}
+      <View style={styles.dockShadowWrapper}>
+        <View style={styles.hardShadow} />
 
-        {/* Tab Items */}
-        <View style={styles.tabsRow}>
-          {tabs.map((t, idx) => {
-            const isFocused = state.index === idx;
-            const IconComponent = t.icon;
+        <View
+          style={[
+            styles.boldDock,
+            {
+              backgroundColor: palette.surface,
+              borderColor: '#000000',
+            },
+          ]}
+        >
+          {/* Animated Active Tab Pill */}
+          <Animated.View style={[styles.activePillWrapper, { width: tabWidth }, indicatorAnimatedStyle]}>
+            <View style={styles.activePillShadow} />
+            <View
+              style={[
+                styles.activePill,
+                {
+                  backgroundColor: palette.secondary, // Electric Lime #C6FF3D
+                  borderColor: '#000000',
+                },
+              ]}
+            />
+          </Animated.View>
 
-            const onPress = () => {
-              triggerHaptic('selection');
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: state.routes[idx].key,
-                canPreventDefault: true,
-              });
+          {/* Tab Items */}
+          <View style={styles.tabsRow}>
+            {tabs.map((t, idx) => {
+              const isFocused = state.index === idx;
+              const IconComponent = t.icon;
 
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(state.routes[idx].name);
-              }
-            };
+              const onPress = () => {
+                triggerHaptic('selection');
+                const event = navigation.emit({
+                  type: 'tabPress',
+                  target: state.routes[idx].key,
+                  canPreventDefault: true,
+                });
 
-            return (
-              <TouchableWithoutFeedback key={t.name} onPress={onPress}>
-                <View style={styles.tabButton}>
-                  <View style={styles.iconHolder}>
-                    <IconComponent
-                      size={22}
-                      color={isFocused ? palette.primary : palette.textMuted}
-                    />
-                    {idx === 0 && totalUnread > 0 && (
-                      <View style={[styles.badge, { backgroundColor: palette.primary }]}>
-                        <Text style={styles.badgeText}>
-                          {totalUnread > 9 ? '9+' : totalUnread}
-                        </Text>
-                      </View>
-                    )}
+                if (!isFocused && !event.defaultPrevented) {
+                  navigation.navigate(state.routes[idx].name);
+                }
+              };
+
+              return (
+                <TouchableWithoutFeedback key={t.name} onPress={onPress}>
+                  <View style={styles.tabButton}>
+                    <View style={styles.iconHolder}>
+                      <IconComponent
+                        size={22}
+                        color={isFocused ? '#100F17' : palette.textMuted}
+                        strokeWidth={isFocused ? 2.5 : 2}
+                      />
+                      {idx === 0 && totalUnread > 0 && (
+                        <View style={[styles.badge, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
+                          <Text style={styles.badgeText}>
+                            {totalUnread > 9 ? '9+' : totalUnread}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text
+                      style={[
+                        styles.tabLabel,
+                        {
+                          color: isFocused ? '#100F17' : palette.textMuted,
+                          fontWeight: isFocused ? '900' : '700',
+                        },
+                      ]}
+                    >
+                      {t.name}
+                    </Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      {
-                        color: isFocused ? palette.primary : palette.textMuted,
-                        fontWeight: isFocused ? '800' : '600',
-                      },
-                    ]}
-                  >
-                    {t.name}
-                  </Text>
-                </View>
-              </TouchableWithoutFeedback>
-            );
-          })}
+                </TouchableWithoutFeedback>
+              );
+            })}
+          </View>
         </View>
       </View>
     </View>
@@ -166,7 +166,7 @@ export const MainTabNavigator: React.FC<MainTabNavigatorProps> = ({
 
   return (
     <Tab.Navigator
-      tabBar={(props) => <CustomClayTabBar {...props} totalUnread={totalUnread} />}
+      tabBar={(props) => <CustomBoldTabBar {...props} totalUnread={totalUnread} />}
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Chats">
@@ -199,19 +199,28 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingTop: 4,
   },
-  clayDock: {
+  dockShadowWrapper: {
+    position: 'relative',
+  },
+  hardShadow: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 24,
+    backgroundColor: '#000000',
+    zIndex: 0,
+  },
+  boldDock: {
     height: 66,
-    borderRadius: 33,
-    borderWidth: 1.8,
+    borderRadius: 24,
+    borderWidth: 2,
     position: 'relative',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 6, height: 8 },
-    shadowOpacity: 0.38,
-    shadowRadius: 14,
-    elevation: 8,
+    zIndex: 1,
   },
-  recessedSlotWrapper: {
+  activePillWrapper: {
     position: 'absolute',
     top: 6,
     bottom: 6,
@@ -219,11 +228,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1,
   },
-  recessedSlot: {
-    width: '82%',
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1.5,
+  activePillShadow: {
+    position: 'absolute',
+    top: 2,
+    left: 12,
+    right: 8,
+    bottom: -2,
+    borderRadius: 18,
+    backgroundColor: '#000000',
+  },
+  activePill: {
+    width: '84%',
+    height: 50,
+    borderRadius: 18,
+    borderWidth: 2,
+    zIndex: 1,
   },
   tabsRow: {
     flexDirection: 'row',
@@ -243,23 +262,25 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   tabLabel: {
-    fontSize: 11,
-    letterSpacing: 0.2,
+    fontSize: 12,
+    letterSpacing: -0.2,
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -10,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -5,
+    right: -12,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    zIndex: 3,
   },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '900',
   },
 });

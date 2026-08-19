@@ -1,11 +1,25 @@
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 const PROD_URL = 'https://meshx.onrender.com';
 
 const getBackendUrl = (): { apiUrl: string; socketUrl: string } => {
-  // Use the live hosted Render backend as primary for APK and global access
+  if (__DEV__) {
+    // In local development, prefer the Metro host URI / ADB reverse localhost / 10.0.2.2 for Android
+    const hostUri = Constants.expoConfig?.hostUri;
+    const devHost = hostUri
+      ? hostUri.split(':')[0]
+      : Platform.OS === 'android'
+      ? '10.0.2.2'
+      : 'localhost';
+    const localUrl = `http://${devHost}:5000`;
+    return {
+      apiUrl: `${localUrl}/api`,
+      socketUrl: localUrl,
+    };
+  }
   return {
     apiUrl: `${PROD_URL}/api`,
     socketUrl: PROD_URL,

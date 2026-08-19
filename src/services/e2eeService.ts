@@ -28,7 +28,6 @@ class E2EEService {
         privKeyBase64 = await SecureStore.getItemAsync(SECURE_STORE_PRIVATE_KEY);
         pubKeyBase64 = await SecureStore.getItemAsync(SECURE_STORE_PUBLIC_KEY);
       } catch (e) {
-        // Fallback for environments where SecureStore is unavailable
         console.warn('[E2EE] SecureStore read fallback:', e);
       }
 
@@ -51,10 +50,14 @@ class E2EEService {
           console.warn('[E2EE] SecureStore write fallback:', e);
         }
 
-        // Publish public key to server
-        await apiClient.post('/users/keys', {
-          publicKey: newPub,
-        });
+        // Publish public key to server with safe error handling
+        try {
+          await apiClient.post('/users/keys', {
+            publicKey: newPub,
+          });
+        } catch (postErr) {
+          console.warn('[E2EE] Public key upload deferred:', (postErr as any)?.message || postErr);
+        }
       }
     } catch (err) {
       console.error('[E2EE] Initialization error:', err);
@@ -73,68 +76,78 @@ class E2EEService {
         return res.data.publicKey;
       }
     } catch (err) {
-      console.warn('[E2EE] Failed to fetch recipient public key:', err);
+      console.warn('[E2EE] Failed to fetch recipient public key:', (err as any)?.message || err);
     }
     return null;
   }
 
   encryptMessage(plaintext: string, recipientPublicKeyBase64: string): string {
-    if (!plaintext) return plaintext;
-    if (!recipientPublicKeyBase64) return plaintext;
-
     try {
+      if (!this.keyPair || !recipientPublicKeyBase64) {
+        return plaintext;
+      }
+
       const recipientPubKey = decodeBase64(recipientPublicKeyBase64);
-      const ephemeralKeyPair = nacl.box.keyPair();
       const nonce = nacl.randomBytes(nacl.box.nonceLength);
       const messageUint8 = decodeUTF8(plaintext);
 
-      const sharedKey = nacl.box.before(recipientPubKey, ephemeralKeyPair.secretKey);
-      const ciphertext = nacl.box.after(messageUint8, nonce, sharedKey);
+      const encrypted = nacl.box(
+        messageUint8,
+        nonce,
+        recipientPubKey,
+        this.keyPair.secretKey
+      );
 
-      const ephPubBase64 = encodeBase64(ephemeralKeyPair.publicKey);
-      const nonceBase64 = encodeBase64(nonce);
-      const cipherBase64 = encodeBase64(ciphertext);
+      const payload = {
+        nonce: encodeBase64(nonce),
+        ciphertext: encodeBase64(encrypted),
+      };
 
-      return `E2E:${ephPubBase64}:${nonceBase64}:${cipherBase64}`;
+      return `E2E:${JSON.stringify(payload)}`;
     } catch (err) {
-      console.error('[E2EE] Encryption error:', err);
+      console.error('[E2EE] Encryption failed:', err);
       return plaintext;
     }
   }
 
-  decryptMessage(encryptedText: string): string {
-    if (!encryptedText || !encryptedText.startsWith('E2E:')) {
-      return encryptedText;
-    }
-
-    if (!this.keyPair) {
-      return '[Encrypted message - keys initializing]';
-    }
-
+  decryptMessage(ciphertextPayload: string, senderPublicKeyBase64?: string): string {
     try {
-      const parts = encryptedText.split(':');
-      if (parts.length < 4) return encryptedText;
+      if (!ciphertextPayload || typeof ciphertextPayload !== 'string' || !ciphertextPayload.startsWith('E2E:')) {
+        return ciphertextPayload;
+      }
 
-      const ephPubBase64 = parts[1];
-      const nonceBase64 = parts[2];
-      const cipherBase64 = parts[3];
+      if (!this.keyPair || !senderPublicKeyBase64) {
+        return ciphertextPayload;
+      }
 
-      const ephPubKey = decodeBase64(ephPubBase64);
+      const jsonStr = ciphertextPayload.slice(4);
+      const { nonce: nonceBase64, ciphertext: cipherBase64 } = JSON.parse(jsonStr);
+
       const nonce = decodeBase64(nonceBase64);
       const ciphertext = decodeBase64(cipherBase64);
+      const senderPubKey = decodeBase64(senderPublicKeyBase64);
 
-      const sharedKey = nacl.box.before(ephPubKey, this.keyPair.secretKey);
-      const decrypted = nacl.box.open.after(ciphertext, nonce, sharedKey);
+      const decrypted = nacl.box.open(
+        ciphertext,
+        nonce,
+        senderPubKey,
+        this.keyPair.secretKey
+      );
 
       if (!decrypted) {
-        return '[Encrypted message]';
+        return '[Encrypted message - unable to decrypt]';
       }
 
       return encodeUTF8(decrypted);
     } catch (err) {
-      console.error('[E2EE] Decryption error:', err);
-      return '[Encrypted message]';
+      console.error('[E2EE] Decryption failed:', err);
+      return ciphertextPayload;
     }
+  }
+
+  getPublicKey(): string | null {
+    if (!this.keyPair) return null;
+    return encodeBase64(this.keyPair.publicKey);
   }
 }
 

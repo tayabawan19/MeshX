@@ -178,6 +178,9 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       if (res.data?.messages) {
         const decryptedMessages = res.data.messages.map((m: any) => ({
           ...m,
+          id: m._id || m.id,
+          _id: m._id || m.id,
+          reactions: m.reactions || {},
           text: e2eeService.decryptMessage(m.text),
         }));
         set((state) => ({
@@ -333,6 +336,7 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   },
 
   toggleReaction: (chatId, messageId, emoji) => {
+    if (!chatId || !messageId) return;
     triggerHaptic('selection');
     const socket = getSocket();
     if (socket) {
@@ -340,11 +344,13 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
 
     const currentUserId = (useAuthStore.getState().user as any)?.id || (useAuthStore.getState().user as any)?._id || 'me';
+    const targetId = String(messageId);
 
     set((state) => {
       const chatMsgs = state.messages[chatId] || [];
       const updatedMsgs = chatMsgs.map((msg) => {
-        if (msg.id === messageId || msg._id === messageId) {
+        const msgId = String(msg.id || msg._id || '');
+        if (msgId && msgId === targetId) {
           const currentReactions = { ...(msg.reactions as Record<string, string>) };
           if (currentReactions[currentUserId] === emoji) {
             delete currentReactions[currentUserId];
@@ -1070,6 +1076,22 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
                 ? { ...m, text, isEdited: true, editedAt: editedAt || Date.now() }
                 : m
             ),
+          },
+        };
+      });
+    });
+
+    socket.on('reaction_updated', ({ messageId, chatId, reactions }: { messageId: string; chatId: string; reactions: any }) => {
+      const targetId = String(messageId);
+      set((state) => {
+        const currentMsgs = state.messages[chatId] || [];
+        return {
+          messages: {
+            ...state.messages,
+            [chatId]: currentMsgs.map((m) => {
+              const mId = String(m.id || m._id || '');
+              return mId && mId === targetId ? { ...m, reactions } : m;
+            }),
           },
         };
       });

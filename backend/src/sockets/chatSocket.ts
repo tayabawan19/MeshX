@@ -248,6 +248,44 @@ export const setupSocketIO = (io: Server) => {
       }
     });
 
+    // Message Reaction Toggle / Add
+    socket.on('reaction_add', async (data: { chatId: string; messageId: string; emoji: string }) => {
+      try {
+        const { chatId, messageId, emoji } = data;
+        if (!messageId || !mongoose.Types.ObjectId.isValid(messageId)) return;
+
+        const message = await Message.findById(messageId);
+        if (!message) return;
+
+        const existingIndex = message.reactions.findIndex(
+          (r: any) => r.userId.toString() === userId
+        );
+
+        if (existingIndex !== -1) {
+          if (message.reactions[existingIndex].emoji === emoji) {
+            message.reactions.splice(existingIndex, 1);
+          } else {
+            message.reactions[existingIndex].emoji = emoji;
+          }
+        } else {
+          message.reactions.push({
+            userId: new mongoose.Types.ObjectId(userId),
+            emoji,
+          });
+        }
+
+        await message.save();
+
+        io.to(chatId).emit('reaction_updated', {
+          chatId,
+          messageId,
+          reactions: message.reactions,
+        });
+      } catch (error) {
+        console.error('[Socket.io] Error in reaction_add:', error);
+      }
+    });
+
     // Edit sent message (15 minute limit)
     socket.on('edit_message', async (data: { messageId: string; chatId: string; text: string }) => {
       try {

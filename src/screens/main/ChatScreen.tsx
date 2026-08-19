@@ -199,7 +199,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
   const handleAddReaction = (emoji: string) => {
     if (selectedMessage) {
-      toggleReaction(chatId, selectedMessage.id, emoji);
+      const mId = selectedMessage._id || selectedMessage.id;
+      if (mId) {
+        toggleReaction(chatId, mId, emoji);
+      }
     }
     setShowActionSheet(false);
   };

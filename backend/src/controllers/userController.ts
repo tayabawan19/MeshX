@@ -20,6 +20,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
         phone: user.phone,
         avatarUrl: user.avatarUrl,
         bio: user.bio,
+        publicKey: user.publicKey,
         isVerified: user.isVerified,
         isOnline: user.isOnline,
         privacy: user.privacy,
@@ -28,6 +29,48 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Get current user error:', error);
     return res.status(500).json({ error: 'Internal server error getting user.' });
+  }
+};
+
+// POST /api/users/keys
+export const updateKeys = async (req: AuthRequest, res: Response) => {
+  try {
+    const currentUserId = req.user?.userId;
+    const { publicKey, preKeys } = req.body;
+
+    const user = await User.findById(currentUserId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    if (publicKey) user.publicKey = publicKey;
+    if (Array.isArray(preKeys)) user.preKeys = preKeys;
+
+    await user.save();
+    return res.status(200).json({ message: 'Public keys updated successfully.', publicKey: user.publicKey });
+  } catch (error: any) {
+    console.error('Update keys error:', error);
+    return res.status(500).json({ error: 'Internal server error updating keys.' });
+  }
+};
+
+// GET /api/users/:userId/keys
+export const getUserKeys = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select('publicKey preKeys name avatarUrl');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    return res.status(200).json({
+      userId: user._id,
+      publicKey: user.publicKey || '',
+      preKeys: user.preKeys || [],
+    });
+  } catch (error: any) {
+    console.error('Get user keys error:', error);
+    return res.status(500).json({ error: 'Internal server error fetching keys.' });
   }
 };
 
@@ -198,7 +241,7 @@ export const inviteUser = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const currentUserId = req.user?.userId;
-    const { name, bio, avatarUrl, privacy } = req.body;
+    const { name, bio, avatarUrl, avatar, privacy } = req.body;
 
     const user = await User.findById(currentUserId);
     if (!user) {
@@ -207,7 +250,8 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 
     if (name) user.name = name.trim();
     if (bio !== undefined) user.bio = bio;
-    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+    const finalAvatar = avatarUrl !== undefined ? avatarUrl : avatar;
+    if (finalAvatar !== undefined) user.avatarUrl = finalAvatar;
     if (privacy) {
       user.privacy = {
         ...user.privacy,
@@ -221,11 +265,15 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       message: 'Profile updated successfully.',
       user: {
         id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
         avatarUrl: user.avatarUrl,
         bio: user.bio,
+        publicKey: user.publicKey,
+        isVerified: user.isVerified,
+        isOnline: user.isOnline,
         privacy: user.privacy,
       },
     });

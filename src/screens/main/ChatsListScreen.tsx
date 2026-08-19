@@ -15,7 +15,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Search, Users, MessageSquarePlus, X } from 'lucide-react-native';
+import { Search, Users, MessageSquarePlus, X, Archive, Star, Radio } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -39,12 +39,14 @@ export const ChatsListScreen: React.FC<{
   const { user } = useAuthStore();
   const {
     chats,
+    archivedChats,
     storyGroups,
     myStories,
     muteChat,
     archiveChat,
     deleteChat,
     fetchChats,
+    fetchArchivedChats,
     fetchStoriesFeed,
     fetchMyStories,
     setActiveChatId,
@@ -56,7 +58,6 @@ export const ChatsListScreen: React.FC<{
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [activeStoryGroup, setActiveStoryGroup] = useState<{ user: any; stories: any[]; isMine?: boolean } | null>(null);
 
-  // FAB Squish Scale
   const fabScale = useSharedValue(1);
 
   useEffect(() => {
@@ -65,14 +66,14 @@ export const ChatsListScreen: React.FC<{
 
   const loadData = async () => {
     setIsLoading(true);
-    await Promise.all([fetchChats(), fetchStoriesFeed(), fetchMyStories()]);
+    await Promise.all([fetchChats(), fetchArchivedChats(), fetchStoriesFeed(), fetchMyStories()]);
     setIsLoading(false);
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     triggerHaptic('light');
-    await Promise.all([fetchChats(), fetchStoriesFeed(), fetchMyStories()]);
+    await Promise.all([fetchChats(), fetchArchivedChats(), fetchStoriesFeed(), fetchMyStories()]);
     setRefreshing(false);
   };
 
@@ -102,6 +103,27 @@ export const ChatsListScreen: React.FC<{
       onOpenNewGroup();
     } else if (navigation) {
       navigation.navigate('NewGroupModal');
+    }
+  };
+
+  const handleOpenBroadcast = () => {
+    triggerHaptic('light');
+    if (navigation) {
+      navigation.navigate('NewBroadcastModal');
+    }
+  };
+
+  const handleOpenStarred = () => {
+    triggerHaptic('light');
+    if (navigation) {
+      navigation.navigate('StarredMessagesScreen');
+    }
+  };
+
+  const handleOpenArchived = () => {
+    triggerHaptic('light');
+    if (navigation) {
+      navigation.navigate('ArchivedChatsScreen');
     }
   };
 
@@ -159,19 +181,24 @@ export const ChatsListScreen: React.FC<{
 
         <View style={styles.headerRight}>
           <TouchableOpacity
-            onPress={handleOpenGroup}
-            style={[
-              styles.headerIconBtn,
-              {
-                backgroundColor: palette.surfaceElevated,
-                borderTopColor: palette.clayHighlight,
-                borderLeftColor: palette.clayHighlight,
-                borderBottomColor: 'rgba(0,0,0,0.35)',
-                borderRightColor: 'rgba(0,0,0,0.2)',
-              },
-            ]}
+            onPress={handleOpenStarred}
+            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated }]}
           >
-            <Users size={20} color={palette.textPrimary} />
+            <Star size={18} color="#E6A868" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleOpenBroadcast}
+            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated }]}
+          >
+            <Radio size={18} color={palette.textPrimary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleOpenGroup}
+            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated }]}
+          >
+            <Users size={19} color={palette.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -202,6 +229,22 @@ export const ChatsListScreen: React.FC<{
         onOpenStoryGroup={(u, st, isMine) => setActiveStoryGroup({ user: u, stories: st, isMine })}
         onCreateStory={() => setIsCreateStoryOpen(true)}
       />
+
+      {/* Archived Chats Quick Row (if any archived) */}
+      {archivedChats.length > 0 && (
+        <TouchableOpacity
+          onPress={handleOpenArchived}
+          style={[styles.archivedRow, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
+        >
+          <View style={styles.archivedLeft}>
+            <Archive size={18} color={palette.primaryLight} style={{ marginRight: 10 }} />
+            <Text style={[styles.archivedLabel, { color: palette.textPrimary }]}>Archived</Text>
+          </View>
+          <View style={[styles.archivedBadge, { backgroundColor: palette.primary }]}>
+            <Text style={styles.archivedBadgeText}>{archivedChats.length}</Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Chats List */}
       {isLoading ? (
@@ -247,16 +290,7 @@ export const ChatsListScreen: React.FC<{
                   : 'Add someone to start chatting on MeshX!'}
               </Text>
               <TouchableOpacity
-                style={[
-                  styles.emptyBtn,
-                  {
-                    backgroundColor: palette.primary,
-                    borderTopColor: palette.clayHighlight,
-                    borderLeftColor: palette.clayHighlight,
-                    borderBottomColor: 'rgba(0,0,0,0.4)',
-                    borderRightColor: 'rgba(0,0,0,0.25)',
-                  },
-                ]}
+                style={[styles.emptyBtn, { backgroundColor: palette.primary }]}
                 onPress={handleOpenNewChat}
               >
                 <Text style={styles.emptyBtnText}>Start New Chat</Text>
@@ -320,37 +354,38 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   headerTitle: { fontSize: 24, fontWeight: '900', letterSpacing: -0.5 },
-  headerRight: { flexDirection: 'row', alignItems: 'center' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerIconBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1.5,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1.2,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    elevation: 2,
   },
   searchWrapper: { paddingHorizontal: 16, paddingVertical: 10 },
   searchBar: { height: 46 },
   searchInput: { flex: 1, fontSize: 14 },
+  archivedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  archivedLeft: { flexDirection: 'row', alignItems: 'center' },
+  archivedLabel: { fontSize: 14, fontWeight: '700' },
+  archivedBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  archivedBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   emptyContainer: { padding: 40, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 18, fontWeight: '800', marginBottom: 6 },
   emptySub: { fontSize: 14, textAlign: 'center', marginBottom: 20 },
-  emptyBtn: {
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 4, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
-  },
+  emptyBtn: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 22, elevation: 4 },
   emptyBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
   fabClayButton: {
     position: 'absolute',
@@ -361,16 +396,7 @@ const styles = StyleSheet.create({
     borderRadius: 31,
     borderWidth: 2,
     overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 8, height: 12 },
-    shadowOpacity: 0.52,
-    shadowRadius: 18,
     elevation: 12,
   },
-  fabGradient: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  fabGradient: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
 });

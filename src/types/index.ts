@@ -1,4 +1,4 @@
-export type MessageType = 'text' | 'image' | 'voice' | 'document';
+export type MessageType = 'text' | 'image' | 'voice' | 'document' | 'system';
 export type MessageStatus = 'sent' | 'delivered' | 'read';
 export type CallType = 'voice' | 'video';
 export type CallStatus = 'calling' | 'incoming' | 'connected' | 'ended' | 'declined' | 'missed';
@@ -37,11 +37,16 @@ export interface Chat {
   chatId: string;
   type: ChatType;
   participants: (string | UserProfile)[];
+  admins?: (string | UserProfile)[];
   participantProfiles?: UserProfile[];
   otherParticipant?: UserProfile;
   groupName?: string;
   groupAvatar?: string;
   groupAvatarUrl?: string;
+  groupDescription?: string;
+  onlyAdminsCanMessage?: boolean;
+  onlyAdminsCanEditInfo?: boolean;
+  inviteCode?: string;
   lastMessage?: {
     text: string;
     senderId: string;
@@ -67,6 +72,19 @@ export interface ReplyPreview {
   senderName?: string;
 }
 
+export interface StoryReplyPreview {
+  storyId?: string;
+  mediaUrl?: string;
+  caption?: string;
+  type?: string;
+}
+
+export interface MessageReceipt {
+  userId: string | UserProfile;
+  deliveredAt?: string | number | Date;
+  readAt?: string | number | Date;
+}
+
 export interface Message {
   id: string;
   _id?: string;
@@ -78,9 +96,19 @@ export interface Message {
   mediaFileName?: string;
   mediaFileSize?: string;
   audioDuration?: number;
+  duration?: number;
   replyTo?: ReplyPreview | Message | any;
+  storyReply?: StoryReplyPreview;
   reactions: Array<{ userId: string; emoji: string }> | Record<string, string>;
   status: MessageStatus;
+  deletedFor?: string[];
+  isDeletedForEveryone?: boolean;
+  isEdited?: boolean;
+  editedAt?: string | number;
+  isForwarded?: boolean;
+  forwardCount?: number;
+  deliveredTo?: MessageReceipt[];
+  readBy?: MessageReceipt[];
   createdAt: string | number;
   expiresAt?: string | number;
   isStarred?: boolean;
@@ -96,6 +124,9 @@ export interface UserStatus {
   type?: 'image' | 'video' | 'text';
   caption?: string;
   backgroundColor?: string;
+  visibility?: 'contacts' | 'except' | 'only';
+  excludedUsers?: string[];
+  includedUsers?: string[];
   createdAt: string | number;
   expiresAt: string | number;
   viewedBy: (string | UserProfile)[];

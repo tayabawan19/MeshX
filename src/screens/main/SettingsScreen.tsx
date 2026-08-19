@@ -74,6 +74,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
 
   const handlePickAvatar = async () => {
     try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow photo library access in device settings to update your profile avatar.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -81,7 +90,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const fileUri = result.assets[0].uri;
         const formData = new FormData();
         formData.append('file', {
@@ -90,17 +99,34 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
           name: 'avatar.jpg',
         } as any);
 
+        console.log('[AvatarUpload] Uploading avatar to /api/media/upload...');
         const uploadRes = await apiClient.post('/media/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
 
-        if (uploadRes.data?.url) {
-          setEditAvatarUrl(uploadRes.data.url);
+        const uploadedUrl = uploadRes.data?.mediaUrl || uploadRes.data?.url;
+        console.log('[AvatarUpload Success]', uploadedUrl);
+
+        if (uploadedUrl) {
+          setEditAvatarUrl(uploadedUrl);
+          // Persist directly to backend user profile
+          const patchRes = await apiClient.patch('/users/me', {
+            avatarUrl: uploadedUrl,
+          });
+          if (patchRes.data?.user) {
+            updateUserProfile(patchRes.data.user);
+          } else {
+            updateUserProfile({ avatarUrl: uploadedUrl });
+          }
           triggerHaptic('success');
+          Alert.alert('Success', 'Profile photo updated successfully!');
+        } else {
+          Alert.alert('Upload Error', 'Could not obtain image URL from server.');
         }
       }
-    } catch (err) {
-      console.error('Avatar pick error:', err);
+    } catch (err: any) {
+      console.error('[Avatar Pick/Upload Error]', err?.message || err);
+      Alert.alert('Upload Failed', 'Failed to upload profile picture. Please check your connection.');
     }
   };
 

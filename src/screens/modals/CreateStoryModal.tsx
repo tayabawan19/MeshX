@@ -9,10 +9,12 @@ import {
   Image,
   ActivityIndicator,
   Dimensions,
+  FlatList,
+  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Camera, ImageIcon, Type, Check, Send } from 'lucide-react-native';
+import { X, Camera, ImageIcon, Type, Check, Send, Lock, Globe, Users, ShieldAlert } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { apiClient } from '../../config/api';
@@ -21,12 +23,12 @@ import { triggerHaptic } from '../../utils/haptics';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const COLOR_PALETTES: [string, string][] = [
-  ['#8B7FD1', '#7B93D6'], // Dusty Lavender -> Soft Periwinkle
-  ['#6FAFA0', '#7B93D6'], // Muted Mint -> Soft Periwinkle
-  ['#E58A8A', '#8B7FD1'], // Soft Coral -> Dusty Lavender
-  ['#D4A373', '#E6A868'], // Warm Clay Sand
-  ['#7EA68B', '#6FAFA0'], // Muted Sage
-  ['#7B93D6', '#8B7FD1'], // Soft Periwinkle -> Dusty Lavender
+  ['#8B7FD1', '#7B93D6'],
+  ['#6FAFA0', '#7B93D6'],
+  ['#E58A8A', '#8B7FD1'],
+  ['#D4A373', '#E6A868'],
+  ['#7EA68B', '#6FAFA0'],
+  ['#7B93D6', '#8B7FD1'],
 ];
 
 interface CreateStoryModalProps {
@@ -36,7 +38,7 @@ interface CreateStoryModalProps {
 
 export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onClose }) => {
   const palette = useThemeStore((state) => state.palette);
-  const postStory = useChatStore((state) => state.postStory);
+  const { contacts, postStory } = useChatStore();
 
   const [mode, setMode] = useState<'picker' | 'text' | 'media'>('picker');
   const [selectedGradient, setSelectedGradient] = useState<[string, string]>(COLOR_PALETTES[0]);
@@ -45,6 +47,11 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [caption, setCaption] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+
+  // Story Privacy Controls
+  const [visibility, setVisibility] = useState<'contacts' | 'except' | 'only'>('contacts');
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [showPrivacySheet, setShowPrivacySheet] = useState(false);
 
   const handleReset = () => {
     setMode('picker');
@@ -61,26 +68,66 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
 
   const pickMedia = async (source: 'gallery' | 'camera') => {
     triggerHaptic('selection');
-    let result;
-    if (source === 'gallery') {
-      result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
-        quality: 0.8,
-      });
-    } else {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) return;
-      result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
-        quality: 0.8,
-      });
-    }
+    try {
+      if (source === 'gallery') {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert(
+            'Permission Required',
+            'Please allow photo library access in device settings to select story photos or videos.'
+          );
+          return;
+        }
 
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      setMediaUri(asset.uri);
-      setMediaType(asset.type === 'video' ? 'video' : 'image');
-      setMode('media');
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.All,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          if (asset?.uri) {
+            setMediaUri(asset.uri);
+            setMediaType(asset.type === 'video' ? 'video' : 'image');
+            setMode('media');
+          }
+        }
+      } else {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert(
+            'Permission Required',
+            'Please allow camera access in device settings to take story photos or videos.'
+          );
+          return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.All,
+          quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          if (asset?.uri) {
+            setMediaUri(asset.uri);
+            setMediaType(asset.type === 'video' ? 'video' : 'image');
+            setMode('media');
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('[CreateStory pickMedia Error]', err?.message || err);
+      Alert.alert('Media Picker Error', 'Could not open media picker. Please try again.');
+    }
+  };
+
+  const toggleSelectPrivacyContact = (id: string) => {
+    triggerHaptic('selection');
+    if (selectedContactIds.includes(id)) {
+      setSelectedContactIds(selectedContactIds.filter((uId) => uId !== id));
+    } else {
+      setSelectedContactIds([...selectedContactIds, id]);
     }
   };
 
@@ -90,6 +137,12 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
     triggerHaptic('medium');
 
     try {
+      const privacyPayload = {
+        visibility,
+        excludedUsers: visibility === 'except' ? selectedContactIds : [],
+        includedUsers: visibility === 'only' ? selectedContactIds : [],
+      };
+
       if (mode === 'text') {
         if (!text.trim()) {
           setIsPosting(false);
@@ -99,14 +152,14 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
           type: 'text',
           caption: text.trim(),
           backgroundColor: selectedGradient[0],
+          ...privacyPayload,
         });
       } else if (mode === 'media' && mediaUri) {
-        // Upload media first via /api/media/upload
         const formData = new FormData();
-        const filename = mediaUri.split('/').pop() || `story_${Date.now()}`;
+        const filename = mediaUri.split('/').pop() || `story_${Date.now()}.jpg`;
         const match = /\.(\w+)$/.exec(filename);
-        const ext = match ? match[1] : 'jpg';
-        const mime = mediaType === 'video' ? `video/${ext}` : `image/${ext}`;
+        const ext = match ? match[1].toLowerCase() : (mediaType === 'video' ? 'mp4' : 'jpg');
+        const mime = mediaType === 'video' ? `video/${ext}` : `image/${ext === 'png' ? 'png' : 'jpeg'}`;
 
         formData.append('file', {
           uri: mediaUri,
@@ -114,23 +167,28 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
           type: mime,
         } as any);
 
+        console.log('[StoryUpload] Uploading story media...');
         const uploadRes = await apiClient.post('/media/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
 
-        const uploadedUrl = uploadRes.data?.mediaUrl || mediaUri;
+        const uploadedUrl = uploadRes.data?.mediaUrl || uploadRes.data?.url || mediaUri;
+        console.log('[StoryUpload Success]', uploadedUrl);
 
         await postStory({
           type: mediaType,
           mediaUrl: uploadedUrl,
           caption: caption.trim(),
+          ...privacyPayload,
         });
       }
 
       triggerHaptic('success');
       handleClose();
-    } catch (err) {
-      console.error('[CreateStory Error]', err);
+    } catch (err: any) {
+      console.error('[CreateStory Post Error]', err?.message || err);
+      Alert.alert('Upload Failed', 'Failed to upload story. Please check your internet connection.');
+    } finally {
       setIsPosting(false);
     }
   };
@@ -150,6 +208,21 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                   <X size={22} color={palette.textMuted} />
                 </TouchableOpacity>
               </View>
+
+              {/* Privacy Trigger Pill */}
+              <TouchableOpacity
+                onPress={() => setShowPrivacySheet(true)}
+                style={[styles.privacyTrigger, { backgroundColor: palette.surface, borderColor: palette.border }]}
+              >
+                <Lock size={14} color={palette.primaryLight} style={{ marginRight: 6 }} />
+                <Text style={[styles.privacyTriggerText, { color: palette.textPrimary }]}>
+                  {visibility === 'contacts'
+                    ? 'My contacts'
+                    : visibility === 'except'
+                    ? `My contacts except (${selectedContactIds.length})`
+                    : `Only share with (${selectedContactIds.length})`}
+                </Text>
+              </TouchableOpacity>
 
               <View style={styles.optionsRow}>
                 <TouchableOpacity onPress={() => pickMedia('camera')} style={styles.optionBtn}>
@@ -191,7 +264,6 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                 <X size={22} color="#FFFFFF" />
               </TouchableOpacity>
 
-              {/* Color Swatches */}
               <View style={styles.swatchRow}>
                 {COLOR_PALETTES.map((colors, idx) => (
                   <TouchableOpacity
@@ -255,6 +327,78 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
             </View>
           </View>
         )}
+
+        {/* Privacy Selector Bottom Sheet */}
+        <Modal visible={showPrivacySheet} transparent animationType="slide" onRequestClose={() => setShowPrivacySheet(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => setShowPrivacySheet(false)} style={styles.modalOverlay}>
+            <View style={[styles.privacySheetContainer, { backgroundColor: palette.surfaceElevated }]}>
+              <View style={styles.sheetHeader}>
+                <Text style={[styles.sheetTitle, { color: palette.textPrimary }]}>Story Privacy</Text>
+                <TouchableOpacity onPress={() => setShowPrivacySheet(false)}>
+                  <Check size={22} color={palette.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setVisibility('contacts')}
+                style={[styles.privacyOption, visibility === 'contacts' && { backgroundColor: 'rgba(255,255,255,0.06)' }]}
+              >
+                <Globe size={18} color={palette.primary} style={{ marginRight: 12 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.privacyTitle, { color: palette.textPrimary }]}>My contacts</Text>
+                  <Text style={[styles.privacyDesc, { color: palette.textMuted }]}>Share with all contacts</Text>
+                </View>
+                {visibility === 'contacts' && <Check size={16} color={palette.primary} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setVisibility('except')}
+                style={[styles.privacyOption, visibility === 'except' && { backgroundColor: 'rgba(255,255,255,0.06)' }]}
+              >
+                <ShieldAlert size={18} color={palette.error} style={{ marginRight: 12 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.privacyTitle, { color: palette.textPrimary }]}>My contacts except...</Text>
+                  <Text style={[styles.privacyDesc, { color: palette.textMuted }]}>Hide from selected people</Text>
+                </View>
+                {visibility === 'except' && <Check size={16} color={palette.primary} />}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setVisibility('only')}
+                style={[styles.privacyOption, visibility === 'only' && { backgroundColor: 'rgba(255,255,255,0.06)' }]}
+              >
+                <Users size={18} color={palette.primaryLight} style={{ marginRight: 12 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.privacyTitle, { color: palette.textPrimary }]}>Only share with...</Text>
+                  <Text style={[styles.privacyDesc, { color: palette.textMuted }]}>Share with selected people only</Text>
+                </View>
+                {visibility === 'only' && <Check size={16} color={palette.primary} />}
+              </TouchableOpacity>
+
+              {/* Multi-Select Contact List for Except / Only */}
+              {(visibility === 'except' || visibility === 'only') && (
+                <FlatList
+                  data={contacts}
+                  keyExtractor={(item) => item.id || item._id || ''}
+                  style={styles.privacyContactsList}
+                  renderItem={({ item }) => {
+                    const uId = item.id || item._id || '';
+                    const isSelected = selectedContactIds.includes(uId);
+                    return (
+                      <TouchableOpacity onPress={() => toggleSelectPrivacyContact(uId)} style={styles.privacyContactRow}>
+                        <Image source={{ uri: item.avatarUrl }} style={styles.contactAvatar} />
+                        <Text style={[styles.contactName, { color: palette.textPrimary }]}>{item.name}</Text>
+                        <View style={[styles.checkbox, isSelected && { backgroundColor: palette.primary, borderColor: palette.primary }]}>
+                          {isSelected && <Check size={12} color="#FFFFFF" />}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              )}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </Modal>
   );
@@ -264,9 +408,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   pickerSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sheetTitle: { fontSize: 20, fontWeight: '700' },
   closeBtn: { padding: 4 },
+  privacyTrigger: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16, borderWidth: 1, marginBottom: 20 },
+  privacyTriggerText: { fontSize: 12, fontWeight: '600' },
   optionsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingBottom: 16 },
   optionBtn: { alignItems: 'center' },
   optionIcon: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 8, elevation: 4 },
@@ -281,7 +427,16 @@ const styles = StyleSheet.create({
   postBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#7C3AED', justifyContent: 'center', alignItems: 'center', elevation: 4 },
   textCenterWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
   textStoryInput: { color: '#FFFFFF', fontSize: 28, fontWeight: '800', textAlign: 'center', width: '100%' },
-  mediaPreview: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, resizeMode: 'cover' },
+  mediaPreview: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, resizeMode: 'contain', backgroundColor: '#000000' },
   captionInputContainer: { position: 'absolute', bottom: 40, left: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 24, paddingHorizontal: 18, paddingVertical: 8 },
   captionInput: { color: '#FFFFFF', fontSize: 16, height: 44 },
+  privacySheetContainer: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, maxHeight: SCREEN_HEIGHT * 0.7 },
+  privacyOption: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, marginBottom: 8 },
+  privacyTitle: { fontSize: 15, fontWeight: '700' },
+  privacyDesc: { fontSize: 12, marginTop: 2 },
+  privacyContactsList: { maxHeight: 200, marginTop: 10 },
+  privacyContactRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 6 },
+  contactAvatar: { width: 34, height: 34, borderRadius: 17, marginRight: 10 },
+  contactName: { fontSize: 14, fontWeight: '600', flex: 1 },
+  checkbox: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: '#666', justifyContent: 'center', alignItems: 'center' },
 });

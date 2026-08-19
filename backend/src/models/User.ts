@@ -7,6 +7,8 @@ export interface IUser extends Document {
   passwordHash: string;
   avatarUrl?: string;
   bio?: string;
+  publicKey?: string;
+  preKeys?: string[];
   isVerified: boolean;
   isOnline: boolean;
   lastSeen: Date;
@@ -28,6 +30,8 @@ const UserSchema: Schema = new Schema(
     passwordHash: { type: String, required: true },
     avatarUrl: { type: String, default: '' },
     bio: { type: String, default: 'Hey there! I am using MeshX.' },
+    publicKey: { type: String, default: '' },
+    preKeys: [{ type: String }],
 
     isVerified: { type: Boolean, default: false },
     isOnline: { type: Boolean, default: false },

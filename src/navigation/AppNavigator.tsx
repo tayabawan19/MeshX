@@ -11,7 +11,10 @@ import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 import { MainTabNavigator } from './MainTabNavigator';
 import { ChatScreen } from '../screens/main/ChatScreen';
 import { NewChatScreen } from '../screens/main/NewChatScreen';
+import { ArchivedChatsScreen } from '../screens/main/ArchivedChatsScreen';
+import { StarredMessagesScreen } from '../screens/main/StarredMessagesScreen';
 import { NewGroupModal } from '../screens/modals/NewGroupModal';
+import { NewBroadcastModal } from '../screens/modals/NewBroadcastModal';
 import { CallModal } from '../screens/modals/CallModal';
 import { MediaViewerModal } from '../screens/modals/MediaViewerModal';
 import { UserProfileModal } from '../screens/modals/UserProfileModal';
@@ -35,7 +38,6 @@ export const AppNavigator: React.FC = () => {
     }
   }, [isAuthenticated]);
 
-
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
@@ -58,10 +60,13 @@ export const AppNavigator: React.FC = () => {
             <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="NewChat" component={NewChatScreen} />
+            <Stack.Screen name="ArchivedChatsScreen" component={ArchivedChatsScreen} />
+            <Stack.Screen name="StarredMessagesScreen" component={StarredMessagesScreen} />
 
             {/* Modals */}
             <Stack.Group screenOptions={{ presentation: 'modal' }}>
               <Stack.Screen name="NewGroupModal" component={NewGroupModal} />
+              <Stack.Screen name="NewBroadcastModal" component={NewBroadcastModal} />
               <Stack.Screen name="CallModal" component={CallModal} />
               <Stack.Screen name="MediaViewerModal" component={MediaViewerModal} />
               <Stack.Screen name="UserProfileModal" component={UserProfileModal} />

@@ -11,6 +11,9 @@ export interface IStory extends Document {
   type: 'image' | 'video' | 'text';
   caption?: string;
   backgroundColor?: string;
+  visibility: 'contacts' | 'except' | 'only';
+  excludedUsers: mongoose.Types.ObjectId[];
+  includedUsers: mongoose.Types.ObjectId[];
   viewedBy: IStoryView[];
   createdAt: Date;
   expiresAt: Date;
@@ -23,6 +26,9 @@ const StorySchema: Schema = new Schema(
     type: { type: String, enum: ['image', 'video', 'text'], default: 'image' },
     caption: { type: String, default: '' },
     backgroundColor: { type: String, default: '#7C3AED' },
+    visibility: { type: String, enum: ['contacts', 'except', 'only'], default: 'contacts' },
+    excludedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    includedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     viewedBy: [
       {
         userId: { type: Schema.Types.ObjectId, ref: 'User' },

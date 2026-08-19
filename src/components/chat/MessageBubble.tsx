@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableWithoutFeedback,
+  TouchableOpacity,
   Image,
   Dimensions,
   ActivityIndicator,
@@ -16,7 +17,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Audio, AVPlaybackStatus } from 'expo-av';
-import { Check, CheckCheck, Play, Pause, FileText } from 'lucide-react-native';
+import {
+  Check,
+  CheckCheck,
+  Play,
+  Pause,
+  FileText,
+  CornerUpRight,
+  Download,
+  Ban,
+  Radio,
+} from 'lucide-react-native';
 import { Message } from '../../types';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
@@ -32,6 +43,9 @@ interface MessageBubbleProps {
   isLastInGroup?: boolean;
   animateEntrance?: boolean;
   senderName?: string;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (message: Message) => void;
   onLongPress?: (message: Message) => void;
   onSwipeReply?: (message: Message) => void;
 }
@@ -43,6 +57,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   isLastInGroup = true,
   animateEntrance = false,
   senderName,
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelect,
   onLongPress,
 }) => {
   const { palette, chatThemes, themeMode } = useThemeStore();
@@ -63,7 +80,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   useEffect(() => {
     if (animateEntrance) {
-      // Clay Blob Land Pop-In (0.85 -> 1.06 -> 1.0)
       scale.value = withSequence(
         withSpring(1.06, { damping: 10, stiffness: 180 }),
         withSpring(1.0, { damping: 12, stiffness: 200 })
@@ -76,25 +92,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   }, [animateEntrance]);
 
   const handlePressIn = () => {
-    // Tactile Clay Squeeze
+    if (isSelectionMode) return;
     scale.value = withSpring(0.95, { damping: 14, stiffness: 240 });
     scaleY.value = withSpring(0.93, { damping: 14, stiffness: 240 });
   };
 
   const handlePressOut = () => {
-    // Bouncy Spring Release
+    if (isSelectionMode) return;
     scale.value = withSpring(1, { damping: 12, stiffness: 180 });
     scaleY.value = withSpring(1, { damping: 12, stiffness: 180 });
   };
 
   const animatedBubbleStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scaleX: scale.value },
-      { scaleY: scaleY.value },
-    ],
+    transform: [{ scaleX: scale.value }, { scaleY: scaleY.value }],
   }));
 
-  // Audio cleanup on unmount
   useEffect(() => {
     return () => {
       if (soundRef.current) {
@@ -107,7 +119,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
     if (!status.isLoaded) {
       if (status.error) {
-        console.error('[VoicePlayer Error]', status.error);
         setIsLoadingAudio(false);
         setIsPlayingAudio(false);
       }
@@ -130,8 +141,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   const toggleAudio = async () => {
     triggerHaptic('light');
+    if (!message.mediaUrl) {
+      console.warn('[VoicePlayer] No mediaUrl present for message:', message.id || message._id);
+      return;
+    }
 
-    if (!message.mediaUrl) return;
+    console.log('[VoicePlayer] Toggled audio playback for message:', {
+      messageId: message.id || message._id,
+      mediaUrl: message.mediaUrl,
+      isMe,
+    });
 
     try {
       if (soundRef.current) {
@@ -156,6 +175,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
         staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
       });
 
       const { sound } = await Audio.Sound.createAsync(
@@ -165,31 +186,47 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       );
 
       soundRef.current = sound;
-    } catch (err) {
-      console.error('[VoicePlayer Error]', err);
+    } catch (err: any) {
+      console.error('[VoicePlayer Error]', err?.message || err);
       setIsLoadingAudio(false);
       setIsPlayingAudio(false);
     }
   };
 
+  // Render System Announcement Pill Message
+  if (message.type === 'system') {
+    return (
+      <View style={styles.systemMessageContainer}>
+        <View style={[styles.systemPill, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+          <Text style={[styles.systemMessageText, { color: palette.textSecondary }]}>{message.text}</Text>
+        </View>
+      </View>
+    );
+  }
+
   const currentChatTheme = activeChatId ? chatThemes[activeChatId] : undefined;
   const sentGradient: [string, string] = currentChatTheme?.gradient || ['#8B7FD1', '#7B93D6'];
   const receivedColor = currentChatTheme?.receivedColor || (themeMode === 'dark' ? '#222234' : '#F5F5FC');
 
-  // Generous 28px+ clay pillow radii
-  const bubbleRadius = 28;
+  const bubbleRadius = 26;
   const sentBorderRadius = {
     borderTopLeftRadius: bubbleRadius,
-    borderTopRightRadius: isFirstInGroup ? bubbleRadius : 12,
+    borderTopRightRadius: isFirstInGroup ? bubbleRadius : 10,
     borderBottomLeftRadius: bubbleRadius,
-    borderBottomRightRadius: isLastInGroup ? 8 : bubbleRadius,
+    borderBottomRightRadius: isLastInGroup ? 6 : bubbleRadius,
   };
 
   const receivedBorderRadius = {
-    borderTopLeftRadius: isFirstInGroup ? bubbleRadius : 12,
+    borderTopLeftRadius: isFirstInGroup ? bubbleRadius : 10,
     borderTopRightRadius: bubbleRadius,
-    borderBottomLeftRadius: isLastInGroup ? 8 : bubbleRadius,
+    borderBottomLeftRadius: isLastInGroup ? 6 : bubbleRadius,
     borderBottomRightRadius: bubbleRadius,
+  };
+
+  const handleBubblePress = () => {
+    if (isSelectionMode && onToggleSelect) {
+      onToggleSelect(message);
+    }
   };
 
   const handleLongPress = () => {
@@ -200,12 +237,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const renderReadStatus = () => {
     if (!isMe) return null;
     if (message.status === 'read') {
-      return <CheckCheck size={15} color={palette.readReceiptBlue} style={styles.receiptIcon} />;
+      return <CheckCheck size={14} color={palette.readReceiptBlue} style={styles.receiptIcon} />;
     }
     if (message.status === 'delivered') {
-      return <CheckCheck size={15} color="#A5A5BA" style={styles.receiptIcon} />;
+      return <CheckCheck size={14} color="#A5A5BA" style={styles.receiptIcon} />;
     }
-    return <Check size={15} color="#A5A5BA" style={styles.receiptIcon} />;
+    return <Check size={14} color="#A5A5BA" style={styles.receiptIcon} />;
   };
 
   const renderReactions = () => {
@@ -254,13 +291,62 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const currentSeconds = Math.round(playbackPosition / 1000);
   const progressRatio = playbackDuration > 0 ? playbackPosition / playbackDuration : 0;
 
+  const isDeleted = message.isDeletedForEveryone;
+
   const renderContent = () => {
+    if (isDeleted) {
+      return (
+        <View style={styles.deletedContainer}>
+          <Ban size={15} color={isMe ? 'rgba(255,255,255,0.7)' : palette.textMuted} style={{ marginRight: 6 }} />
+          <Text
+            style={[
+              styles.deletedText,
+              { color: isMe ? 'rgba(255,255,255,0.85)' : palette.textMuted },
+            ]}
+          >
+            This message was deleted
+          </Text>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.innerContent}>
+        {/* Forwarded Header Indicator */}
+        {message.isForwarded && (
+          <View style={styles.forwardedBadge}>
+            <CornerUpRight size={12} color={isMe ? 'rgba(255,255,255,0.85)' : palette.primaryLight} style={{ marginRight: 4 }} />
+            <Text style={[styles.forwardedText, { color: isMe ? 'rgba(255,255,255,0.85)' : palette.primaryLight }]}>
+              {(message.forwardCount || 0) >= 5 ? 'Forwarded many times' : 'Forwarded'}
+            </Text>
+          </View>
+        )}
+
+        {/* Sender Name in Group Chat */}
         {!isMe && senderName && isFirstInGroup && (
           <Text style={[styles.senderName, { color: palette.primaryLight }]}>{senderName}</Text>
         )}
 
+        {/* Story Reply Preview Card */}
+        {message.storyReply && (
+          <View style={[styles.storyReplyCard, { backgroundColor: isMe ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)' }]}>
+            {message.storyReply.mediaUrl ? (
+              <Image source={{ uri: message.storyReply.mediaUrl }} style={styles.storyReplyThumbnail} />
+            ) : (
+              <View style={[styles.storyReplyTextThumb, { backgroundColor: palette.primary }]}>
+                <Text style={styles.storyReplyThumbText}>Story</Text>
+              </View>
+            )}
+            <View style={styles.storyReplyMeta}>
+              <Text style={[styles.storyReplyTitle, { color: isMe ? '#FFFFFF' : palette.primaryLight }]}>Story reply</Text>
+              <Text style={[styles.storyReplyCaption, { color: isMe ? 'rgba(255,255,255,0.85)' : palette.textSecondary }]} numberOfLines={1}>
+                {message.storyReply.caption || 'Status story'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Standard Reply Preview */}
         {message.replyTo && (
           <View style={[styles.replyContainer, { backgroundColor: isMe ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)' }]}>
             <View style={styles.replyBar} />
@@ -273,6 +359,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         )}
 
+        {/* Image Message */}
         {message.type === 'image' && message.mediaUrl && (
           <TouchableWithoutFeedback
             onPress={() => openMediaViewer(message.mediaUrl!, 'image', message.text)}
@@ -283,18 +370,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </TouchableWithoutFeedback>
         )}
 
+        {/* Voice Note */}
         {message.type === 'voice' && (
           <View style={styles.voiceContainer}>
-            <TouchableWithoutFeedback onPress={toggleAudio}>
+            <TouchableOpacity
+              onPress={toggleAudio}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
               <View
                 style={[
                   styles.voicePlayBtn,
                   {
                     backgroundColor: isMe ? 'rgba(255,255,255,0.32)' : palette.primary,
                     borderTopColor: palette.clayHighlight,
-                    borderLeftColor: palette.clayHighlight,
-                    borderBottomColor: 'rgba(0,0,0,0.3)',
-                    borderRightColor: 'rgba(0,0,0,0.2)',
                   },
                 ]}
               >
@@ -306,7 +395,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                   <Play size={18} color="#FFFFFF" style={{ marginLeft: 2 }} />
                 )}
               </View>
-            </TouchableWithoutFeedback>
+            </TouchableOpacity>
             <View style={styles.waveformContainer}>
               <View style={styles.waveformBars}>
                 {[40, 70, 30, 90, 60, 100, 45, 80, 50, 95, 30, 70, 50].map((h, idx) => {
@@ -341,6 +430,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         )}
 
+        {/* Document Message */}
         {message.type === 'document' && (
           <View style={styles.documentContainer}>
             <FileText size={28} color={isMe ? '#FFFFFF' : palette.primary} />
@@ -355,13 +445,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </View>
         )}
 
+        {/* Message Text */}
         {message.text ? (
           <Text style={[styles.messageText, { color: isMe ? '#FFFFFF' : palette.receivedText }]}>
             {message.text}
           </Text>
         ) : null}
 
+        {/* Timestamp, Edited Badge & Delivery Receipt */}
         <View style={styles.metaContainer}>
+          {message.isEdited && (
+            <Text style={[styles.editedTag, { color: isMe ? 'rgba(255,255,255,0.75)' : palette.textMuted }]}>
+              edited{' '}
+            </Text>
+          )}
           <Text style={[styles.timestamp, { color: isMe ? 'rgba(255,255,255,0.78)' : palette.textMuted }]}>
             {formatMessageTime(Number(message.createdAt) || Date.now())}
           </Text>
@@ -373,73 +470,92 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <View style={[styles.container, { marginBottom: isLastInGroup ? 8 : 3 }]}>
-      <Animated.View
-        style={[
-          styles.bubbleWrapper,
-          isMe ? styles.sentWrapper : styles.receivedWrapper,
-          animatedBubbleStyle,
-        ]}
-      >
-        <TouchableWithoutFeedback
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          onLongPress={handleLongPress}
-          delayLongPress={350}
-        >
-          <View style={styles.bubbleShadowOuter}>
-            {isMe ? (
-              <LinearGradient
-                colors={sentGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                  styles.bubble,
-                  sentBorderRadius,
-                  {
-                    borderTopColor: 'rgba(255, 255, 255, 0.35)',
-                    borderLeftColor: 'rgba(255, 255, 255, 0.28)',
-                    borderBottomColor: 'rgba(0, 0, 0, 0.32)',
-                    borderRightColor: 'rgba(0, 0, 0, 0.22)',
-                  },
-                ]}
-              >
-                {renderContent()}
-              </LinearGradient>
-            ) : (
-              <View
-                style={[
-                  styles.bubble,
-                  receivedBorderRadius,
-                  {
-                    backgroundColor: receivedColor,
-                    borderTopColor: palette.clayHighlight,
-                    borderLeftColor: palette.clayHighlight,
-                    borderBottomColor: 'rgba(0, 0, 0, 0.40)',
-                    borderRightColor: 'rgba(0, 0, 0, 0.25)',
-                  },
-                ]}
-              >
-                {renderContent()}
-              </View>
-            )}
+      <View style={[styles.bubbleRow, isMe ? styles.sentRow : styles.receivedRow]}>
+        {/* Multi-Select Checkbox */}
+        {isSelectionMode && (
+          <TouchableOpacity
+            onPress={() => onToggleSelect && onToggleSelect(message)}
+            style={[
+              styles.selectionCheckbox,
+              {
+                borderColor: isSelected ? palette.primary : palette.border,
+                backgroundColor: isSelected ? palette.primary : 'transparent',
+              },
+            ]}
+          >
+            {isSelected && <Check size={12} color="#FFFFFF" />}
+          </TouchableOpacity>
+        )}
 
-            {/* Clay Pinch Nub Tail for last message in group */}
-            {isLastInGroup && (
-              <View
-                style={[
-                  styles.clayTailNub,
-                  isMe ? styles.sentTailNub : styles.receivedTailNub,
-                  {
-                    backgroundColor: isMe ? sentGradient[1] : receivedColor,
-                    borderTopColor: isMe ? 'rgba(255, 255, 255, 0.3)' : palette.clayHighlight,
-                    borderBottomColor: 'rgba(0, 0, 0, 0.35)',
-                  },
-                ]}
-              />
-            )}
-          </View>
-        </TouchableWithoutFeedback>
-      </Animated.View>
+        <Animated.View
+          style={[
+            styles.bubbleWrapper,
+            isMe ? styles.sentWrapper : styles.receivedWrapper,
+            animatedBubbleStyle,
+          ]}
+        >
+          <TouchableWithoutFeedback
+            onPress={handleBubblePress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onLongPress={handleLongPress}
+            delayLongPress={350}
+          >
+            <View style={styles.bubbleShadowOuter}>
+              {isMe ? (
+                <LinearGradient
+                  colors={sentGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[
+                    styles.bubble,
+                    sentBorderRadius,
+                    {
+                      borderTopColor: 'rgba(255, 255, 255, 0.35)',
+                      borderLeftColor: 'rgba(255, 255, 255, 0.28)',
+                      borderBottomColor: 'rgba(0, 0, 0, 0.32)',
+                      borderRightColor: 'rgba(0, 0, 0, 0.22)',
+                    },
+                  ]}
+                >
+                  {renderContent()}
+                </LinearGradient>
+              ) : (
+                <View
+                  style={[
+                    styles.bubble,
+                    receivedBorderRadius,
+                    {
+                      backgroundColor: receivedColor,
+                      borderTopColor: palette.clayHighlight,
+                      borderLeftColor: palette.clayHighlight,
+                      borderBottomColor: 'rgba(0, 0, 0, 0.40)',
+                      borderRightColor: 'rgba(0, 0, 0, 0.25)',
+                    },
+                  ]}
+                >
+                  {renderContent()}
+                </View>
+              )}
+
+              {/* Clay Nub Tail */}
+              {isLastInGroup && !isDeleted && (
+                <View
+                  style={[
+                    styles.clayTailNub,
+                    isMe ? styles.sentTailNub : styles.receivedTailNub,
+                    {
+                      backgroundColor: isMe ? sentGradient[1] : receivedColor,
+                      borderTopColor: isMe ? 'rgba(255, 255, 255, 0.3)' : palette.clayHighlight,
+                      borderBottomColor: 'rgba(0, 0, 0, 0.35)',
+                    },
+                  ]}
+                />
+              )}
+            </View>
+          </TouchableWithoutFeedback>
+        </Animated.View>
+      </View>
       {renderReactions()}
     </View>
   );
@@ -448,6 +564,25 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 14,
+  },
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sentRow: {
+    justifyContent: 'flex-end',
+  },
+  receivedRow: {
+    justifyContent: 'flex-start',
+  },
+  selectionCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   bubbleWrapper: {
     maxWidth: SCREEN_WIDTH * 0.77,
@@ -461,24 +596,79 @@ const styles = StyleSheet.create({
   bubbleShadowOuter: {
     position: 'relative',
     shadowColor: '#000000',
-    shadowOffset: { width: 5, height: 7 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 4, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   bubble: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderWidth: 1.8,
     overflow: 'hidden',
   },
   innerContent: {
     justifyContent: 'center',
   },
+  forwardedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  forwardedText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    fontWeight: '600',
+  },
+  deletedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  deletedText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
   senderName: {
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 4,
+  },
+  storyReplyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 6,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  storyReplyThumbnail: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  storyReplyTextThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  storyReplyThumbText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  storyReplyMeta: {
+    flex: 1,
+  },
+  storyReplyTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  storyReplyCaption: {
+    fontSize: 12,
   },
   replyContainer: {
     flexDirection: 'row',
@@ -507,7 +697,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   imageWrapper: {
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: 'hidden',
     marginBottom: 6,
     borderWidth: 1,
@@ -532,11 +722,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
   },
   waveformContainer: {
     flex: 1,
@@ -577,6 +762,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginTop: 4,
   },
+  editedTag: {
+    fontSize: 10,
+    fontStyle: 'italic',
+  },
   timestamp: {
     fontSize: 11,
     fontWeight: '600',
@@ -595,11 +784,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3.5,
     borderRadius: 16,
     borderWidth: 1.2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   reactionText: {
     fontSize: 12,
@@ -617,5 +802,21 @@ const styles = StyleSheet.create({
   },
   receivedTailNub: {
     left: 4,
+  },
+  systemMessageContainer: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  systemPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    maxWidth: '85%',
+  },
+  systemMessageText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

@@ -7,7 +7,7 @@ import { AuthRequest } from '../middleware/authMiddleware';
 export const createStory = async (req: AuthRequest, res: Response) => {
   try {
     const currentUserId = req.user?.userId;
-    const { mediaUrl, type, caption, backgroundColor } = req.body;
+    const { mediaUrl, type, caption, backgroundColor, visibility, excludedUsers, includedUsers } = req.body;
 
     if (!type || !['image', 'video', 'text'].includes(type)) {
       return res.status(400).json({ error: 'Valid story type (image, video, text) is required.' });
@@ -25,6 +25,9 @@ export const createStory = async (req: AuthRequest, res: Response) => {
       type,
       caption: caption || '',
       backgroundColor: backgroundColor || '#7C3AED',
+      visibility: visibility || 'contacts',
+      excludedUsers: Array.isArray(excludedUsers) ? excludedUsers : [],
+      includedUsers: Array.isArray(includedUsers) ? includedUsers : [],
       expiresAt,
       viewedBy: [],
     });
@@ -49,15 +52,30 @@ export const getStoriesFeed = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Exclude current user from feed (they use /mine), query contacts' active stories
+    // Query active stories from user's contacts
     const contactIds = currentUser.contacts || [];
 
-    const stories = await Story.find({
+    const rawStories = await Story.find({
       userId: { $in: contactIds },
       expiresAt: { $gt: new Date() },
     })
       .populate('userId', '_id name avatarUrl')
       .sort({ createdAt: 1 });
+
+    // Apply visibility privacy filtering for current user
+    const stories = rawStories.filter((story) => {
+      const uIdStr = currentUserId!;
+      if (story.visibility === 'except') {
+        const isExcluded = story.excludedUsers?.some((id) => id.toString() === uIdStr);
+        return !isExcluded;
+      }
+      if (story.visibility === 'only') {
+        const isIncluded = story.includedUsers?.some((id) => id.toString() === uIdStr);
+        return isIncluded;
+      }
+      // 'contacts' default: all contacts see it
+      return true;
+    });
 
     const groupedMap: { [key: string]: { user: any; stories: any[]; hasUnviewed: boolean; latestCreatedAt: Date } } = {};
 

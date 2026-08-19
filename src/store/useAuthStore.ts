@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { UserProfile } from '../types';
 import { apiClient, setAuthTokens, initSocket, disconnectSocket } from '../config/api';
+import { e2eeService } from '../services/e2eeService';
 
 interface AuthState {
   user: UserProfile | null;
@@ -45,7 +46,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await apiClient.get('/users/me');
       if (res.data?.user) {
-        set({ user: res.data.user, isAuthenticated: true, isLoading: false });
+        const u = res.data.user;
+        set({ user: u, isAuthenticated: true, isLoading: false });
+        e2eeService.initialize(u._id || u.id);
       } else {
         set({ user: null, isAuthenticated: false, isLoading: false });
       }
@@ -74,6 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { accessToken, refreshToken, user } = res.data;
       setAuthTokens(accessToken, refreshToken);
       initSocket(accessToken);
+      e2eeService.initialize(user._id || user.id);
 
       set({
         user,
@@ -109,6 +113,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { accessToken, refreshToken, user } = res.data;
       setAuthTokens(accessToken, refreshToken);
       initSocket(accessToken);
+      e2eeService.initialize(user._id || user.id);
 
       set({
         user,

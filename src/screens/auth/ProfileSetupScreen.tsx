@@ -37,6 +37,15 @@ export const ProfileSetupScreen: React.FC = () => {
     triggerHaptic('selection');
     setErrorMsg('');
     try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow photo library access in device settings to choose an avatar.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -44,7 +53,7 @@ export const ProfileSetupScreen: React.FC = () => {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const localUri = result.assets[0].uri;
         setAvatarUrl(localUri);
 
@@ -62,8 +71,10 @@ export const ProfileSetupScreen: React.FC = () => {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
 
-          if (uploadRes.data?.url) {
-            setAvatarUrl(uploadRes.data.url);
+          const uploadedUrl = uploadRes.data?.mediaUrl || uploadRes.data?.url;
+          if (uploadedUrl) {
+            setAvatarUrl(uploadedUrl);
+            triggerHaptic('success');
           }
         } catch (uploadErr) {
           console.warn('Direct avatar upload failed, will upload on save:', uploadErr);
@@ -71,7 +82,7 @@ export const ProfileSetupScreen: React.FC = () => {
           setIsUploadingAvatar(false);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Pick avatar error:', err);
       setIsUploadingAvatar(false);
     }

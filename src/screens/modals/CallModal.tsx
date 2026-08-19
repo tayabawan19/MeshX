@@ -10,12 +10,11 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mic, MicOff, Video, VideoOff, Volume2, PhoneOff, Phone, RefreshCw } from 'lucide-react-native';
+import { Mic, MicOff, Video, VideoOff, Volume2, PhoneOff, Phone, RefreshCw, Users, AlertCircle } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { triggerHaptic } from '../../utils/haptics';
 
-// Concentric Soft Clay Ripple Wave Ring
 const ClayRippleRing: React.FC<{ delay: number; color: string }> = ({ delay, color }) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.5);
@@ -71,7 +70,6 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
 
   const [seconds, setSeconds] = useState(0);
 
-  // Squish scales for accept/decline buttons
   const acceptScale = useSharedValue(1);
   const declineScale = useSharedValue(1);
 
@@ -88,6 +86,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   if (!activeCall) return null;
 
   const isIncoming = activeCall.isIncoming && activeCall.status !== 'connected';
+  const isBusy = activeCall.status === 'busy';
 
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -134,49 +133,85 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
     >
       {/* Header Info */}
       <View style={styles.header}>
-        {(!isConnected || activeCall.type === 'voice' || !activeCall.isVideoEnabled) && (
-          <View style={styles.avatarHolder}>
-            {/* Concentric Soft Clay Ripple Rings */}
-            <ClayRippleRing delay={0} color="rgba(139, 127, 209, 0.22)" />
-            <ClayRippleRing delay={800} color="rgba(123, 147, 214, 0.18)" />
-            <ClayRippleRing delay={1600} color="rgba(111, 175, 160, 0.15)" />
+        {isBusy ? (
+          <View style={styles.busyContainer}>
+            <AlertCircle size={64} color="#E57373" style={{ marginBottom: 16 }} />
+            <Text style={styles.peerName}>{activeCall.peerName}</Text>
+            <Text style={[styles.callStatus, { color: '#E57373' }]}>User is busy on another call</Text>
+          </View>
+        ) : (
+          <>
+            {(!isConnected || activeCall.type === 'voice' || !activeCall.isVideoEnabled) && (
+              <View style={styles.avatarHolder}>
+                <ClayRippleRing delay={0} color="rgba(139, 127, 209, 0.22)" />
+                <ClayRippleRing delay={800} color="rgba(123, 147, 214, 0.18)" />
+                <ClayRippleRing delay={1600} color="rgba(111, 175, 160, 0.15)" />
 
-            <View style={styles.clayAvatarWrapper}>
+                <View style={styles.clayAvatarWrapper}>
+                  {activeCall.isGroupCall ? (
+                    <View style={[styles.avatar, { backgroundColor: '#7C3AED', justifyContent: 'center', alignItems: 'center' }]}>
+                      <Users size={48} color="#FFFFFF" />
+                    </View>
+                  ) : (
+                    <Image
+                      source={{
+                        uri:
+                          activeCall.peerAvatar ||
+                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+                      }}
+                      style={styles.avatar}
+                    />
+                  )}
+                </View>
+              </View>
+            )}
+            <Text style={styles.peerName}>{activeCall.peerName}</Text>
+            <Text style={styles.callStatus}>
+              {isIncoming
+                ? `Incoming ${activeCall.isGroupCall ? 'Group ' : ''}${activeCall.type === 'video' ? 'Video' : 'Voice'} Call...`
+                : activeCall.status === 'calling'
+                ? `Calling ${activeCall.isGroupCall ? 'Group' : ''}...`
+                : `${activeCall.isGroupCall ? 'Group ' : ''}${activeCall.type === 'video' ? 'Video' : 'Voice'} Call • ${formatTime(seconds)}`}
+            </Text>
+          </>
+        )}
+      </View>
+
+      {/* Video Canvas Container (Support 1:1 or Group Multi-Tile Grid) */}
+      {!isIncoming && !isBusy && activeCall.type === 'video' && (
+        <View style={styles.videoCanvas}>
+          {activeCall.isGroupCall ? (
+            <View style={styles.groupVideoGrid}>
+              <View style={styles.gridTile}>
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <Text style={styles.tileLabel}>Alex</Text>
+              </View>
+              <View style={styles.gridTile}>
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80' }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <Text style={styles.tileLabel}>David</Text>
+              </View>
+            </View>
+          ) : (
+            <>
               <Image
                 source={{
                   uri:
                     activeCall.peerAvatar ||
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
                 }}
-                style={styles.avatar}
+                style={StyleSheet.absoluteFillObject}
               />
-            </View>
-          </View>
-        )}
-        <Text style={styles.peerName}>{activeCall.peerName}</Text>
-        <Text style={styles.callStatus}>
-          {isIncoming
-            ? `Incoming ${activeCall.type === 'video' ? 'Video' : 'Voice'} Call...`
-            : activeCall.status === 'calling'
-            ? 'Calling...'
-            : `${activeCall.type === 'video' ? 'Video' : 'Voice'} Call • ${formatTime(seconds)}`}
-        </Text>
-      </View>
-
-      {/* Video Canvas Container */}
-      {!isIncoming && activeCall.type === 'video' && (
-        <View style={styles.videoCanvas}>
-          <Image
-            source={{
-              uri:
-                activeCall.peerAvatar ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
-            }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.videoOverlay}>
-            <Text style={styles.hdBadge}>MeshX RTC HD 1080p</Text>
-          </View>
+              <View style={styles.videoOverlay}>
+                <Text style={styles.hdBadge}>MeshX RTC HD</Text>
+              </View>
+            </>
+          )}
 
           {activeCall.isVideoEnabled && (
             <View style={styles.pipView}>
@@ -212,6 +247,10 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
             </Animated.View>
           </TouchableWithoutFeedback>
         </View>
+      ) : isBusy ? (
+        <TouchableOpacity style={styles.endClayBtn} onPress={handleEndCall}>
+          <PhoneOff size={24} color="#FFFFFF" />
+        </TouchableOpacity>
       ) : (
         /* Connected / Outgoing Call Controls Bar */
         <View style={styles.controlsRow}>
@@ -280,6 +319,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 40,
   },
+  busyContainer: {
+    alignItems: 'center',
+    marginVertical: 40,
+  },
   avatarHolder: {
     position: 'relative',
     width: 140,
@@ -305,10 +348,6 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0, 0, 0, 0.50)',
     borderRightColor: 'rgba(0, 0, 0, 0.35)',
     overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 8, height: 14 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
     elevation: 12,
   },
   avatar: {
@@ -338,11 +377,30 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#1E1E2C',
-    shadowColor: '#000',
-    shadowOffset: { width: 6, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
     elevation: 8,
+  },
+  groupVideoGrid: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
+  },
+  gridTile: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#2A2A3C',
+  },
+  tileLabel: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   videoOverlay: {
     position: 'absolute',
@@ -383,13 +441,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     borderWidth: 1.8,
     borderTopColor: 'rgba(255,255,255,0.16)',
-    borderLeftColor: 'rgba(255,255,255,0.16)',
     borderBottomColor: 'rgba(0,0,0,0.4)',
-    borderRightColor: 'rgba(0,0,0,0.25)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 6, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
     elevation: 8,
   },
   controlBtn: {
@@ -409,14 +461,8 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     backgroundColor: '#E57373',
     borderWidth: 1.5,
-    borderTopColor: 'rgba(255,255,255,0.3)',
-    borderBottomColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E57373',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
     elevation: 8,
   },
   incomingControlsRow: { flexDirection: 'row', gap: 60, marginBottom: 50 },
@@ -426,14 +472,8 @@ const styles = StyleSheet.create({
     borderRadius: 38,
     backgroundColor: '#E57373',
     borderWidth: 2,
-    borderTopColor: 'rgba(255,255,255,0.3)',
-    borderBottomColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#E57373',
-    shadowOffset: { width: 4, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
     elevation: 8,
   },
   acceptClayBtn: {
@@ -442,14 +482,8 @@ const styles = StyleSheet.create({
     borderRadius: 38,
     backgroundColor: '#6FAFA0',
     borderWidth: 2,
-    borderTopColor: 'rgba(255,255,255,0.3)',
-    borderBottomColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#6FAFA0',
-    shadowOffset: { width: 4, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
     elevation: 8,
   },
   btnLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', marginTop: 4 },

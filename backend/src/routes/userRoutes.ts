@@ -15,6 +15,8 @@ import {
   getBlockedUsers,
   deleteAccount,
   updateFcmToken,
+  updateKeys,
+  getUserKeys,
 } from '../controllers/userController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -24,6 +26,9 @@ router.use(authenticateToken as any);
 
 router.get('/me', getCurrentUser as any);
 router.get('/search', searchUser as any);
+
+router.post('/keys', updateKeys as any);
+router.get('/:userId/keys', getUserKeys as any);
 
 router.post('/add-contact', addContact as any);
 router.get('/contacts', getContacts as any);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   StyleSheet,
   Modal,
   Dimensions,
-  PanResponder,
+  TextInput,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Eye, Trash2 } from 'lucide-react-native';
+import { X, Eye, Trash2, Send } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -38,15 +40,20 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 }) => {
   const palette = useThemeStore((state) => state.palette);
   const currentUser = useAuthStore((state) => state.user);
-  const { viewStoryApi, deleteStoryApi } = useChatStore();
+  const { viewStoryApi, deleteStoryApi, createNewChat, sendMessage } = useChatStore();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showViewersList, setShowViewersList] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
 
   const stories = storyGroup?.stories || [];
   const currentStory = stories[currentIndex];
-  const isMine = storyGroup?.isMine || currentStory?.userId?._id === currentUser?.id || currentStory?.userId === currentUser?.id;
+  const isMine =
+    storyGroup?.isMine ||
+    currentStory?.userId?._id === currentUser?.id ||
+    currentStory?.userId === currentUser?.id;
 
   const progress = useSharedValue(0);
 
@@ -73,7 +80,6 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     progress.value = 0;
     progress.value = withTiming(1, { duration: 5000, easing: Easing.linear }, (finished) => {
       if (finished) {
-        // Auto-advance
         if (index < stories.length - 1) {
           setCurrentIndex(index + 1);
           startProgress(index + 1);
@@ -92,6 +98,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   };
 
   const handleResume = () => {
+    if (isReplying) return;
     setIsPaused(false);
     const remainingTime = (1 - progress.value) * 5000;
     progress.value = withTiming(1, { duration: remainingTime, easing: Easing.linear }, (finished) => {
@@ -141,6 +148,28 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }
   };
 
+  const handleSendStoryReply = async () => {
+    if (!replyText.trim() || !storyGroup?.user) return;
+    triggerHaptic('success');
+    const targetUserId = storyGroup.user._id || storyGroup.user.id;
+    const chatId = await createNewChat(targetUserId);
+
+    if (chatId) {
+      sendMessage(replyText.trim(), 'text', undefined, {
+        storyReply: {
+          storyId: currentStory._id || currentStory.id,
+          mediaUrl: currentStory.mediaUrl || '',
+          caption: currentStory.caption || currentStory.text || '',
+          type: currentStory.type,
+        },
+      }, chatId);
+    }
+
+    setReplyText('');
+    setIsReplying(false);
+    handleResume();
+  };
+
   if (!visible || !storyGroup || !currentStory) return null;
 
   const storyUser = storyGroup.user || {};
@@ -148,8 +177,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.container}>
-        {/* Background Render: Image, Video, or Text Gradient */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+        {/* Story Media / Text Gradient */}
         {currentStory.type === 'text' ? (
           <LinearGradient
             colors={[currentStory.backgroundColor || '#7C3AED', '#3B82F6']}
@@ -225,25 +257,27 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           ) : null}
 
           {/* Touch Area for Left/Right Navigation */}
-          <View style={styles.touchNavigationArea}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handlePrev}
-              onLongPress={handlePause}
-              onPressOut={handleResume}
-              style={styles.touchHalf}
-            />
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={handleNext}
-              onLongPress={handlePause}
-              onPressOut={handleResume}
-              style={styles.touchHalf}
-            />
-          </View>
+          {!isReplying && (
+            <View style={styles.touchNavigationArea}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={handlePrev}
+                onLongPress={handlePause}
+                onPressOut={handleResume}
+                style={styles.touchHalf}
+              />
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={handleNext}
+                onLongPress={handlePause}
+                onPressOut={handleResume}
+                style={styles.touchHalf}
+              />
+            </View>
+          )}
 
-          {/* Swipe Up / Viewer Count for Owner */}
-          {isMine && (
+          {/* Owner Views or Viewer Reply Bar */}
+          {isMine ? (
             <TouchableOpacity
               onPress={() => {
                 triggerHaptic('light');
@@ -254,6 +288,29 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               <Eye size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
               <Text style={styles.viewerCountText}>{viewedByList.length} views</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.replyBarContainer}>
+              <TextInput
+                value={replyText}
+                onChangeText={setReplyText}
+                onFocus={() => {
+                  setIsReplying(true);
+                  handlePause();
+                }}
+                onBlur={() => {
+                  setIsReplying(false);
+                  handleResume();
+                }}
+                placeholder="Reply to story..."
+                placeholderTextColor="rgba(255,255,255,0.7)"
+                style={styles.replyInput}
+              />
+              {replyText.trim().length > 0 && (
+                <TouchableOpacity onPress={handleSendStoryReply} style={styles.replySendBtn}>
+                  <Send size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
 
@@ -294,7 +351,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             </View>
           </TouchableOpacity>
         </Modal>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -303,7 +360,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
   fullScreenGradient: { flex: 1, width: SCREEN_WIDTH, height: SCREEN_HEIGHT, justifyContent: 'center', alignItems: 'center', padding: 30 },
   textStoryContent: { color: '#FFFFFF', fontSize: 32, fontWeight: '900', textAlign: 'center' },
-  fullScreenMedia: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, resizeMode: 'cover' },
+  fullScreenMedia: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, resizeMode: 'contain', backgroundColor: '#000000' },
   overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', padding: 16, paddingTop: 50 },
   progressContainer: { flexDirection: 'row', gap: 6, marginBottom: 12 },
   segmentTrack: { flex: 1, height: 6, backgroundColor: 'rgba(255,255,255,0.20)', borderRadius: 4, overflow: 'hidden' },
@@ -315,12 +372,15 @@ const styles = StyleSheet.create({
   headerTime: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
   headerActions: { flexDirection: 'row', gap: 12 },
   iconBtn: { padding: 6 },
-  captionContainer: { backgroundColor: 'rgba(20,20,30,0.85)', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 22, borderWidth: 1.2, borderColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 60, maxWidth: '90%', zIndex: 10 },
+  captionContainer: { backgroundColor: 'rgba(20,20,30,0.85)', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 22, borderWidth: 1.2, borderColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', marginBottom: 20, maxWidth: '90%', zIndex: 10 },
   captionText: { color: '#FFFFFF', fontSize: 15, fontWeight: '500', textAlign: 'center' },
   touchNavigationArea: { ...StyleSheet.absoluteFillObject, flexDirection: 'row', zIndex: 1 },
   touchHalf: { flex: 1 },
-  viewerTrayTrigger: { position: 'absolute', bottom: 30, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20,20,30,0.85)', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22, borderWidth: 1.2, borderColor: 'rgba(255,255,255,0.15)', zIndex: 10 },
+  viewerTrayTrigger: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20,20,30,0.85)', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 22, borderWidth: 1.2, borderColor: 'rgba(255,255,255,0.15)', zIndex: 10, marginBottom: 20 },
   viewerCountText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  replyBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(20,20,30,0.88)', borderRadius: 26, paddingHorizontal: 16, paddingVertical: 6, zIndex: 10, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  replyInput: { flex: 1, color: '#FFFFFF', fontSize: 15, height: 40 },
+  replySendBtn: { padding: 8, backgroundColor: '#7C3AED', borderRadius: 18, marginLeft: 8 },
   sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   viewersSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)', padding: 20, maxHeight: SCREEN_HEIGHT * 0.5 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },

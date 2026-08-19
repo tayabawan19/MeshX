@@ -54,7 +54,8 @@
         {
           "microphonePermission": "MeshX needs microphone access to record voice notes and connect calls."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

@@ -1,7 +1,16 @@
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
 import nacl from 'tweetnacl';
 import { encodeBase64, decodeBase64, encodeUTF8, decodeUTF8 } from 'tweetnacl-util';
 import { apiClient } from '../config/api';
+
+// Supply secure PRNG to tweetnacl in React Native
+nacl.setPRNG((x, n) => {
+  const randomBytes = Crypto.getRandomBytes(n);
+  for (let i = 0; i < n; i++) {
+    x[i] = randomBytes[i];
+  }
+});
 
 const SECURE_STORE_PRIVATE_KEY = 'meshx_e2e_private_key_v1';
 const SECURE_STORE_PUBLIC_KEY = 'meshx_e2e_public_key_v1';

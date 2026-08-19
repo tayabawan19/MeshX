@@ -163,9 +163,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
       const res = await apiClient.get('/chats/archived');
       if (res.data?.chats) {
         set({ archivedChats: res.data.chats });
+        return;
       }
     } catch (err) {
-      console.warn('[FetchArchivedChats Error]', err);
+      // Graceful fallback to client-side filter
+      const localArchived = get().chats.filter((c) => c.isArchived);
+      set({ archivedChats: localArchived });
     }
   },
 

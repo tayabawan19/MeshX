@@ -7,15 +7,13 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, User, FileText, Check, ArrowRight } from 'lucide-react-native';
 import { Header } from '../../components/common/Header';
-import { GradientButton } from '../../components/common/GradientButton';
-import { ClayInput } from '../../components/common/ClayInput';
+import { BoldButton } from '../../components/common/BoldButton';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { apiClient } from '../../config/api';
@@ -57,7 +55,6 @@ export const ProfileSetupScreen: React.FC = () => {
         const localUri = result.assets[0].uri;
         setAvatarUrl(localUri);
 
-        // Upload to Cloudinary via backend /media/upload
         setIsUploadingAvatar(true);
         try {
           const formData = new FormData();
@@ -82,23 +79,15 @@ export const ProfileSetupScreen: React.FC = () => {
           setIsUploadingAvatar(false);
         }
       }
-    } catch (err: any) {
-      console.error('Pick avatar error:', err);
-      setIsUploadingAvatar(false);
+    } catch (err) {
+      console.warn('Avatar pick error:', err);
     }
-  };
-
-  const handleFinish = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Main' }],
-    });
   };
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setErrorMsg('Please enter your name.');
-      triggerHaptic('error');
+      setErrorMsg('Display name is required');
+      triggerHaptic('heavy');
       return;
     }
 
@@ -109,7 +98,6 @@ export const ProfileSetupScreen: React.FC = () => {
     try {
       let finalAvatarUrl = avatarUrl;
 
-      // If avatar is local file URI, upload to Cloudinary first
       if (avatarUrl && avatarUrl.startsWith('file://')) {
         try {
           const formData = new FormData();
@@ -122,27 +110,24 @@ export const ProfileSetupScreen: React.FC = () => {
           const uploadRes = await apiClient.post('/media/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
-
-          if (uploadRes.data?.url) {
-            finalAvatarUrl = uploadRes.data.url;
-          }
-        } catch (e) {
-          console.warn('Avatar upload retry failed:', e);
+          finalAvatarUrl = uploadRes.data?.mediaUrl || uploadRes.data?.url || avatarUrl;
+        } catch (upErr) {
+          console.warn('Save fallback avatar upload warning:', upErr);
         }
       }
 
-      await updateProfile({
-        name: name.trim(),
-        bio: bio.trim(),
-        avatarUrl: finalAvatarUrl,
-      });
-
+      await updateProfile({ name: name.trim(), bio: bio.trim(), avatarUrl: finalAvatarUrl });
+      updateUserProfile({ name: name.trim(), bio: bio.trim(), avatarUrl: finalAvatarUrl });
       triggerHaptic('success');
-      handleFinish();
+
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      }
     } catch (err: any) {
-      console.error('Error saving profile:', err);
-      setErrorMsg('Failed to save profile. Please try again.');
-      triggerHaptic('error');
+      setErrorMsg(err.response?.data?.message || 'Failed to update profile');
+      triggerHaptic('heavy');
     } finally {
       setIsSaving(false);
     }
@@ -150,96 +135,111 @@ export const ProfileSetupScreen: React.FC = () => {
 
   const handleSkip = () => {
     triggerHaptic('light');
-    handleFinish();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
-      <Header
-        title="Profile Setup"
-        showBack={navigation.canGoBack()}
-        rightElement={
-          <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-            <Text style={[styles.skipText, { color: palette.textSecondary }]}>Skip</Text>
-          </TouchableOpacity>
-        }
-      />
+      <Header title="Set Up Profile" />
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Avatar Section */}
         <View style={styles.avatarSection}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={pickAvatar}
-            disabled={isUploadingAvatar}
-            style={styles.avatarTouchable}
-          >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: palette.primary }]}>
-                <Text style={styles.initialText}>{name ? name.charAt(0).toUpperCase() : 'U'}</Text>
-              </View>
-            )}
-            <View style={[styles.cameraBadge, { backgroundColor: palette.primary }]}>
-              {isUploadingAvatar ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+          <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8} style={styles.avatarTouchable}>
+            <View style={styles.avatarShadow} />
+            <View style={[styles.avatarRing, { borderColor: '#000000', backgroundColor: palette.surfaceElevated }]}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
               ) : (
-                <Camera size={18} color="#FFFFFF" />
+                <View style={[styles.avatarPlaceholder, { backgroundColor: palette.accent }]}>
+                  <Text style={styles.initialText}>
+                    {name ? name.charAt(0).toUpperCase() : 'M'}
+                  </Text>
+                </View>
               )}
             </View>
+
+            <View style={[styles.cameraBadge, { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
+              <Camera size={18} color="#100F17" strokeWidth={2.5} />
+            </View>
           </TouchableOpacity>
-          <Text style={[styles.changeText, { color: palette.primaryLight }]}>
-            {isUploadingAvatar ? 'Uploading avatar...' : 'Tap to change avatar'}
+
+          <Text style={[styles.avatarSubtext, { color: palette.textMuted }]}>
+            {isUploadingAvatar ? 'Uploading avatar...' : 'Tap to change photo'}
           </Text>
         </View>
 
         {errorMsg ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMsg}</Text>
+          <View style={[styles.errorContainer, { backgroundColor: 'rgba(255, 77, 94, 0.15)', borderColor: palette.error }]}>
+            <Text style={[styles.errorText, { color: palette.error }]}>{errorMsg}</Text>
           </View>
         ) : null}
 
+        {/* Display Name Input */}
         <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: palette.textSecondary }]}>DISPLAY NAME</Text>
-          <ClayInput style={styles.inputRow}>
-            <User size={20} color={palette.textMuted} style={styles.inputIcon} />
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your name"
-              placeholderTextColor={palette.textMuted}
-              style={[styles.input, { color: palette.textPrimary }]}
-            />
-          </ClayInput>
+          <Text style={[styles.label, { color: palette.secondary }]}>DISPLAY NAME</Text>
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputShadow} />
+            <View style={[styles.inputBox, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+              <User size={20} color={palette.secondary} strokeWidth={2.5} style={styles.inputIcon} />
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter your name"
+                placeholderTextColor={palette.textMuted}
+                style={[styles.input, { color: palette.textPrimary }]}
+              />
+            </View>
+          </View>
         </View>
 
+        {/* Status / Bio Input */}
         <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: palette.textSecondary }]}>STATUS / BIO</Text>
-          <ClayInput style={[styles.inputRow, { height: 75, alignItems: 'flex-start', paddingTop: 10 }]}>
-            <FileText size={20} color={palette.textMuted} style={[styles.inputIcon, { marginTop: 4 }]} />
-            <TextInput
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Write a short bio..."
-              placeholderTextColor={palette.textMuted}
-              multiline
-              style={[styles.input, { color: palette.textPrimary, height: 55 }]}
-            />
-          </ClayInput>
+          <Text style={[styles.label, { color: palette.secondary }]}>STATUS / BIO</Text>
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputShadow} />
+            <View
+              style={[
+                styles.inputBox,
+                {
+                  backgroundColor: palette.surfaceElevated,
+                  borderColor: '#000000',
+                  height: 80,
+                  alignItems: 'flex-start',
+                  paddingTop: 12,
+                },
+              ]}
+            >
+              <FileText size={20} color={palette.primary} strokeWidth={2.5} style={[styles.inputIcon, { marginTop: 2 }]} />
+              <TextInput
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Write a short bio..."
+                placeholderTextColor={palette.textMuted}
+                multiline
+                style={[styles.input, { color: palette.textPrimary, height: 60 }]}
+              />
+            </View>
+          </View>
         </View>
 
-        <GradientButton
+        <BoldButton
           title="Save Profile"
           onPress={handleSave}
-          isLoading={isSaving}
+          loading={isSaving}
           disabled={isSaving || isUploadingAvatar}
-          icon={<Check size={20} color="#FFFFFF" />}
-          style={{ marginTop: 24 }}
+          icon={<Check size={20} color="#FFFFFF" strokeWidth={3} />}
+          size="lg"
+          style={{ marginTop: 16 }}
         />
 
         <TouchableOpacity onPress={handleSkip} style={styles.skipBottomButton}>
           <Text style={[styles.skipBottomText, { color: palette.textSecondary }]}>Continue to Chats</Text>
-          <ArrowRight size={16} color={palette.textSecondary} style={{ marginLeft: 4 }} />
+          <ArrowRight size={16} color={palette.textSecondary} strokeWidth={2.5} style={{ marginLeft: 4 }} />
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -255,61 +255,104 @@ const styles = StyleSheet.create({
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   avatarTouchable: {
     position: 'relative',
+    width: 114,
+    height: 114,
+  },
+  avatarShadow: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 57,
+    backgroundColor: '#000000',
+  },
+  avatarRing: {
+    width: 114,
+    height: 114,
+    borderRadius: 57,
+    borderWidth: 3,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   avatarImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: '100%',
+    height: '100%',
   },
   avatarPlaceholder: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   initialText: {
-    fontSize: 40,
-    fontWeight: '700',
+    fontSize: 44,
+    fontWeight: '900',
     color: '#FFFFFF',
   },
   cameraBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#0F0F14',
+    zIndex: 2,
   },
-  changeText: {
+  avatarSubtext: {
     fontSize: 13,
-    fontWeight: '600',
-    marginTop: 10,
+    fontWeight: '700',
+    marginTop: 12,
+  },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 2,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   formGroup: {
     marginBottom: 20,
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '900',
+    letterSpacing: 1,
     marginBottom: 8,
   },
-  inputRow: {
+  inputWrapper: {
+    position: 'relative',
+  },
+  inputShadow: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    right: -3,
+    bottom: -3,
+    borderRadius: 20,
+    backgroundColor: '#000000',
+  },
+  inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
+    height: 52,
+    borderRadius: 20,
+    borderWidth: 2,
+    paddingHorizontal: 16,
+    zIndex: 1,
   },
   inputIcon: {
     marginRight: 10,
@@ -317,38 +360,17 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-  },
-  skipButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  skipText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   skipBottomButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
+    marginTop: 24,
     paddingVertical: 10,
   },
   skipBottomText: {
     fontSize: 14,
-    fontWeight: '600',
-  },
-  errorBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 1,
-    borderColor: '#EF4444',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 13,
-    textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '800',
   },
 });

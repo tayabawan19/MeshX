@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } fr
 import { Phone, Video, PhoneIncoming, PhoneMissed, PhoneOutgoing } from 'lucide-react-native';
 import { Header } from '../../components/common/Header';
 import { Avatar } from '../../components/common/Avatar';
-import { ClayCard } from '../../components/common/ClayCard';
+import { BoldCard } from '../../components/common/BoldCard';
 import { useChatStore } from '../../store/useChatStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -33,9 +33,9 @@ export const CallsScreen: React.FC = () => {
       return <PhoneMissed size={16} color={palette.error} style={{ marginRight: 6 }} />;
     }
     if (isOutgoing) {
-      return <PhoneOutgoing size={16} color={palette.primaryLight} style={{ marginRight: 6 }} />;
+      return <PhoneOutgoing size={16} color={palette.primary} style={{ marginRight: 6 }} />;
     }
-    return <PhoneIncoming size={16} color={palette.onlineGreen} style={{ marginRight: 6 }} />;
+    return <PhoneIncoming size={16} color={palette.secondary} style={{ marginRight: 6 }} />;
   };
 
   return (
@@ -57,55 +57,57 @@ export const CallsScreen: React.FC = () => {
           const timeVal = Number(item.createdAt || (item as any).timestamp) || Date.now();
 
           return (
-            <ClayCard
-              borderRadius={22}
+            <BoldCard
+              borderRadius={20}
+              shadowOffset={3}
               onPress={() => {
                 triggerHaptic('light');
                 startCall(recId, partnerName, partnerAvatar, item.type);
               }}
-              style={styles.callRow}
+              style={styles.cardContainer}
             >
-              <Avatar url={partnerAvatar} name={partnerName} size="md" />
+              <View style={styles.callRow}>
+                <Avatar url={partnerAvatar} name={partnerName} size="md" />
 
-              <View style={styles.content}>
-                <Text style={[styles.name, { color: palette.textPrimary }]}>{partnerName}</Text>
-                <View style={styles.statusRow}>
-                  {renderCallIcon(item.status, item.callerId)}
-                  <Text style={[styles.timeText, { color: item.status === 'missed' ? palette.error : palette.textMuted }]}>
-                    {item.status === 'missed' ? 'Missed' : formatChatTimestamp(timeVal)}
-                    {item.duration > 0 ? ` • ${formatCallDuration(item.duration)}` : ''}
-                  </Text>
+                <View style={styles.content}>
+                  <Text style={[styles.name, { color: palette.textPrimary }]}>{partnerName}</Text>
+                  <View style={styles.statusRow}>
+                    {renderCallIcon(item.status, item.callerId)}
+                    <Text style={[styles.timeText, { color: item.status === 'missed' ? palette.error : palette.textMuted }]}>
+                      {item.status === 'missed' ? 'Missed' : formatChatTimestamp(timeVal)}
+                      {item.duration > 0 ? ` • ${formatCallDuration(item.duration)}` : ''}
+                    </Text>
+                  </View>
                 </View>
-              </View>
 
-              <TouchableOpacity
-                onPress={() => {
-                  triggerHaptic('medium');
-                  startCall(recId, partnerName, partnerAvatar, item.type);
-                }}
-                style={[
-                  styles.clayCallIconBtn,
-                  {
-                    backgroundColor: palette.surfaceElevated,
-                    borderTopColor: palette.clayHighlight,
-                    borderLeftColor: palette.clayHighlight,
-                    borderBottomColor: 'rgba(0,0,0,0.35)',
-                    borderRightColor: 'rgba(0,0,0,0.2)',
-                  },
-                ]}
-              >
-                {item.type === 'video' ? (
-                  <Video size={19} color={palette.accent} />
-                ) : (
-                  <Phone size={18} color={palette.primaryLight} />
-                )}
-              </TouchableOpacity>
-            </ClayCard>
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHaptic('medium');
+                    startCall(recId, partnerName, partnerAvatar, item.type);
+                  }}
+                  style={[
+                    styles.callIconBtn,
+                    {
+                      backgroundColor: item.type === 'video' ? palette.accent : palette.secondary,
+                      borderColor: '#000000',
+                    },
+                  ]}
+                >
+                  {item.type === 'video' ? (
+                    <Video size={18} color="#FFFFFF" />
+                  ) : (
+                    <Phone size={18} color="#100F17" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </BoldCard>
           );
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={{ fontSize: 44, marginBottom: 12 }}>📞</Text>
+            <View style={[styles.emptyIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+              <Phone size={36} color={palette.secondary} />
+            </View>
             <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>No calls yet</Text>
             <Text style={[styles.emptySub, { color: palette.textMuted }]}>
               Recent voice and video calls will appear here.
@@ -119,31 +121,51 @@ export const CallsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingHorizontal: 14, paddingVertical: 10, paddingBottom: 80 },
+  listContent: { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 90 },
+  cardContainer: {
+    marginVertical: 5,
+  },
   callRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    marginBottom: 10,
   },
   content: { flex: 1, marginLeft: 14 },
-  name: { fontSize: 16, fontWeight: '700' },
+  name: { fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
   statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  timeText: { fontSize: 13, fontWeight: '500' },
-  clayCallIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
+  timeText: { fontSize: 12, fontWeight: '700' },
+  callIconBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
   },
-  emptyContainer: { padding: 40, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '800', marginBottom: 6 },
-  emptySub: { fontSize: 14, textAlign: 'center' },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 6,
+    letterSpacing: -0.4,
+  },
+  emptySub: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });

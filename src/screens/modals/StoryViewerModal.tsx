@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,19 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, cancelAnimation, SharedValue } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  cancelAnimation,
+  SharedValue,
+  runOnJS,
+} from 'react-native-reanimated';
 import { X, Eye, Trash2, Send } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { formatCallDuration } from '../../utils/dateUtils';
 import { triggerHaptic } from '../../utils/haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -51,6 +58,17 @@ const StoryProgressBar: React.FC<StoryProgressBarProps> = ({ index, currentIndex
   );
 };
 
+const getStoryTimeAgo = (createdAt: any): string => {
+  if (!createdAt) return 'Just now';
+  const time = typeof createdAt === 'number' ? createdAt : new Date(createdAt).getTime();
+  if (isNaN(time)) return 'Just now';
+  const diffSec = Math.max(0, Math.floor((Date.now() - time) / 1000));
+  if (diffSec < 60) return 'Just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return `${Math.floor(diffSec / 86400)}d ago`;
+};
+
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   visible,
   storyGroup,
@@ -69,48 +87,62 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const [isReplying, setIsReplying] = useState(false);
 
   const stories = storyGroup?.stories || [];
-  const currentStory = stories[currentIndex];
+  const currentStory = stories[currentIndex] || stories[0];
+  const currentUserId = currentUser?.id || currentUser?._id;
   const isMine =
     storyGroup?.isMine ||
-    currentStory?.userId?._id === currentUser?.id ||
-    currentStory?.userId === currentUser?.id;
+    (currentStory?.userId && (currentStory.userId._id === currentUserId || currentStory.userId === currentUserId));
 
   const progress = useSharedValue(0);
 
+  const handleStoryComplete = useCallback(
+    (completedIndex: number) => {
+      if (completedIndex < stories.length - 1) {
+        const nextIdx = completedIndex + 1;
+        setCurrentIndex(nextIdx);
+        startProgress(nextIdx);
+      } else if (onNextGroup) {
+        onNextGroup();
+      } else {
+        onClose();
+      }
+    },
+    [stories.length, onNextGroup, onClose]
+  );
+
+  const startProgress = useCallback(
+    (index: number) => {
+      cancelAnimation(progress);
+      progress.value = 0;
+      progress.value = withTiming(1, { duration: 5000, easing: Easing.linear }, (finished) => {
+        if (finished) {
+          runOnJS(handleStoryComplete)(index);
+        }
+      });
+    },
+    [handleStoryComplete]
+  );
+
   useEffect(() => {
-    if (visible && currentStory) {
+    if (visible && stories.length > 0) {
       setCurrentIndex(0);
       startProgress(0);
+    } else {
+      cancelAnimation(progress);
     }
   }, [visible, storyGroup]);
 
   useEffect(() => {
-    if (currentStory && visible) {
+    if (currentStory && visible && !isMine) {
       const sId = currentStory.id || currentStory._id;
-      if (sId) {
+      if (sId && typeof sId === 'string' && sId.length >= 12) {
         const timer = setTimeout(() => {
           viewStoryApi(sId);
-        }, 1000);
+        }, 1200);
         return () => clearTimeout(timer);
       }
     }
-  }, [currentIndex, visible, storyGroup]);
-
-  const startProgress = (index: number) => {
-    progress.value = 0;
-    progress.value = withTiming(1, { duration: 5000, easing: Easing.linear }, (finished) => {
-      if (finished) {
-        if (index < stories.length - 1) {
-          setCurrentIndex(index + 1);
-          startProgress(index + 1);
-        } else if (onNextGroup) {
-          onNextGroup();
-        } else {
-          onClose();
-        }
-      }
-    });
-  };
+  }, [currentIndex, visible, isMine]);
 
   const handlePause = () => {
     setIsPaused(true);
@@ -120,17 +152,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const handleResume = () => {
     if (isReplying) return;
     setIsPaused(false);
-    const remainingTime = (1 - progress.value) * 5000;
+    const currentProgressVal = progress.value || 0;
+    const remainingTime = Math.max(200, (1 - currentProgressVal) * 5000);
     progress.value = withTiming(1, { duration: remainingTime, easing: Easing.linear }, (finished) => {
       if (finished) {
-        if (currentIndex < stories.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-          startProgress(currentIndex + 1);
-        } else if (onNextGroup) {
-          onNextGroup();
-        } else {
-          onClose();
-        }
+        runOnJS(handleStoryComplete)(currentIndex);
       }
     });
   };
@@ -162,8 +188,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const handleDelete = async () => {
     if (currentStory) {
       triggerHaptic('heavy');
+      cancelAnimation(progress);
       const sId = currentStory.id || currentStory._id;
-      await deleteStoryApi(sId);
+      if (sId) {
+        await deleteStoryApi(sId);
+      }
       onClose();
     }
   };
@@ -190,10 +219,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     handleResume();
   };
 
-  if (!visible || !storyGroup || !currentStory) return null;
+  if (!visible || !storyGroup || !stories.length || !currentStory) return null;
 
   const storyUser = storyGroup.user || {};
-  const viewedByList = currentStory.viewedBy || [];
+  const viewedByList = Array.isArray(currentStory.viewedBy) ? currentStory.viewedBy : [];
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -206,10 +235,14 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           <View
             style={[styles.fullScreenGradient, { backgroundColor: currentStory.backgroundColor || '#2E4BFF' }]}
           >
-            <Text style={styles.textStoryContent}>{currentStory.caption || currentStory.text}</Text>
+            <Text style={styles.textStoryContent}>{currentStory.caption || currentStory.text || ''}</Text>
           </View>
         ) : (
-          <Image source={{ uri: currentStory.mediaUrl }} style={styles.fullScreenMedia} resizeMode="contain" />
+          <Image
+            source={{ uri: currentStory.mediaUrl || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80' }}
+            style={styles.fullScreenMedia}
+            resizeMode="contain"
+          />
         )}
 
         {/* Story Overlay Controls */}
@@ -218,7 +251,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           <View style={styles.progressContainer}>
             {stories.map((s, idx) => (
               <StoryProgressBar
-                key={s.id || s._id || idx}
+                key={s?.id || s?._id || `bar_${idx}`}
                 index={idx}
                 currentIndex={currentIndex}
                 progress={progress}
@@ -239,9 +272,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
               />
               <View>
                 <Text style={styles.headerName}>{storyUser.name || 'User'}</Text>
-                <Text style={styles.headerTime}>
-                  {formatCallDuration(Math.floor((Date.now() - new Date(currentStory.createdAt).getTime()) / 1000))} ago
-                </Text>
+                <Text style={styles.headerTime}>{getStoryTimeAgo(currentStory.createdAt)}</Text>
               </View>
             </View>
 
@@ -329,23 +360,27 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             <View style={styles.viewersSheet}>
               <Text style={styles.viewersSheetTitle}>Viewed by ({viewedByList.length})</Text>
               <ScrollView style={{ maxHeight: 180 }}>
-                {viewedByList.map((v: any, idx: number) => {
-                  const uName = v.name || v.userId?.name || 'Viewer';
-                  const uAvatar = v.avatarUrl || v.userId?.avatarUrl;
-                  return (
-                    <View key={idx} style={styles.viewerRow}>
-                      <Image
-                        source={{
-                          uri:
-                            uAvatar ||
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-                        }}
-                        style={styles.viewerAvatar}
-                      />
-                      <Text style={styles.viewerName}>{uName}</Text>
-                    </View>
-                  );
-                })}
+                {viewedByList.length === 0 ? (
+                  <Text style={{ color: '#A5A5BA', fontStyle: 'italic', paddingVertical: 8 }}>No views yet</Text>
+                ) : (
+                  viewedByList.map((v: any, idx: number) => {
+                    const uName = v.name || v.userId?.name || 'Viewer';
+                    const uAvatar = v.avatarUrl || v.userId?.avatarUrl;
+                    return (
+                      <View key={idx} style={styles.viewerRow}>
+                        <Image
+                          source={{
+                            uri:
+                              uAvatar ||
+                              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+                          }}
+                          style={styles.viewerAvatar}
+                        />
+                        <Text style={styles.viewerName}>{uName}</Text>
+                      </View>
+                    );
+                  })
+                )}
               </ScrollView>
             </View>
           )}

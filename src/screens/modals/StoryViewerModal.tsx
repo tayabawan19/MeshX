@@ -12,8 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, cancelAnimation, SharedValue } from 'react-native-reanimated';
 import { X, Eye, Trash2, Send } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
@@ -30,6 +29,27 @@ interface StoryViewerModalProps {
   onNextGroup?: () => void;
   onPrevGroup?: () => void;
 }
+
+interface StoryProgressBarProps {
+  index: number;
+  currentIndex: number;
+  progress: SharedValue<number>;
+}
+
+const StoryProgressBar: React.FC<StoryProgressBarProps> = ({ index, currentIndex, progress }) => {
+  const animatedFillStyle = useAnimatedStyle(() => {
+    if (index === currentIndex) {
+      return { width: `${progress.value * 100}%` };
+    }
+    return { width: index < currentIndex ? '100%' : '0%' };
+  });
+
+  return (
+    <View style={styles.segmentTrack}>
+      <Animated.View style={[styles.segmentFill, animatedFillStyle]} />
+    </View>
+  );
+};
 
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   visible,
@@ -197,23 +217,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           {/* Top Progress Segment Bars */}
           <View style={styles.progressContainer}>
             {stories.map((s, idx) => (
-              <View key={idx} style={styles.segmentTrack}>
-                {idx === currentIndex ? (
-                  <Animated.View
-                    style={[
-                      styles.segmentFill,
-                      useAnimatedStyle(() => ({ width: `${progress.value * 100}%` })),
-                    ]}
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.segmentFill,
-                      { width: idx < currentIndex ? '100%' : '0%' },
-                    ]}
-                  />
-                )}
-              </View>
+              <StoryProgressBar
+                key={s.id || s._id || idx}
+                index={idx}
+                currentIndex={currentIndex}
+                progress={progress}
+              />
             ))}
           </View>
 

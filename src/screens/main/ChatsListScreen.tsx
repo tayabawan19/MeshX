@@ -56,7 +56,7 @@ export const ChatsListScreen: React.FC<{
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
-  const [activeStoryGroup, setActiveStoryGroup] = useState<{ user: any; stories: any[]; isMine?: boolean } | null>(null);
+  const [activeStoryGroup, setActiveStoryGroup] = useState<{ user: any; stories: any[]; isMine?: boolean; initialIndex?: number } | null>(null);
 
   const fabPressedOffset = useSharedValue(0);
 
@@ -251,7 +251,9 @@ export const ChatsListScreen: React.FC<{
       <StoryAvatarRow
         storyGroups={storyGroups}
         myStories={myStories}
-        onOpenStoryGroup={(u, st, isMine) => setActiveStoryGroup({ user: u, stories: st, isMine })}
+        onOpenStoryGroup={(u, st, isMine, initialIndex) =>
+          setActiveStoryGroup({ user: u, stories: st, isMine, initialIndex: initialIndex || 0 })
+        }
         onCreateStory={() => setIsCreateStoryOpen(true)}
       />
 
@@ -358,6 +360,7 @@ export const ChatsListScreen: React.FC<{
       <StoryViewerModal
         visible={!!activeStoryGroup}
         storyGroup={activeStoryGroup}
+        initialIndex={activeStoryGroup?.initialIndex || 0}
         onClose={() => setActiveStoryGroup(null)}
       />
     </View>

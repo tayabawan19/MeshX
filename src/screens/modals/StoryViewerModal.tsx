@@ -21,6 +21,7 @@ import Animated, {
   SharedValue,
   runOnJS,
 } from 'react-native-reanimated';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { X, Eye, Trash2, Send } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
@@ -28,10 +29,12 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { triggerHaptic } from '../../utils/haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const IMAGE_STORY_DURATION = 20000; // 20 seconds for images and text stories
 
 interface StoryViewerModalProps {
   visible: boolean;
   storyGroup: { user: any; stories: any[]; isMine?: boolean } | null;
+  initialIndex?: number;
   onClose: () => void;
   onNextGroup?: () => void;
   onPrevGroup?: () => void;
@@ -72,6 +75,7 @@ const getStoryTimeAgo = (createdAt: any): string => {
 export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   visible,
   storyGroup,
+  initialIndex = 0,
   onClose,
   onNextGroup,
   onPrevGroup,
@@ -80,11 +84,13 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const currentUser = useAuthStore((state) => state.user);
   const { viewStoryApi, deleteStoryApi, createNewChat, sendMessage } = useChatStore();
 
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isPaused, setIsPaused] = useState(false);
   const [showViewersList, setShowViewersList] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [isReplying, setIsReplying] = useState(false);
+
+  const videoRef = useRef<Video | null>(null);
 
   const stories = storyGroup?.stories || [];
   const currentStory = stories[currentIndex] || stories[0];
@@ -114,23 +120,32 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     (index: number) => {
       cancelAnimation(progress);
       progress.value = 0;
-      progress.value = withTiming(1, { duration: 5000, easing: Easing.linear }, (finished) => {
+
+      const targetStory = stories[index];
+      if (targetStory?.type === 'video') {
+        // Video manages its own progress via onPlaybackStatusUpdate
+        return;
+      }
+
+      // For Image & Text: 20 seconds duration
+      progress.value = withTiming(1, { duration: IMAGE_STORY_DURATION, easing: Easing.linear }, (finished) => {
         if (finished) {
           runOnJS(handleStoryComplete)(index);
         }
       });
     },
-    [handleStoryComplete]
+    [stories, handleStoryComplete]
   );
 
   useEffect(() => {
     if (visible && stories.length > 0) {
-      setCurrentIndex(0);
-      startProgress(0);
+      const startIndex = Math.min(Math.max(0, initialIndex), stories.length - 1);
+      setCurrentIndex(startIndex);
+      startProgress(startIndex);
     } else {
       cancelAnimation(progress);
     }
-  }, [visible, storyGroup]);
+  }, [visible, storyGroup, initialIndex]);
 
   useEffect(() => {
     if (currentStory && visible && !isMine) {
@@ -147,18 +162,42 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
   const handlePause = () => {
     setIsPaused(true);
     cancelAnimation(progress);
+    if (currentStory?.type === 'video' && videoRef.current) {
+      videoRef.current.pauseAsync().catch(() => {});
+    }
   };
 
   const handleResume = () => {
     if (isReplying) return;
     setIsPaused(false);
+
+    if (currentStory?.type === 'video') {
+      if (videoRef.current) {
+        videoRef.current.playAsync().catch(() => {});
+      }
+      return;
+    }
+
     const currentProgressVal = progress.value || 0;
-    const remainingTime = Math.max(200, (1 - currentProgressVal) * 5000);
+    const remainingTime = Math.max(200, (1 - currentProgressVal) * IMAGE_STORY_DURATION);
     progress.value = withTiming(1, { duration: remainingTime, easing: Easing.linear }, (finished) => {
       if (finished) {
         runOnJS(handleStoryComplete)(currentIndex);
       }
     });
+  };
+
+  const handleVideoPlaybackStatus = (status: AVPlaybackStatus) => {
+    if (!status.isLoaded) return;
+
+    if (status.durationMillis && status.durationMillis > 0) {
+      const currentPos = status.positionMillis || 0;
+      progress.value = Math.min(1, currentPos / status.durationMillis);
+    }
+
+    if (status.didJustFinish) {
+      runOnJS(handleStoryComplete)(currentIndex);
+    }
   };
 
   const handleNext = () => {
@@ -230,16 +269,31 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.container}
       >
-        {/* Story Media / Text Gradient */}
+        {/* Story Media / Video / Text */}
         {currentStory.type === 'text' ? (
           <View
             style={[styles.fullScreenGradient, { backgroundColor: currentStory.backgroundColor || '#2E4BFF' }]}
           >
             <Text style={styles.textStoryContent}>{currentStory.caption || currentStory.text || ''}</Text>
           </View>
+        ) : currentStory.type === 'video' && currentStory.mediaUrl ? (
+          <Video
+            ref={videoRef}
+            source={{ uri: currentStory.mediaUrl }}
+            style={styles.fullScreenMedia}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={!isPaused && !isReplying}
+            isLooping={false}
+            useNativeControls={false}
+            onPlaybackStatusUpdate={handleVideoPlaybackStatus}
+          />
         ) : (
           <Image
-            source={{ uri: currentStory.mediaUrl || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80' }}
+            source={{
+              uri:
+                currentStory.mediaUrl ||
+                'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=600&q=80',
+            }}
             style={styles.fullScreenMedia}
             resizeMode="contain"
           />

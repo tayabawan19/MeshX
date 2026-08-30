@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { Plus, Type, Video as VideoIcon } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../common/Avatar';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -35,7 +34,7 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
   const user = useAuthStore((state) => state.user);
 
   return (
-    <View style={[styles.container, { borderBottomColor: '#000000' }]}>
+    <View style={[styles.container, { borderBottomColor: palette.border }]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* 1. Add Story Button */}
         <TouchableOpacity
@@ -49,17 +48,16 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
           <View style={styles.avatarWrapper}>
             <View style={styles.addWrapper}>
               <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
-              <View style={styles.plusShadow} />
               <View
                 style={[
                   styles.plusBadge,
                   {
                     backgroundColor: palette.primary,
-                    borderColor: '#000000',
+                    borderColor: palette.background,
                   },
                 ]}
               >
-                <Plus size={14} color="#FFFFFF" strokeWidth={3} />
+                <Plus size={12} color="#FFFFFF" strokeWidth={2.5} />
               </View>
             </View>
           </View>
@@ -81,11 +79,11 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
                 style={styles.item}
               >
                 <View style={styles.avatarWrapper}>
-                  <LinearGradient colors={['#FF4D5E', '#C6FF3D']} style={styles.storyDonutRing}>
+                  <View style={[styles.storyDonutRing, { borderColor: palette.primary }]}>
                     <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
                       {story.type === 'text' ? (
-                        <View style={[styles.textThumbnail, { backgroundColor: story.backgroundColor || '#2E4BFF' }]}>
-                          <Type size={18} color="#FFFFFF" strokeWidth={2.5} />
+                        <View style={[styles.textThumbnail, { backgroundColor: story.backgroundColor || palette.primary }]}>
+                          <Type size={16} color="#FFFFFF" strokeWidth={2} />
                         </View>
                       ) : story.mediaUrl ? (
                         <Image source={{ uri: story.mediaUrl }} style={styles.mediaThumbnail} />
@@ -93,14 +91,14 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
                         <Avatar size="lg" url={user?.avatarUrl} name={user?.name || 'Me'} />
                       )}
                     </View>
-                  </LinearGradient>
+                  </View>
                   {story.type === 'video' && (
-                    <View style={styles.videoBadge}>
-                      <VideoIcon size={10} color="#FFFFFF" />
+                    <View style={[styles.videoBadge, { backgroundColor: palette.surfaceElevated }]}>
+                      <VideoIcon size={9} color="#FFFFFF" />
                     </View>
                   )}
                 </View>
-                <Text style={[styles.nameText, { color: palette.secondary }]} numberOfLines={1}>
+                <Text style={[styles.nameText, { color: palette.primary }]} numberOfLines={1}>
                   My • {timeLabel}
                 </Text>
               </TouchableOpacity>
@@ -127,43 +125,23 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
                 style={styles.item}
               >
                 <View style={styles.avatarWrapper}>
-                  {isUnviewed ? (
-                    <LinearGradient colors={['#FF4D5E', '#C6FF3D']} style={styles.storyDonutRing}>
-                      <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
-                        {story.type === 'text' ? (
-                          <View
-                            style={[
-                              styles.textThumbnail,
-                              { backgroundColor: story.backgroundColor || '#2E4BFF' },
-                            ]}
-                          >
-                            <Type size={18} color="#FFFFFF" strokeWidth={2.5} />
-                          </View>
-                        ) : story.mediaUrl ? (
-                          <Image source={{ uri: story.mediaUrl }} style={styles.mediaThumbnail} />
-                        ) : (
-                          <Avatar size="lg" url={u.avatarUrl} name={u.name || 'User'} />
-                        )}
-                      </View>
-                    </LinearGradient>
-                  ) : (
-                    <View
-                      style={[
-                        styles.viewedDonutRing,
-                        {
-                          borderColor: '#000000',
-                          backgroundColor: palette.surfaceElevated,
-                        },
-                      ]}
-                    >
+                  <View
+                    style={[
+                      styles.storyDonutRing,
+                      {
+                        borderColor: isUnviewed ? palette.primary : '#4E5058',
+                      },
+                    ]}
+                  >
+                    <View style={[styles.innerBorder, { backgroundColor: palette.background }]}>
                       {story.type === 'text' ? (
                         <View
                           style={[
                             styles.textThumbnail,
-                            { backgroundColor: story.backgroundColor || '#2E4BFF' },
+                            { backgroundColor: story.backgroundColor || palette.primary },
                           ]}
                         >
-                          <Type size={18} color="#FFFFFF" strokeWidth={2.5} />
+                          <Type size={16} color="#FFFFFF" strokeWidth={2} />
                         </View>
                       ) : story.mediaUrl ? (
                         <Image source={{ uri: story.mediaUrl }} style={styles.mediaThumbnail} />
@@ -171,10 +149,10 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
                         <Avatar size="lg" url={u.avatarUrl} name={u.name || 'User'} />
                       )}
                     </View>
-                  )}
+                  </View>
                   {story.type === 'video' && (
-                    <View style={styles.videoBadge}>
-                      <VideoIcon size={10} color="#FFFFFF" />
+                    <View style={[styles.videoBadge, { backgroundColor: palette.surfaceElevated }]}>
+                      <VideoIcon size={9} color="#FFFFFF" />
                     </View>
                   )}
                 </View>
@@ -192,66 +170,49 @@ export const StoryAvatarRow: React.FC<StoryAvatarRowProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 12,
-    borderBottomWidth: 2,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    gap: 14,
+    gap: 12,
   },
   item: {
     alignItems: 'center',
-    width: 68,
+    width: 64,
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   addWrapper: {
     position: 'relative',
-  },
-  plusShadow: {
-    position: 'absolute',
-    bottom: -1,
-    right: -1,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#000000',
   },
   plusBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
   },
   storyDonutRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    padding: 2.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  viewedDonutRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    padding: 2.5,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    padding: 2,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   innerBorder: {
-    width: 51,
-    height: 51,
-    borderRadius: 25.5,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -259,31 +220,28 @@ const styles = StyleSheet.create({
   mediaThumbnail: {
     width: '100%',
     height: '100%',
-    borderRadius: 25.5,
+    borderRadius: 23,
   },
   textThumbnail: {
     width: '100%',
     height: '100%',
-    borderRadius: 25.5,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
   },
   videoBadge: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    backgroundColor: '#FF4D5E',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#000000',
+    bottom: 0,
+    right: 0,
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
     justifyContent: 'center',
     alignItems: 'center',
   },
   nameText: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '600',
     textAlign: 'center',
     width: '100%',
   },

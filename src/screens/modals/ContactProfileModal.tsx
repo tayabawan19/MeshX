@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, ScrollView, Image, TouchableOpacity, Switch, Alert } from 'react-native';
-import { Phone, Video, MessageSquare, BellOff, ShieldAlert, Clock, ChevronRight } from 'lucide-react-native';
+import { View, Text, StyleSheet, Modal, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import { Phone, Video, MessageSquare, BellOff, ShieldAlert, Clock } from 'lucide-react-native';
 import { Header } from '../../components/common/Header';
 import { Avatar } from '../../components/common/Avatar';
-import { BoldCard } from '../../components/common/BoldCard';
+import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -32,7 +32,6 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
     email: '',
   };
 
-  const targetChat = chats.find((c) => c.chatId === chatId || (c as any)._id === chatId);
   const chatMessages = (chatId && messages[chatId]) || [];
 
   const mediaMessages = chatMessages.filter(
@@ -87,22 +86,22 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
   return (
     <Modal visible={!!userId} animationType="slide" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: palette.background }]}>
-        <Header title="Contact Info" showBack onBackPress={onClose} />
+        <Header title="User Profile" showBack onBackPress={onClose} />
 
         <ScrollView contentContainerStyle={styles.content}>
           {/* User Hero Banner */}
           <View style={styles.profileHeader}>
-            <Avatar url={contactUser.avatarUrl} name={contactUser.name} size="xl" />
+            <Avatar url={contactUser.avatarUrl} name={contactUser.name} size="xl" isOnline={true} />
             <Text style={[styles.name, { color: palette.textPrimary }]}>{contactUser.name}</Text>
-            <Text style={[styles.bio, { color: palette.textSecondary }]}>{contactUser.bio || 'Available on MeshX'}</Text>
+            <Text style={[styles.bio, { color: palette.textSecondary }]}>{contactUser.bio || 'Online'}</Text>
           </View>
 
-          {/* Quick Action Grid */}
-          <BoldCard borderRadius={22} shadowOffset={3} style={styles.actionCard}>
+          {/* Quick Action Buttons */}
+          <View style={[styles.actionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
             <View style={styles.actionRow}>
               <TouchableOpacity onPress={onClose} style={styles.actionBtn}>
-                <View style={[styles.actionIconCircle, { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
-                  <MessageSquare size={20} color="#100F17" strokeWidth={2.5} />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <MessageSquare size={18} color={palette.textPrimary} />
                 </View>
                 <Text style={[styles.actionText, { color: palette.textPrimary }]}>Message</Text>
               </TouchableOpacity>
@@ -114,10 +113,10 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
                 }}
                 style={styles.actionBtn}
               >
-                <View style={[styles.actionIconCircle, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
-                  <Phone size={20} color="#FFFFFF" strokeWidth={2.5} />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <Phone size={18} color={palette.textPrimary} />
                 </View>
-                <Text style={[styles.actionText, { color: palette.textPrimary }]}>Audio</Text>
+                <Text style={[styles.actionText, { color: palette.textPrimary }]}>Voice</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -127,22 +126,22 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
                 }}
                 style={styles.actionBtn}
               >
-                <View style={[styles.actionIconCircle, { backgroundColor: palette.accent, borderColor: '#000000' }]}>
-                  <Video size={20} color="#FFFFFF" strokeWidth={2.5} />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <Video size={18} color={palette.textPrimary} />
                 </View>
                 <Text style={[styles.actionText, { color: palette.textPrimary }]}>Video</Text>
               </TouchableOpacity>
             </View>
-          </BoldCard>
+          </View>
 
-          {/* Shared Media Grid */}
-          <Text style={[styles.sectionTitle, { color: palette.secondary }]}>SHARED MEDIA ({mediaMessages.length})</Text>
+          {/* Shared Media */}
+          <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>SHARED MEDIA ({mediaMessages.length})</Text>
           {mediaMessages.length === 0 ? (
-            <BoldCard borderRadius={18} shadowOffset={2} style={styles.emptyMediaCard}>
-              <Text style={{ color: palette.textMuted, fontWeight: '600', textAlign: 'center' }}>
-                No shared photos or videos yet
+            <View style={[styles.emptyMediaCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <Text style={{ color: palette.textMuted, fontWeight: '500', textAlign: 'center', fontSize: 13 }}>
+                No shared photos or videos
               </Text>
-            </BoldCard>
+            </View>
           ) : (
             <View style={styles.mediaGrid}>
               {mediaMessages.map((msg, idx) => (
@@ -158,40 +157,38 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
           )}
 
           {/* Chat Settings Card */}
-          <Text style={[styles.sectionTitle, { color: palette.secondary, marginTop: 12 }]}>CHAT SETTINGS</Text>
-          <BoldCard borderRadius={20} shadowOffset={3} style={styles.optionsCard}>
+          <Text style={[styles.sectionTitle, { color: palette.textMuted, marginTop: 12 }]}>CHAT SETTINGS</Text>
+          <View style={[styles.optionsCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
             <View style={styles.optionRow}>
               <View style={styles.optionLeft}>
-                <BellOff size={20} color={palette.textMuted} strokeWidth={2.5} />
+                <BellOff size={18} color={palette.textMuted} />
                 <Text style={[styles.optionText, { color: palette.textPrimary }]}>Mute Notifications</Text>
               </View>
-              <Switch
+              <ClaySwitch
                 value={isMuted}
                 onValueChange={handleToggleMute}
-                trackColor={{ false: '#3A394D', true: palette.secondary }}
-                thumbColor="#FFFFFF"
               />
             </View>
 
             <TouchableOpacity onPress={() => setShowDisappearingPicker(true)} style={styles.optionRow}>
               <View style={styles.optionLeft}>
-                <Clock size={20} color={palette.highlight} strokeWidth={2.5} />
+                <Clock size={18} color={palette.textMuted} />
                 <Text style={[styles.optionText, { color: palette.textPrimary }]}>Disappearing Messages</Text>
               </View>
-              <Text style={{ color: palette.secondary, fontWeight: '800' }}>
+              <Text style={{ color: palette.textSecondary, fontWeight: '600', fontSize: 13 }}>
                 {disappearingDuration === 86400 ? '24h' : disappearingDuration === 604800 ? '7 days' : 'Off'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleToggleBlock} style={[styles.optionRow, { borderBottomWidth: 0 }]}>
               <View style={styles.optionLeft}>
-                <ShieldAlert size={20} color={palette.error} strokeWidth={2.5} />
+                <ShieldAlert size={18} color={palette.error} />
                 <Text style={[styles.optionText, { color: palette.error }]}>
                   {isBlocked ? 'Unblock Contact' : 'Block Contact'}
                 </Text>
               </View>
             </TouchableOpacity>
-          </BoldCard>
+          </View>
         </ScrollView>
 
         {/* Disappearing Messages Duration Picker Modal */}
@@ -201,7 +198,7 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
             onPress={() => setShowDisappearingPicker(false)}
             style={styles.pickerOverlay}
           >
-            <BoldCard borderRadius={24} shadowOffset={4} style={styles.pickerCard}>
+            <View style={[styles.pickerCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
               <Text style={[styles.pickerTitle, { color: palette.textPrimary }]}>Disappearing Messages</Text>
 
               {[
@@ -216,11 +213,11 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
                 >
                   <Text style={[styles.pickerLabel, { color: palette.textPrimary }]}>{opt.label}</Text>
                   {disappearingDuration === opt.value && (
-                    <Text style={{ color: palette.secondary, fontWeight: '900' }}>✓</Text>
+                    <Text style={{ color: palette.primary, fontWeight: '700' }}>✓</Text>
                   )}
                 </TouchableOpacity>
               ))}
-            </BoldCard>
+            </View>
           </TouchableOpacity>
         </Modal>
       </View>
@@ -230,34 +227,33 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 18, paddingBottom: 60 },
-  profileHeader: { alignItems: 'center', marginBottom: 20 },
-  name: { fontSize: 24, fontWeight: '900', marginTop: 14, letterSpacing: -0.4 },
-  bio: { fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 4 },
-  actionCard: { marginBottom: 20 },
+  content: { padding: 16, paddingBottom: 50 },
+  profileHeader: { alignItems: 'center', marginBottom: 16 },
+  name: { fontSize: 20, fontWeight: '700', marginTop: 10, letterSpacing: -0.2 },
+  bio: { fontSize: 13, fontWeight: '400', textAlign: 'center', marginTop: 2 },
+  actionCard: { padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 16 },
   actionRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
   actionBtn: { alignItems: 'center' },
   actionIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 2,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  actionText: { fontSize: 13, fontWeight: '800', marginTop: 8 },
-  sectionTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: 10 },
-  emptyMediaCard: { padding: 16, marginBottom: 20 },
-  mediaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  mediaItem: { width: '22.5%', height: 80, borderRadius: 14, borderWidth: 2, borderColor: '#000000', overflow: 'hidden' },
+  actionText: { fontSize: 12, fontWeight: '600', marginTop: 6 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8, marginLeft: 4 },
+  emptyMediaCard: { padding: 14, borderRadius: 8, borderWidth: 1, marginBottom: 16 },
+  mediaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  mediaItem: { width: '22.5%', height: 74, borderRadius: 8, overflow: 'hidden' },
   mediaThumb: { width: '100%', height: '100%', resizeMode: 'cover' },
-  optionsCard: { marginBottom: 20 },
-  optionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionText: { fontSize: 15, fontWeight: '800' },
-  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 24 },
-  pickerCard: { padding: 20 },
-  pickerTitle: { fontSize: 18, fontWeight: '900', marginBottom: 16, textAlign: 'center', letterSpacing: -0.3 },
-  pickerOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1 },
-  pickerLabel: { fontSize: 16, fontWeight: '700' },
+  optionsCard: { borderRadius: 10, borderWidth: 1, marginBottom: 16 },
+  optionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  optionText: { fontSize: 14, fontWeight: '500' },
+  pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 24 },
+  pickerCard: { padding: 18, borderRadius: 12, borderWidth: 1 },
+  pickerTitle: { fontSize: 16, fontWeight: '700', marginBottom: 14, textAlign: 'center' },
+  pickerOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
+  pickerLabel: { fontSize: 14, fontWeight: '500' },
 });

@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
-  FadeInRight,
+  FadeIn,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { BellOff } from 'lucide-react-native';
 import { Chat } from '../../types';
@@ -12,7 +12,6 @@ import { Avatar } from '../common/Avatar';
 import { useThemeStore } from '../../store/useThemeStore';
 import { formatChatTimestamp } from '../../utils/dateUtils';
 import { triggerHaptic } from '../../utils/haptics';
-import { getContactAccent } from '../../theme/colors';
 
 interface ChatListItemProps {
   chat: Chat;
@@ -29,7 +28,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   onPress,
 }) => {
   const palette = useThemeStore((state) => state.palette);
-  const pressedOffset = useSharedValue(0);
+  const opacity = useSharedValue(1);
 
   const isGroup = chat.type === 'group';
   const recipient =
@@ -47,7 +46,6 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   const displayName = isGroup ? (chat.groupName || 'Group') : (recipient?.name || 'Direct Chat');
   const avatarUrl = isGroup ? (chat.groupAvatar || chat.groupAvatarUrl) : recipient?.avatarUrl;
   const isOnline = !isGroup && !!recipient?.isOnline;
-  const assignedAccent = getContactAccent(displayName);
 
   const unreadCount = Number(chat.unreadCount) || 0;
   const hasUnread = unreadCount > 0;
@@ -65,11 +63,11 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
 
   const handlePressIn = () => {
     triggerHaptic('light');
-    pressedOffset.value = withSpring(3, { damping: 14, stiffness: 280 });
+    opacity.value = withTiming(0.7, { duration: 100 });
   };
 
   const handlePressOut = () => {
-    pressedOffset.value = withSpring(0, { damping: 12, stiffness: 220 });
+    opacity.value = withTiming(1, { duration: 120 });
   };
 
   const handlePress = () => {
@@ -77,23 +75,13 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   };
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: pressedOffset.value },
-      { translateY: pressedOffset.value },
-    ],
-  }));
-
-  const animatedShadowStyle = useAnimatedStyle(() => ({
-    opacity: pressedOffset.value >= 2 ? 0 : 1,
+    opacity: opacity.value,
   }));
 
   const timeVal = Number(chat.lastMessage?.timestamp || chat.lastMessage?.createdAt) || (typeof chat.updatedAt === 'number' ? chat.updatedAt : Date.now());
 
   return (
-    <Animated.View entering={FadeInRight.duration(250)} style={styles.container}>
-      {/* Hard Offset Comic Shadow */}
-      <Animated.View style={[styles.hardShadow, animatedShadowStyle]} />
-
+    <Animated.View entering={FadeIn.duration(160)} style={styles.container}>
       <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -103,8 +91,8 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
           style={[
             styles.cardBody,
             {
-              backgroundColor: palette.surface,
-              borderColor: hasUnread ? assignedAccent : '#000000',
+              backgroundColor: hasUnread ? palette.surface : 'transparent',
+              borderBottomColor: palette.border,
             },
             animatedStyle,
           ]}
@@ -114,7 +102,6 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
             name={displayName}
             size="md"
             isOnline={isOnline}
-            accentColor={assignedAccent}
           />
 
           <View style={styles.content}>
@@ -124,7 +111,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
                   styles.name,
                   {
                     color: palette.textPrimary,
-                    fontWeight: hasUnread ? '900' : '700',
+                    fontWeight: hasUnread ? '700' : '600',
                   },
                 ]}
                 numberOfLines={1}
@@ -136,8 +123,8 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
                   style={[
                     styles.timestamp,
                     {
-                      color: hasUnread ? assignedAccent : palette.textMuted,
-                      fontWeight: hasUnread ? '800' : '600',
+                      color: hasUnread ? palette.primary : palette.textMuted,
+                      fontWeight: hasUnread ? '600' : '400',
                     },
                   ]}
                 >
@@ -152,7 +139,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
                   styles.preview,
                   {
                     color: hasUnread ? palette.textPrimary : palette.textSecondary,
-                    fontWeight: hasUnread ? '700' : '500',
+                    fontWeight: hasUnread ? '500' : '400',
                   },
                 ]}
                 numberOfLines={1}
@@ -163,19 +150,15 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
               <View style={styles.actionsBadgeGroup}>
                 {chat.isMuted && <BellOff size={14} color={palette.textMuted} style={{ marginRight: 6 }} />}
                 {hasUnread && (
-                  <View style={styles.unreadWrapper}>
-                    <View style={styles.unreadShadow} />
-                    <View
-                      style={[
-                        styles.unreadBadge,
-                        {
-                          backgroundColor: palette.primary, // Hot Coral #FF4D5E
-                          borderColor: '#000000',
-                        },
-                      ]}
-                    >
-                      <Text style={styles.unreadText}>{unreadDisplay}</Text>
-                    </View>
+                  <View
+                    style={[
+                      styles.unreadBadge,
+                      {
+                        backgroundColor: palette.primary, // Blurple #5865F2
+                      },
+                    ]}
+                  >
+                    <Text style={styles.unreadText}>{unreadDisplay}</Text>
                   </View>
                 )}
               </View>
@@ -189,28 +172,15 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    marginHorizontal: 14,
-    marginVertical: 4,
-  },
-  hardShadow: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 20,
-    backgroundColor: '#000000',
-    zIndex: 0,
+    marginHorizontal: 8,
+    marginVertical: 1,
   },
   cardBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 2,
-    zIndex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
   },
   content: {
     flex: 1,
@@ -220,16 +190,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   name: {
-    fontSize: 16,
-    letterSpacing: -0.3,
+    fontSize: 15,
+    letterSpacing: -0.1,
     flex: 1,
     marginRight: 8,
   },
   timestamp: {
-    fontSize: 12,
+    fontSize: 11,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -237,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   preview: {
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
     marginRight: 8,
   },
@@ -245,31 +215,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  unreadWrapper: {
-    position: 'relative',
-  },
-  unreadShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#000000',
-  },
   unreadBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    paddingHorizontal: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   unreadText: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

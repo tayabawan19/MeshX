@@ -13,7 +13,7 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { Search, Users, MessageSquarePlus, X, Archive, Star, Radio } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
@@ -22,7 +22,6 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { ChatListItem } from '../../components/chats/ChatListItem';
 import { StoryAvatarRow } from '../../components/chats/StoryAvatarRow';
 import { ChatListItemSkeleton } from '../../components/common/SkeletonLoader';
-import { ClayInput } from '../../components/common/ClayInput';
 import { BoldButton } from '../../components/common/BoldButton';
 import { triggerHaptic } from '../../utils/haptics';
 import { CreateStoryModal } from '../modals/CreateStoryModal';
@@ -34,7 +33,7 @@ export const ChatsListScreen: React.FC<{
   onSelectChat?: (chatId: string) => void;
   onOpenNewGroup?: () => void;
   onOpenStatusViewer?: (statusId: string) => void;
-}> = ({ navigation, onSelectChat, onOpenNewGroup, onOpenStatusViewer }) => {
+}> = ({ navigation, onSelectChat, onOpenNewGroup }) => {
   const palette = useThemeStore((state) => state.palette);
   const { user } = useAuthStore();
   const {
@@ -58,7 +57,7 @@ export const ChatsListScreen: React.FC<{
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [activeStoryGroup, setActiveStoryGroup] = useState<{ user: any; stories: any[]; isMine?: boolean; initialIndex?: number } | null>(null);
 
-  const fabPressedOffset = useSharedValue(0);
+  const fabScale = useSharedValue(1);
 
   useEffect(() => {
     loadData();
@@ -160,22 +159,15 @@ export const ChatsListScreen: React.FC<{
 
   const handleFabPressIn = () => {
     triggerHaptic('medium');
-    fabPressedOffset.value = withSpring(4, { damping: 14, stiffness: 280 });
+    fabScale.value = withTiming(0.92, { duration: 100 });
   };
 
   const handleFabPressOut = () => {
-    fabPressedOffset.value = withSpring(0, { damping: 12, stiffness: 220 });
+    fabScale.value = withTiming(1, { duration: 100 });
   };
 
   const fabAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: fabPressedOffset.value },
-      { translateY: fabPressedOffset.value },
-    ],
-  }));
-
-  const fabShadowAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: fabPressedOffset.value >= 3 ? 0 : 1,
+    transform: [{ scale: fabScale.value }],
   }));
 
   return (
@@ -185,9 +177,9 @@ export const ChatsListScreen: React.FC<{
         style={[
           styles.header,
           {
-            paddingTop: Math.max(insets.top, 14),
-            backgroundColor: palette.background,
-            borderBottomColor: '#000000',
+            paddingTop: Math.max(insets.top, 12),
+            backgroundColor: palette.surfaceElevated,
+            borderBottomColor: palette.border,
           },
         ]}
       >
@@ -196,42 +188,41 @@ export const ChatsListScreen: React.FC<{
         </View>
 
         <View style={styles.headerRight}>
-          <View style={styles.headerBtnWrapper}>
-            <View style={styles.headerBtnShadow} />
-            <TouchableOpacity
-              onPress={handleOpenStarred}
-              style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
-            >
-              <Star size={18} color={palette.highlight} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleOpenStarred}
+            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceLight }]}
+          >
+            <Star size={17} color={palette.textPrimary} />
+          </TouchableOpacity>
 
-          <View style={styles.headerBtnWrapper}>
-            <View style={styles.headerBtnShadow} />
-            <TouchableOpacity
-              onPress={handleOpenBroadcast}
-              style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
-            >
-              <Radio size={18} color={palette.secondary} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleOpenBroadcast}
+            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceLight }]}
+          >
+            <Radio size={17} color={palette.textPrimary} />
+          </TouchableOpacity>
 
-          <View style={styles.headerBtnWrapper}>
-            <View style={styles.headerBtnShadow} />
-            <TouchableOpacity
-              onPress={handleOpenGroup}
-              style={[styles.headerIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
-            >
-              <Users size={19} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleOpenGroup}
+            style={[styles.headerIconBtn, { backgroundColor: palette.surfaceLight }]}
+          >
+            <Users size={17} color={palette.textPrimary} />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Bold Search Slot */}
+      {/* Search Bar */}
       <View style={styles.searchWrapper}>
-        <ClayInput borderRadius={18} style={styles.searchBar}>
-          <Search size={18} color={palette.textMuted} style={{ marginRight: 8 }} />
+        <View
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
+            },
+          ]}
+        >
+          <Search size={16} color={palette.textMuted} style={{ marginRight: 8 }} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -241,10 +232,10 @@ export const ChatsListScreen: React.FC<{
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <X size={16} color={palette.textMuted} />
+              <X size={15} color={palette.textMuted} />
             </TouchableOpacity>
           )}
-        </ClayInput>
+        </View>
       </View>
 
       {/* Active Stories Row */}
@@ -257,19 +248,18 @@ export const ChatsListScreen: React.FC<{
         onCreateStory={() => setIsCreateStoryOpen(true)}
       />
 
-      {/* Archived Chats Quick Row */}
+      {/* Archived Chats Row */}
       {archivedChats.length > 0 && (
         <View style={styles.archivedWrapper}>
-          <View style={styles.archivedShadow} />
           <TouchableOpacity
             onPress={handleOpenArchived}
-            style={[styles.archivedRow, { backgroundColor: palette.surface, borderColor: '#000000' }]}
+            style={[styles.archivedRow, { backgroundColor: palette.surface, borderColor: palette.border }]}
           >
             <View style={styles.archivedLeft}>
-              <Archive size={18} color={palette.secondary} style={{ marginRight: 10 }} />
+              <Archive size={16} color={palette.textMuted} style={{ marginRight: 10 }} />
               <Text style={[styles.archivedLabel, { color: palette.textPrimary }]}>Archived</Text>
             </View>
-            <View style={[styles.archivedBadge, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
+            <View style={[styles.archivedBadge, { backgroundColor: palette.surfaceElevated }]}>
               <Text style={styles.archivedBadgeText}>{archivedChats.length}</Text>
             </View>
           </TouchableOpacity>
@@ -310,14 +300,13 @@ export const ChatsListScreen: React.FC<{
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={{ fontSize: 52, marginBottom: 12 }}>⚡</Text>
               <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>
                 No Conversations Yet
               </Text>
               <Text style={[styles.emptySub, { color: palette.textMuted }]}>
                 {searchQuery
                   ? 'No conversations match your search.'
-                  : 'Start a bold new chat on MeshX!'}
+                  : 'Start a direct chat or create a group.'}
               </Text>
               <BoldButton
                 title="Start New Chat"
@@ -330,9 +319,8 @@ export const ChatsListScreen: React.FC<{
         />
       )}
 
-      {/* Bold Floating Action Button (FAB) */}
+      {/* Floating Action Button (FAB) */}
       <View style={styles.fabWrapper}>
-        <Animated.View style={[styles.fabHardShadow, fabShadowAnimatedStyle]} />
         <Pressable
           onPressIn={handleFabPressIn}
           onPressOut={handleFabPressOut}
@@ -342,13 +330,12 @@ export const ChatsListScreen: React.FC<{
             style={[
               styles.fabButton,
               {
-                backgroundColor: palette.primary, // Hot Coral #FF4D5E
-                borderColor: '#000000',
+                backgroundColor: palette.primary, // Blurple #5865F2
               },
               fabAnimatedStyle,
             ]}
           >
-            <MessageSquarePlus size={26} color="#FFFFFF" />
+            <MessageSquarePlus size={22} color="#FFFFFF" />
           </Animated.View>
         </Pressable>
       </View>
@@ -370,98 +357,73 @@ export const ChatsListScreen: React.FC<{
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingBottom: 12,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { fontSize: 28, fontWeight: '900', letterSpacing: -0.8 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerBtnWrapper: { position: 'relative' },
-  headerBtnShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#000000',
-  },
+  headerTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
-  searchWrapper: { paddingHorizontal: 16, paddingVertical: 8 },
-  searchBar: { height: 50 },
-  searchInput: { flex: 1, fontSize: 15, fontWeight: '600' },
+  searchWrapper: { paddingHorizontal: 12, paddingVertical: 8 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    height: 38,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: '400' },
   archivedWrapper: {
-    position: 'relative',
-    marginHorizontal: 14,
-    marginBottom: 8,
-  },
-  archivedShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    right: -3,
-    bottom: -3,
-    borderRadius: 16,
-    backgroundColor: '#000000',
-    zIndex: 0,
+    marginHorizontal: 12,
+    marginVertical: 4,
   },
   archivedRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    zIndex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   archivedLeft: { flexDirection: 'row', alignItems: 'center' },
-  archivedLabel: { fontSize: 15, fontWeight: '800' },
+  archivedLabel: { fontSize: 14, fontWeight: '600' },
   archivedBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  archivedBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
+  archivedBadgeText: { color: '#F2F3F5', fontSize: 11, fontWeight: '600' },
   emptyContainer: { padding: 40, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 20, fontWeight: '900', marginBottom: 6, letterSpacing: -0.3 },
-  emptySub: { fontSize: 14, textAlign: 'center', marginBottom: 16, fontWeight: '500' },
+  emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  emptySub: { fontSize: 13, textAlign: 'center', marginBottom: 16, fontWeight: '400' },
   fabWrapper: {
     position: 'absolute',
-    bottom: 24,
-    right: 20,
+    bottom: 20,
+    right: 18,
     zIndex: 10,
   },
-  fabHardShadow: {
-    position: 'absolute',
-    top: 5,
-    left: 5,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: '#000000',
-    zIndex: 0,
-  },
   fabButton: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    borderWidth: 2,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });

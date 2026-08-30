@@ -7,10 +7,9 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { ArrowLeft, Bell, ShieldOff, Phone, Video, Image as ImageIcon } from 'lucide-react-native';
+import { ChevronLeft, Bell, ShieldOff, Phone, Video, Image as ImageIcon } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
-import { ClayCard } from '../../components/common/ClayCard';
 import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -38,34 +37,15 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
     <ScrollView style={[styles.container, { backgroundColor: palette.background }]}>
       <View style={styles.header}>
         <TouchableOpacity
-          style={[
-            styles.backButton,
-            {
-              backgroundColor: palette.surfaceElevated,
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0,0,0,0.35)',
-              borderRightColor: 'rgba(0,0,0,0.2)',
-            },
-          ]}
+          style={[styles.backButton, { backgroundColor: palette.surfaceElevated }]}
           onPress={() => navigation.goBack()}
         >
-          <ArrowLeft color={palette.textPrimary} size={22} />
+          <ChevronLeft color={palette.textPrimary} size={20} />
         </TouchableOpacity>
       </View>
 
       <View style={styles.profileHeader}>
-        <View
-          style={[
-            styles.clayAvatarWrapper,
-            {
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0, 0, 0, 0.45)',
-              borderRightColor: 'rgba(0, 0, 0, 0.30)',
-            },
-          ]}
-        >
+        <View style={styles.avatarWrapper}>
           <Image
             source={{
               uri: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
@@ -78,59 +58,41 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
         <Text style={[styles.bio, { color: palette.textSecondary }]}>
           {bio || 'Hey there! I am using MeshX.'}
         </Text>
-        <Text style={[styles.contactDetail, { color: palette.primaryLight }]}>
+        <Text style={[styles.contactDetail, { color: palette.textMuted }]}>
           {email || phone || ''}
         </Text>
 
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              {
-                backgroundColor: palette.surfaceElevated,
-                borderTopColor: palette.clayHighlight,
-                borderLeftColor: palette.clayHighlight,
-                borderBottomColor: 'rgba(0,0,0,0.35)',
-                borderRightColor: 'rgba(0,0,0,0.2)',
-              },
-            ]}
+            style={[styles.actionBtn, { backgroundColor: palette.surface, borderColor: palette.border }]}
             onPress={() => {
               triggerHaptic('selection');
               startCall('peer', title || 'Contact', avatar || '', 'voice');
               navigation.navigate('CallModal');
             }}
           >
-            <Phone size={18} color={palette.primaryLight} />
-            <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Audio</Text>
+            <Phone size={16} color={palette.textPrimary} />
+            <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Voice</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              {
-                backgroundColor: palette.surfaceElevated,
-                borderTopColor: palette.clayHighlight,
-                borderLeftColor: palette.clayHighlight,
-                borderBottomColor: 'rgba(0,0,0,0.35)',
-                borderRightColor: 'rgba(0,0,0,0.2)',
-              },
-            ]}
+            style={[styles.actionBtn, { backgroundColor: palette.surface, borderColor: palette.border }]}
             onPress={() => {
               triggerHaptic('selection');
               startCall('peer', title || 'Contact', avatar || '', 'video');
               navigation.navigate('CallModal');
             }}
           >
-            <Video size={18} color={palette.accent} />
+            <Video size={16} color={palette.textPrimary} />
             <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Video</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Shared Media */}
-      <ClayCard borderRadius={24} style={styles.section}>
+      <View style={[styles.section, { backgroundColor: palette.surface, borderColor: palette.border }]}>
         <View style={styles.sectionHeader}>
-          <ImageIcon size={18} color={palette.primaryLight} />
+          <ImageIcon size={16} color={palette.textMuted} />
           <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Shared Media</Text>
         </View>
         <View style={styles.mediaGrid}>
@@ -138,12 +100,12 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
             <Image key={idx} source={{ uri: url }} style={styles.mediaItem} />
           ))}
         </View>
-      </ClayCard>
+      </View>
 
       {/* Settings List */}
-      <ClayCard borderRadius={24} style={styles.section}>
+      <View style={[styles.section, { backgroundColor: palette.surface, borderColor: palette.border }]}>
         <View style={styles.row}>
-          <Bell size={20} color={palette.textPrimary} style={{ marginRight: 14 }} />
+          <Bell size={18} color={palette.textPrimary} style={{ marginRight: 10 }} />
           <Text style={[styles.rowText, { color: palette.textPrimary }]}>Mute Notifications</Text>
           <ClaySwitch value={isMuted} onValueChange={handleMuteToggle} />
         </View>
@@ -155,71 +117,54 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
             setIsBlocked(!isBlocked);
           }}
         >
-          <ShieldOff size={20} color={palette.error} style={{ marginRight: 14 }} />
-          <Text style={[styles.rowText, { color: palette.error, fontWeight: '700' }]}>
+          <ShieldOff size={18} color={palette.error} style={{ marginRight: 10 }} />
+          <Text style={[styles.rowText, { color: palette.error, fontWeight: '600' }]}>
             {isBlocked ? 'Unblock Contact' : 'Block Contact'}
           </Text>
         </TouchableOpacity>
-      </ClayCard>
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 16, paddingTop: 48, paddingBottom: 8 },
+  header: { paddingHorizontal: 16, paddingTop: 44, paddingBottom: 6 },
   backButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1.5,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
   },
-  profileHeader: { alignItems: 'center', paddingHorizontal: 24, paddingBottom: 24 },
-  clayAvatarWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2.2,
+  profileHeader: { alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 },
+  avatarWrapper: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     overflow: 'hidden',
-    marginBottom: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 6, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 8,
+    marginBottom: 12,
   },
   avatar: { width: '100%', height: '100%' },
-  name: { fontSize: 24, fontWeight: '800', marginBottom: 4 },
-  bio: { fontSize: 14, textAlign: 'center', marginBottom: 6 },
-  contactDetail: { fontSize: 13, fontWeight: '600', marginBottom: 20 },
-  actionRow: { flexDirection: 'row', gap: 16 },
+  name: { fontSize: 20, fontWeight: '700', marginBottom: 2 },
+  bio: { fontSize: 13, textAlign: 'center', marginBottom: 4 },
+  contactDetail: { fontSize: 12, marginBottom: 16 },
+  actionRow: { flexDirection: 'row', gap: 12 },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 5 },
-    shadowOpacity: 0.32,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
   },
-  actionLabel: { fontWeight: '700', fontSize: 14 },
-  section: { marginHorizontal: 16, marginBottom: 16 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
-  sectionTitle: { fontSize: 15, fontWeight: '700' },
-  mediaGrid: { flexDirection: 'row', gap: 10 },
-  mediaItem: { width: 74, height: 74, borderRadius: 16 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, justifyContent: 'space-between' },
-  rowText: { flex: 1, fontSize: 15, fontWeight: '600' },
+  actionLabel: { fontWeight: '600', fontSize: 13 },
+  section: { marginHorizontal: 16, marginBottom: 12, padding: 14, borderRadius: 10, borderWidth: 1 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 6 },
+  sectionTitle: { fontSize: 13, fontWeight: '700' },
+  mediaGrid: { flexDirection: 'row', gap: 8 },
+  mediaItem: { width: 68, height: 68, borderRadius: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, justifyContent: 'space-between' },
+  rowText: { flex: 1, fontSize: 14, fontWeight: '500' },
 });

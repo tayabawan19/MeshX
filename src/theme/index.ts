@@ -2,11 +2,11 @@ import { darkPalette, lightPalette, BUBBLE_THEMES } from './colors';
 import { typography } from './typography';
 
 export const radius = {
-  xs: 6,
-  sm: 10,
-  md: 16,
-  lg: 20,
-  xl: 24,
+  xs: 4,
+  sm: 8,
+  md: 10,
+  lg: 12,
+  xl: 16,
   full: 9999,
 };
 
@@ -22,17 +22,17 @@ export const spacing = {
 export const shadows = {
   soft: {
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   glow: (color: string) => ({
     shadowColor: color,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   }),
 };
 

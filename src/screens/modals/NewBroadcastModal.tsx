@@ -8,12 +8,11 @@ import {
   Image,
   TextInput,
 } from 'react-native';
-import { ArrowLeft, Check, Radio, Send } from 'lucide-react-native';
+import { ChevronLeft, Check, Send } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { ClayInput } from '../../components/common/ClayInput';
-import { ClayCard } from '../../components/common/ClayCard';
 import { triggerHaptic } from '../../utils/haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [messageText, setMessageText] = useState('');
@@ -21,6 +20,7 @@ export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation })
   const [isSending, setIsSending] = useState(false);
   const { contacts, createNewChat, sendMessage } = useChatStore();
   const palette = useThemeStore((state) => state.palette);
+  const insets = useSafeAreaInsets();
 
   const toggleSelectUser = (id: string) => {
     triggerHaptic('selection');
@@ -50,12 +50,21 @@ export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation })
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: palette.border }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: Math.max(insets.top, 12),
+            backgroundColor: palette.surfaceElevated,
+            borderBottomColor: palette.border,
+          },
+        ]}
+      >
         <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: palette.surfaceElevated }]}
+          style={[styles.backButton, { backgroundColor: palette.surfaceLight }]}
           onPress={() => navigation.goBack()}
         >
-          <ArrowLeft color={palette.textPrimary} size={22} />
+          <ChevronLeft color={palette.textPrimary} size={20} />
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
           <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>New Broadcast</Text>
@@ -68,19 +77,19 @@ export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation })
               backgroundColor:
                 messageText.trim() && selectedUserIds.length > 0
                   ? palette.primary
-                  : palette.surfaceElevated,
+                  : palette.surfaceLight,
             },
           ]}
           onPress={handleSendBroadcast}
           disabled={!messageText.trim() || selectedUserIds.length === 0 || isSending}
         >
-          <Send size={16} color={messageText.trim() && selectedUserIds.length > 0 ? '#FFFFFF' : palette.textMuted} />
+          <Send size={15} color={messageText.trim() && selectedUserIds.length > 0 ? '#FFFFFF' : palette.textMuted} />
         </TouchableOpacity>
       </View>
 
       {/* Broadcast Message Input */}
       <View style={styles.inputSection}>
-        <ClayInput borderRadius={20} style={styles.messageInputWrapper}>
+        <View style={[styles.messageInputWrapper, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           <TextInput
             style={[styles.messageInput, { color: palette.textPrimary }]}
             placeholder="Type broadcast message..."
@@ -89,26 +98,26 @@ export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation })
             onChangeText={setMessageText}
             multiline
           />
-        </ClayInput>
+        </View>
       </View>
 
       {/* Select Recipients List */}
       <View style={styles.membersSection}>
         <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>
-          SELECT RECIPIENTS ({selectedUserIds.length} of {contacts.length})
+          RECIPIENTS ({selectedUserIds.length} of {contacts.length})
         </Text>
         <FlatList
           data={contacts}
           keyExtractor={(item, idx) => item.id || item._id || `c_${idx}`}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 40 }}
           renderItem={({ item }) => {
             const uId = item.id || item._id || (item as any).userId;
             const isSelected = selectedUserIds.includes(uId);
             return (
-              <ClayCard
-                borderRadius={20}
+              <TouchableOpacity
+                activeOpacity={0.7}
                 onPress={() => toggleSelectUser(uId)}
-                style={styles.userRow}
+                style={[styles.userRow, { backgroundColor: palette.surface, borderColor: palette.border }]}
               >
                 <Image
                   source={{
@@ -122,7 +131,7 @@ export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation })
                   <Text style={[styles.userName, { color: palette.textPrimary }]}>
                     {item.name}
                   </Text>
-                  <Text style={[styles.userBio, { color: palette.textSecondary }]} numberOfLines={1}>
+                  <Text style={[styles.userBio, { color: palette.textMuted }]} numberOfLines={1}>
                     {item.bio || item.email}
                   </Text>
                 </View>
@@ -135,9 +144,9 @@ export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation })
                     },
                   ]}
                 >
-                  {isSelected && <Check size={14} color="#FFFFFF" />}
+                  {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
                 </View>
-              </ClayCard>
+              </TouchableOpacity>
             );
           }}
         />
@@ -149,27 +158,26 @@ export const NewBroadcastModal: React.FC<{ navigation: any }> = ({ navigation })
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    height: 60,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    marginTop: 40,
   },
-  backButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '800' },
+  backButton: { width: 34, height: 34, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '700' },
   headerSub: { fontSize: 11 },
-  createBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  inputSection: { padding: 16 },
-  messageInputWrapper: { height: 80, padding: 12 },
-  messageInput: { flex: 1, fontSize: 15 },
+  createBtn: { width: 34, height: 34, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  inputSection: { padding: 12 },
+  messageInputWrapper: { height: 74, padding: 10, borderRadius: 8, borderWidth: 1 },
+  messageInput: { flex: 1, fontSize: 14 },
   membersSection: { flex: 1 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginHorizontal: 16, marginBottom: 10 },
-  userRow: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 8 },
-  avatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginHorizontal: 16, marginBottom: 8 },
+  userRow: { flexDirection: 'row', alignItems: 'center', padding: 10, marginBottom: 4, borderRadius: 8, borderWidth: 1 },
+  avatar: { width: 38, height: 38, borderRadius: 19, marginRight: 10 },
   userInfo: { flex: 1 },
-  userName: { fontSize: 15, fontWeight: '700' },
-  userBio: { fontSize: 13, marginTop: 2 },
-  checkbox: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  userName: { fontSize: 14, fontWeight: '600' },
+  userBio: { fontSize: 12, marginTop: 1 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
 });

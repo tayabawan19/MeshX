@@ -12,32 +12,21 @@ interface ClayInputProps {
 export const ClayInput: React.FC<ClayInputProps> = ({
   children,
   style,
-  borderRadius = 18,
+  borderRadius = 8,
   isFocused = false,
 }) => {
   const palette = useThemeStore((state) => state.palette);
 
   return (
     <View style={styles.outerWrapper}>
-      {isFocused && (
-        <View
-          style={[
-            styles.hardShadow,
-            {
-              backgroundColor: palette.secondary, // Electric lime shadow on focus
-              borderRadius,
-            },
-          ]}
-        />
-      )}
       <View
         style={[
           styles.inputSlot,
           {
             backgroundColor: palette.inputBackground,
             borderRadius,
-            borderColor: isFocused ? palette.secondary : '#000000',
-            borderWidth: 2,
+            borderColor: isFocused ? palette.primary : 'rgba(0, 0, 0, 0.28)',
+            borderWidth: 1,
           },
           style,
         ]}
@@ -50,22 +39,12 @@ export const ClayInput: React.FC<ClayInputProps> = ({
 
 const styles = StyleSheet.create({
   outerWrapper: {
-    position: 'relative',
     marginVertical: 4,
-  },
-  hardShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    right: -3,
-    bottom: -3,
-    zIndex: 0,
   },
   inputSlot: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 54,
-    zIndex: 1,
+    paddingHorizontal: 12,
+    height: 48,
   },
 });

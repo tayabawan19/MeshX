@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -19,56 +19,39 @@ export const ReactionPicker: React.FC<ReactionPickerProps> = ({ onSelectEmoji })
   };
 
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.hardShadow} />
-      <Animated.View
-        entering={ZoomIn.duration(200)}
-        style={[styles.container, { backgroundColor: palette.surface, borderColor: '#000000' }]}
-      >
-        {EMOJIS.map((emoji) => (
-          <TouchableOpacity
-            key={emoji}
-            activeOpacity={0.7}
-            onPress={() => handleSelect(emoji)}
-            style={styles.emojiButton}
-          >
-            <Text style={styles.emojiText}>{emoji}</Text>
-          </TouchableOpacity>
-        ))}
-      </Animated.View>
-    </View>
+    <Animated.View
+      entering={FadeIn.duration(150)}
+      style={[styles.container, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
+    >
+      {EMOJIS.map((emoji) => (
+        <TouchableOpacity
+          key={emoji}
+          activeOpacity={0.7}
+          onPress={() => handleSelect(emoji)}
+          style={styles.emojiButton}
+        >
+          <Text style={styles.emojiText}>{emoji}</Text>
+        </TouchableOpacity>
+      ))}
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative',
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  hardShadow: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 24,
-    backgroundColor: '#000000',
-    zIndex: 0,
-  },
   container: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 24,
-    borderWidth: 2,
-    zIndex: 1,
+    alignSelf: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 12,
   },
   emojiButton: {
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 4,
   },
   emojiText: {
-    fontSize: 26,
+    fontSize: 22,
   },
 });

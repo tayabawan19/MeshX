@@ -37,9 +37,9 @@ export const Header: React.FC<HeaderProps> = ({
       style={[
         styles.container,
         {
-          paddingTop: Math.max(insets.top, 14),
-          backgroundColor: palette.background,
-          borderBottomColor: '#000000',
+          paddingTop: Math.max(insets.top, 12),
+          backgroundColor: palette.surfaceElevated,
+          borderBottomColor: palette.border,
         },
       ]}
     >
@@ -47,16 +47,16 @@ export const Header: React.FC<HeaderProps> = ({
         {showBack && (
           <TouchableOpacity
             onPress={handleBack}
-            style={[styles.backButton, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+            style={[styles.backButton, { backgroundColor: palette.surfaceLight }]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <ChevronLeft size={22} color="#FFFFFF" />
+            <ChevronLeft size={20} color={palette.textPrimary} />
           </TouchableOpacity>
         )}
         <View style={styles.titleContainer}>
           <Text style={[styles.title, { color: palette.textPrimary }]}>{title}</Text>
           {subtitle && (
-            <Text style={[styles.subtitle, { color: palette.secondary }]}>{subtitle}</Text>
+            <Text style={[styles.subtitle, { color: palette.textSecondary }]}>{subtitle}</Text>
           )}
         </View>
       </View>
@@ -67,39 +67,37 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 14,
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   titleContainer: {
     justifyContent: 'center',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -0.5,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 12,
-    fontWeight: '800',
-    marginTop: 2,
-    letterSpacing: -0.2,
+    fontWeight: '500',
+    marginTop: 1,
   },
   right: {
     flexDirection: 'row',

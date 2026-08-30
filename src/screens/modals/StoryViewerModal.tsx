@@ -29,7 +29,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { triggerHaptic } from '../../utils/haptics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const IMAGE_STORY_DURATION = 20000; // 20 seconds for images and text stories
+const IMAGE_STORY_DURATION = 15000;
 
 interface StoryViewerModalProps {
   visible: boolean;
@@ -123,11 +123,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
       const targetStory = stories[index];
       if (targetStory?.type === 'video') {
-        // Video manages its own progress via onPlaybackStatusUpdate
         return;
       }
 
-      // For Image & Text: 20 seconds duration
       progress.value = withTiming(1, { duration: IMAGE_STORY_DURATION, easing: Easing.linear }, (finished) => {
         if (finished) {
           runOnJS(handleStoryComplete)(index);
@@ -272,7 +270,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
         {/* Story Media / Video / Text */}
         {currentStory.type === 'text' ? (
           <View
-            style={[styles.fullScreenGradient, { backgroundColor: currentStory.backgroundColor || '#2E4BFF' }]}
+            style={[styles.fullScreenGradient, { backgroundColor: currentStory.backgroundColor || '#5865F2' }]}
           >
             <Text style={styles.textStoryContent}>{currentStory.caption || currentStory.text || ''}</Text>
           </View>
@@ -333,11 +331,11 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             <View style={styles.headerActions}>
               {isMine && (
                 <TouchableOpacity onPress={handleDelete} style={styles.iconBtn}>
-                  <Trash2 size={20} color="#FF4D5E" />
+                  <Trash2 size={18} color="#F23F42" />
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={onClose} style={styles.iconBtn}>
-                <X size={24} color="#FFFFFF" />
+                <X size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -372,22 +370,20 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           {/* Owner Views or Viewer Reply Bar */}
           {isMine ? (
             <View style={styles.footerContainer}>
-              <View style={styles.viewersShadow} />
               <TouchableOpacity
                 onPress={() => setShowViewersList(!showViewersList)}
-                style={styles.viewersBtn}
+                style={[styles.viewersBtn, { backgroundColor: palette.surfaceElevated }]}
               >
-                <Eye size={18} color="#100F17" />
+                <Eye size={15} color="#FFFFFF" />
                 <Text style={styles.viewersCount}>{viewedByList.length} Views</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.replyRow}>
-              <View style={styles.replyInputShadow} />
-              <View style={styles.replyInputSlot}>
+              <View style={[styles.replyInputSlot, { backgroundColor: palette.surface, borderColor: palette.border }]}>
                 <TextInput
                   placeholder={`Reply to ${storyUser.name || 'User'}...`}
-                  placeholderTextColor="#A5A5BA"
+                  placeholderTextColor={palette.textMuted}
                   value={replyText}
                   onChangeText={setReplyText}
                   onFocus={() => {
@@ -398,24 +394,24 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                     setIsReplying(false);
                     handleResume();
                   }}
-                  style={styles.replyTextInput}
+                  style={[styles.replyTextInput, { color: palette.textPrimary }]}
                 />
                 {replyText.trim().length > 0 && (
-                  <TouchableOpacity onPress={handleSendStoryReply} style={styles.sendReplyBtn}>
-                    <Send size={16} color="#FFFFFF" strokeWidth={2.5} />
+                  <TouchableOpacity onPress={handleSendStoryReply} style={[styles.sendReplyBtn, { backgroundColor: palette.primary }]}>
+                    <Send size={15} color="#FFFFFF" strokeWidth={2} />
                   </TouchableOpacity>
                 )}
               </View>
             </View>
           )}
 
-          {/* Viewers Sheet (for my story) */}
+          {/* Viewers Sheet */}
           {showViewersList && (
-            <View style={styles.viewersSheet}>
-              <Text style={styles.viewersSheetTitle}>Viewed by ({viewedByList.length})</Text>
+            <View style={[styles.viewersSheet, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+              <Text style={[styles.viewersSheetTitle, { color: palette.textPrimary }]}>Viewed by ({viewedByList.length})</Text>
               <ScrollView style={{ maxHeight: 180 }}>
                 {viewedByList.length === 0 ? (
-                  <Text style={{ color: '#A5A5BA', fontStyle: 'italic', paddingVertical: 8 }}>No views yet</Text>
+                  <Text style={{ color: palette.textMuted, fontStyle: 'italic', paddingVertical: 8 }}>No views yet</Text>
                 ) : (
                   viewedByList.map((v: any, idx: number) => {
                     const uName = v.name || v.userId?.name || 'Viewer';
@@ -430,7 +426,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                           }}
                           style={styles.viewerAvatar}
                         />
-                        <Text style={styles.viewerName}>{uName}</Text>
+                        <Text style={[styles.viewerName, { color: palette.textPrimary }]}>{uName}</Text>
                       </View>
                     );
                   })
@@ -447,12 +443,12 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#1E1F22',
   },
   fullScreenMedia: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
-    backgroundColor: '#000000',
+    backgroundColor: '#1E1F22',
   },
   fullScreenGradient: {
     width: SCREEN_WIDTH,
@@ -463,10 +459,10 @@ const styles = StyleSheet.create({
   },
   textStoryContent: {
     color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 36,
+    lineHeight: 32,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -477,75 +473,68 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     paddingHorizontal: 12,
-    gap: 5,
+    gap: 4,
     marginBottom: 8,
   },
   segmentTrack: {
     flex: 1,
-    height: 4,
+    height: 3,
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 2,
     overflow: 'hidden',
   },
   segmentFill: {
     height: '100%',
-    backgroundColor: '#C6FF3D', // Electric Lime
+    backgroundColor: '#5865F2', // Discord Blurple
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
   userMeta: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#000000',
-    marginRight: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 8,
   },
   headerName: {
     color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 15,
+    fontWeight: '700',
+    fontSize: 14,
   },
   headerTime: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 11,
-    fontWeight: '700',
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   iconBtn: {
     padding: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderWidth: 1.5,
-    borderColor: '#000000',
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   captionContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    backgroundColor: 'rgba(30, 31, 34, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     marginHorizontal: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#000000',
+    borderRadius: 8,
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   captionText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
   },
   touchNavigationArea: {
@@ -559,110 +548,72 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     alignItems: 'center',
-    marginBottom: 10,
-    position: 'relative',
-  },
-  viewersShadow: {
-    position: 'absolute',
-    top: 3,
-    left: '35%',
-    width: 130,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#000000',
+    marginBottom: 8,
   },
   viewersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#C6FF3D', // Electric Lime
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 19,
-    borderWidth: 2,
-    borderColor: '#000000',
-    zIndex: 1,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
   },
   viewersCount: {
-    color: '#100F17',
-    fontWeight: '900',
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 12,
   },
   replyRow: {
-    marginHorizontal: 16,
-    marginBottom: 10,
-    position: 'relative',
-  },
-  replyInputShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    right: -3,
-    bottom: -3,
-    borderRadius: 24,
-    backgroundColor: '#000000',
+    marginHorizontal: 14,
+    marginBottom: 8,
   },
   replyInputSlot: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1C1A2E',
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#000000',
-    paddingHorizontal: 14,
-    height: 48,
-    zIndex: 1,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 42,
   },
   replyTextInput: {
     flex: 1,
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '400',
   },
   sendReplyBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FF4D5E', // Hot Coral
-    borderWidth: 1.5,
-    borderColor: '#000000',
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   viewersSheet: {
-    backgroundColor: '#1C1A2E',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 2,
-    borderColor: '#000000',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
     padding: 16,
-    maxHeight: 240,
+    maxHeight: 220,
   },
   viewersSheetTitle: {
-    color: '#FFFFFF',
-    fontWeight: '900',
-    fontSize: 16,
-    marginBottom: 12,
-    letterSpacing: -0.3,
+    fontWeight: '700',
+    fontSize: 15,
+    marginBottom: 10,
   },
   viewerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   viewerAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1.5,
-    borderColor: '#000000',
-    marginRight: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
   },
   viewerName: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

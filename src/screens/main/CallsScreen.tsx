@@ -3,7 +3,6 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } fr
 import { Phone, Video, PhoneIncoming, PhoneMissed, PhoneOutgoing } from 'lucide-react-native';
 import { Header } from '../../components/common/Header';
 import { Avatar } from '../../components/common/Avatar';
-import { BoldCard } from '../../components/common/BoldCard';
 import { useChatStore } from '../../store/useChatStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -30,12 +29,12 @@ export const CallsScreen: React.FC = () => {
   const renderCallIcon = (status: string, callerId: any) => {
     const isOutgoing = (typeof callerId === 'string' ? callerId : callerId?._id) === currentUser?.id;
     if (status === 'missed' || status === 'declined') {
-      return <PhoneMissed size={16} color={palette.error} style={{ marginRight: 6 }} />;
+      return <PhoneMissed size={15} color={palette.error} style={{ marginRight: 6 }} />;
     }
     if (isOutgoing) {
-      return <PhoneOutgoing size={16} color={palette.primary} style={{ marginRight: 6 }} />;
+      return <PhoneOutgoing size={15} color={palette.textSecondary} style={{ marginRight: 6 }} />;
     }
-    return <PhoneIncoming size={16} color={palette.secondary} style={{ marginRight: 6 }} />;
+    return <PhoneIncoming size={15} color={palette.onlineGreen} style={{ marginRight: 6 }} />;
   };
 
   return (
@@ -57,14 +56,13 @@ export const CallsScreen: React.FC = () => {
           const timeVal = Number(item.createdAt || (item as any).timestamp) || Date.now();
 
           return (
-            <BoldCard
-              borderRadius={20}
-              shadowOffset={3}
+            <TouchableOpacity
+              activeOpacity={0.7}
               onPress={() => {
                 triggerHaptic('light');
                 startCall(recId, partnerName, partnerAvatar, item.type);
               }}
-              style={styles.cardContainer}
+              style={[styles.callCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
             >
               <View style={styles.callRow}>
                 <Avatar url={partnerAvatar} name={partnerName} size="md" />
@@ -85,28 +83,22 @@ export const CallsScreen: React.FC = () => {
                     triggerHaptic('medium');
                     startCall(recId, partnerName, partnerAvatar, item.type);
                   }}
-                  style={[
-                    styles.callIconBtn,
-                    {
-                      backgroundColor: item.type === 'video' ? palette.accent : palette.secondary,
-                      borderColor: '#000000',
-                    },
-                  ]}
+                  style={[styles.callIconBtn, { backgroundColor: palette.surfaceLight }]}
                 >
                   {item.type === 'video' ? (
-                    <Video size={18} color="#FFFFFF" />
+                    <Video size={16} color={palette.textPrimary} />
                   ) : (
-                    <Phone size={18} color="#100F17" />
+                    <Phone size={16} color={palette.textPrimary} />
                   )}
                 </TouchableOpacity>
               </View>
-            </BoldCard>
+            </TouchableOpacity>
           );
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <View style={[styles.emptyIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-              <Phone size={36} color={palette.secondary} />
+            <View style={[styles.emptyIconCircle, { backgroundColor: palette.surfaceElevated }]}>
+              <Phone size={28} color={palette.textMuted} />
             </View>
             <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>No calls yet</Text>
             <Text style={[styles.emptySub, { color: palette.textMuted }]}>
@@ -121,23 +113,25 @@ export const CallsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 90 },
-  cardContainer: {
-    marginVertical: 5,
+  listContent: { paddingHorizontal: 14, paddingVertical: 8, paddingBottom: 90 },
+  callCard: {
+    marginVertical: 3,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   callRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  content: { flex: 1, marginLeft: 14 },
-  name: { fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  timeText: { fontSize: 12, fontWeight: '700' },
+  content: { flex: 1, marginLeft: 12 },
+  name: { fontSize: 15, fontWeight: '600' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  timeText: { fontSize: 12, fontWeight: '400' },
   callIconBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -148,24 +142,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    marginBottom: 6,
-    letterSpacing: -0.4,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   emptySub: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '400',
     textAlign: 'center',
-    lineHeight: 20,
   },
 });

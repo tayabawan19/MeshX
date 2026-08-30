@@ -11,7 +11,7 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -43,28 +43,25 @@ export const BoldButton: React.FC<BoldButtonProps> = ({
   textStyle,
   icon,
   size = 'md',
-  shadowOffset = 4,
 }) => {
   const palette = useThemeStore((state) => state.palette);
-
-  const pressedOffset = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
 
   const getBackgroundColor = () => {
-    if (disabled) return palette.surfaceLight;
+    if (disabled) return '#35373C';
     if (color) return color;
     switch (variant) {
       case 'primary':
-        return palette.primary; // Hot Coral #FF4D5E
-      case 'secondary':
-        return palette.secondary; // Electric Lime #C6FF3D
       case 'accent':
-        return palette.accent; // Deep Cobalt #2E4BFF
       case 'highlight':
-        return palette.highlight; // Sunshine Yellow #FFD23F
+        return palette.primary; // Blurple #5865F2
+      case 'secondary':
+        return '#4E5058';
       case 'danger':
-        return palette.error;
+        return palette.error; // #F23F42
       case 'surface':
-        return palette.surfaceElevated;
+        return palette.surfaceElevated; // #313338
       default:
         return palette.primary;
     }
@@ -73,65 +70,33 @@ export const BoldButton: React.FC<BoldButtonProps> = ({
   const getTextColor = () => {
     if (disabled) return palette.textMuted;
     if (textColor) return textColor;
-    if (variant === 'secondary' || variant === 'highlight') {
-      return '#100F17'; // High contrast black on bright lime/yellow
-    }
     return '#FFFFFF';
   };
 
   const handlePressIn = () => {
     if (disabled || loading) return;
     triggerHaptic('light');
-    // Press down into shadow: move down-right
-    pressedOffset.value = withSpring(shadowOffset, {
-      damping: 15,
-      stiffness: 300,
-    });
+    scale.value = withTiming(0.97, { duration: 100 });
+    opacity.value = withTiming(0.85, { duration: 100 });
   };
 
   const handlePressOut = () => {
     if (disabled || loading) return;
-    // Spring back up with punchy bounce
-    pressedOffset.value = withSpring(0, {
-      damping: 12,
-      stiffness: 240,
-    });
+    scale.value = withTiming(1, { duration: 120 });
+    opacity.value = withTiming(1, { duration: 120 });
   };
 
-  const animatedButtonStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: pressedOffset.value },
-      { translateY: pressedOffset.value },
-    ],
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
   }));
 
-  const animatedShadowStyle = useAnimatedStyle(() => ({
-    opacity: pressedOffset.value >= shadowOffset - 1 ? 0 : 1,
-  }));
-
-  const paddingVertical = size === 'sm' ? 8 : size === 'lg' ? 16 : 13;
+  const paddingVertical = size === 'sm' ? 8 : size === 'lg' ? 14 : 11;
   const paddingHorizontal = size === 'sm' ? 14 : size === 'lg' ? 24 : 18;
-  const fontSize = size === 'sm' ? 13 : size === 'lg' ? 17 : 15;
+  const fontSize = size === 'sm' ? 13 : size === 'lg' ? 16 : 14;
 
   return (
     <View style={[styles.container, style]}>
-      {/* Hard Offset Comic Shadow */}
-      {!disabled && (
-        <Animated.View
-          style={[
-            styles.hardShadow,
-            {
-              backgroundColor: '#000000',
-              top: shadowOffset,
-              left: shadowOffset,
-              borderRadius: styles.button.borderRadius,
-            },
-            animatedShadowStyle,
-          ]}
-        />
-      )}
-
-      {/* Main Button Body */}
       <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
@@ -143,11 +108,10 @@ export const BoldButton: React.FC<BoldButtonProps> = ({
             styles.button,
             {
               backgroundColor: getBackgroundColor(),
-              borderColor: '#000000',
               paddingVertical,
               paddingHorizontal,
             },
-            animatedButtonStyle,
+            animatedStyle,
           ]}
         >
           {loading ? (
@@ -179,21 +143,11 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
   },
-  hardShadow: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 0,
-  },
   button: {
-    borderRadius: 20,
-    borderWidth: 2,
+    borderRadius: 8,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   contentRow: {
     flexDirection: 'row',
@@ -204,7 +158,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   title: {
-    fontWeight: '800',
-    letterSpacing: -0.2,
+    fontWeight: '600',
+    letterSpacing: 0.1,
   },
 });

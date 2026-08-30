@@ -3,7 +3,7 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -20,12 +20,11 @@ export const ClaySwitch: React.FC<ClaySwitchProps> = ({
   disabled = false,
 }) => {
   const palette = useThemeStore((state) => state.palette);
-  const translateX = useSharedValue(value ? 24 : 3);
+  const translateX = useSharedValue(value ? 20 : 2);
 
   useEffect(() => {
-    translateX.value = withSpring(value ? 24 : 3, {
-      damping: 12,
-      stiffness: 280,
+    translateX.value = withTiming(value ? 20 : 2, {
+      duration: 150,
     });
   }, [value]);
 
@@ -41,25 +40,17 @@ export const ClaySwitch: React.FC<ClaySwitchProps> = ({
 
   return (
     <Pressable onPress={handleToggle} disabled={disabled} style={styles.container}>
-      {/* Hard Offset Shadow */}
-      <View style={styles.hardShadow} />
-
       <View
         style={[
           styles.track,
           {
-            backgroundColor: value ? palette.secondary : palette.surfaceLight, // Electric lime when ON
-            borderColor: '#000000',
+            backgroundColor: value ? palette.primary : '#4E5058',
           },
         ]}
       >
         <Animated.View
           style={[
             styles.thumb,
-            {
-              backgroundColor: value ? '#100F17' : '#FFFFFF',
-              borderColor: '#000000',
-            },
             thumbAnimatedStyle,
           ]}
         />
@@ -70,32 +61,25 @@ export const ClaySwitch: React.FC<ClaySwitchProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    width: 56,
-    height: 32,
-  },
-  hardShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    width: 54,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#000000',
-    zIndex: 0,
+    width: 44,
+    height: 26,
+    justifyContent: 'center',
   },
   track: {
-    width: 54,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
+    width: 44,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
-    zIndex: 1,
   },
   thumb: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
 });

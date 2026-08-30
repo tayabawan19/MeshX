@@ -13,10 +13,8 @@ import {
 import { X, Search, Check, Users } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
-import { ClayInput } from '../../components/common/ClayInput';
 import { BoldButton } from '../../components/common/BoldButton';
 import { triggerHaptic } from '../../utils/haptics';
-import { getContactAccent } from '../../theme/colors';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -71,38 +69,38 @@ export const ForwardPickerModal: React.FC<ForwardPickerModalProps> = ({
   });
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.overlay}>
         <View
           style={[
             styles.container,
             {
-              backgroundColor: palette.surface,
-              borderColor: '#000000',
+              backgroundColor: palette.surfaceElevated,
+              borderColor: palette.border,
             },
           ]}
         >
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: palette.textPrimary }]}>
-              Forward to ({selectedChatIds.length})
+              Forward Message ({selectedChatIds.length})
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={22} color={palette.textMuted} />
+              <X size={20} color={palette.textMuted} />
             </TouchableOpacity>
           </View>
 
           {/* Search Bar */}
-          <ClayInput borderRadius={16} style={styles.searchSlot}>
-            <Search size={16} color={palette.textMuted} style={{ marginRight: 6 }} />
+          <View style={[styles.searchSlot, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <Search size={16} color={palette.textMuted} style={{ marginRight: 8 }} />
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Search chats..."
+              placeholder="Search conversations..."
               placeholderTextColor={palette.textMuted}
               style={[styles.searchInput, { color: palette.textPrimary }]}
             />
-          </ClayInput>
+          </View>
 
           {/* List of Chats */}
           <FlatList
@@ -115,7 +113,6 @@ export const ForwardPickerModal: React.FC<ForwardPickerModalProps> = ({
               const isGroup = item.type === 'group';
               const name = isGroup ? item.groupName : item.otherParticipant?.name;
               const avatar = isGroup ? (item.groupAvatar || item.groupAvatarUrl) : item.otherParticipant?.avatarUrl;
-              const assignedAccent = getContactAccent(name || 'Chat');
 
               return (
                 <TouchableOpacity
@@ -128,15 +125,15 @@ export const ForwardPickerModal: React.FC<ForwardPickerModalProps> = ({
                   {avatar ? (
                     <Image source={{ uri: avatar }} style={styles.avatar} />
                   ) : (
-                    <View style={[styles.avatarFallback, { backgroundColor: assignedAccent, borderColor: '#000000' }]}>
-                      {isGroup ? <Users size={18} color="#FFFFFF" /> : <Text style={styles.avatarInitial}>{name?.[0]}</Text>}
+                    <View style={[styles.avatarFallback, { backgroundColor: palette.primary }]}>
+                      {isGroup ? <Users size={16} color="#FFFFFF" /> : <Text style={styles.avatarInitial}>{name?.[0]}</Text>}
                     </View>
                   )}
 
                   <View style={styles.chatInfo}>
                     <Text style={[styles.chatName, { color: palette.textPrimary }]}>{name || 'Chat'}</Text>
                     <Text style={[styles.chatType, { color: palette.textMuted }]}>
-                      {isGroup ? 'Group' : 'Direct'}
+                      {isGroup ? 'Group' : 'Direct Message'}
                     </Text>
                   </View>
 
@@ -144,12 +141,12 @@ export const ForwardPickerModal: React.FC<ForwardPickerModalProps> = ({
                     style={[
                       styles.checkbox,
                       {
-                        borderColor: '#000000',
-                        backgroundColor: isSelected ? palette.secondary : palette.surfaceElevated,
+                        borderColor: isSelected ? palette.primary : palette.border,
+                        backgroundColor: isSelected ? palette.primary : 'transparent',
                       },
                     ]}
                   >
-                    {isSelected && <Check size={14} color="#100F17" strokeWidth={3} />}
+                    {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
                   </View>
                 </TouchableOpacity>
               );
@@ -159,11 +156,11 @@ export const ForwardPickerModal: React.FC<ForwardPickerModalProps> = ({
           {/* Bottom Forward Action Button */}
           {selectedChatIds.length > 0 && (
             <BoldButton
-              title={`Forward (${selectedChatIds.length})`}
+              title={`Send to ${selectedChatIds.length} Chat${selectedChatIds.length > 1 ? 's' : ''}`}
               variant="primary"
               loading={isSending}
               onPress={handleSendForward}
-              style={{ marginTop: 12 }}
+              style={{ marginTop: 10 }}
             />
           )}
         </View>
@@ -175,44 +172,51 @@ export const ForwardPickerModal: React.FC<ForwardPickerModalProps> = ({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   container: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 2,
-    padding: 22,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    padding: 18,
     maxHeight: SCREEN_HEIGHT * 0.75,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  title: { fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  title: { fontSize: 17, fontWeight: '700' },
   closeBtn: { padding: 4 },
-  searchSlot: { height: 46, marginBottom: 12 },
-  searchInput: { flex: 1, fontSize: 14, fontWeight: '600' },
-  list: { paddingBottom: 20 },
+  searchSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  searchInput: { flex: 1, fontSize: 13, fontWeight: '400' },
+  list: { paddingBottom: 16 },
   chatRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 8,
-    borderRadius: 16,
+    borderRadius: 8,
   },
-  avatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#000000', marginRight: 12 },
+  avatar: { width: 38, height: 38, borderRadius: 19, marginRight: 10 },
   avatarFallback: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
-  avatarInitial: { color: '#FFFFFF', fontWeight: '900', fontSize: 16 },
+  avatarInitial: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
   chatInfo: { flex: 1 },
-  chatName: { fontSize: 16, fontWeight: '800' },
-  chatType: { fontSize: 12, fontWeight: '600', marginTop: 2 },
+  chatName: { fontSize: 14, fontWeight: '600' },
+  chatType: { fontSize: 11, marginTop: 1 },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    borderWidth: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

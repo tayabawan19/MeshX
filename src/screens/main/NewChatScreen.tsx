@@ -9,15 +9,15 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { ArrowLeft, Search, UserPlus, Mail, Users, Send } from 'lucide-react-native';
+import { ChevronLeft, Search, UserPlus, Mail, Users, Send } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { apiClient } from '../../config/api';
 import { triggerHaptic } from '../../utils/haptics';
 import { UserProfile } from '../../types';
 import { Avatar } from '../../components/common/Avatar';
-import { BoldCard } from '../../components/common/BoldCard';
 import { BoldButton } from '../../components/common/BoldButton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [query, setQuery] = useState('');
@@ -34,6 +34,7 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
 
   const { contacts, createNewChat, fetchContacts } = useChatStore();
   const { palette } = useThemeStore();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     fetchContacts();
@@ -47,7 +48,7 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
 
     const timer = setTimeout(() => {
       handleSearch();
-    }, 400);
+    }, 350);
 
     return () => clearTimeout(timer);
   }, [query]);
@@ -118,49 +119,51 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: '#000000', backgroundColor: palette.surface }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: Math.max(insets.top, 12),
+            backgroundColor: palette.surfaceElevated,
+            borderBottomColor: palette.border,
+          },
+        ]}
+      >
         <TouchableOpacity
-          style={styles.backBtnWrapper}
+          style={[styles.backBtn, { backgroundColor: palette.surfaceLight }]}
           onPress={() => {
             triggerHaptic('light');
             navigation.goBack();
           }}
         >
-          <View style={styles.backBtnShadow} />
-          <View style={[styles.backBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-            <ArrowLeft color={palette.textPrimary} size={20} strokeWidth={2.5} />
-          </View>
+          <ChevronLeft color={palette.textPrimary} size={20} />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>New Chat</Text>
+        <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>New Direct Message</Text>
 
         <TouchableOpacity
-          style={styles.groupBtnWrapper}
+          style={[styles.groupBtn, { backgroundColor: palette.primary }]}
           onPress={() => {
             triggerHaptic('selection');
             navigation.navigate('NewGroupModal');
           }}
         >
-          <View style={styles.groupBtnShadow} />
-          <View style={[styles.groupBtn, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
-            <Users color="#FFFFFF" size={18} strokeWidth={2.5} />
-          </View>
+          <Users color="#FFFFFF" size={17} />
         </TouchableOpacity>
       </View>
 
       {/* Search Input Bar */}
       <View style={styles.searchSection}>
-        <View style={styles.searchShadow} />
         <View
           style={[
             styles.searchBar,
-            { backgroundColor: palette.surfaceElevated, borderColor: '#000000' },
+            { backgroundColor: palette.surface, borderColor: palette.border },
           ]}
         >
-          <Search color={palette.secondary} size={20} strokeWidth={2.5} style={{ marginRight: 10 }} />
+          <Search color={palette.textMuted} size={18} style={{ marginRight: 8 }} />
           <TextInput
             style={[styles.searchInput, { color: palette.textPrimary }]}
-            placeholder="Search by email or phone..."
+            placeholder="Search by username, email or phone..."
             placeholderTextColor={palette.textMuted}
             value={query}
             onChangeText={(t) => setQuery(t)}
@@ -172,11 +175,11 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
         </View>
       </View>
 
-      {/* Search Result Card (if user searched) */}
+      {/* Search Result Card */}
       {searchResult && (
         <View style={styles.resultContainer}>
           {searchResult.found && searchResult.user ? (
-            <BoldCard borderRadius={20} shadowOffset={4} style={styles.resultCard}>
+            <View style={[styles.resultCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               <View style={styles.profileRow}>
                 <Avatar url={searchResult.user.avatarUrl} name={searchResult.user.name} size="lg" />
                 <View style={styles.cardInfo}>
@@ -184,49 +187,49 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
                     {searchResult.user.name}
                   </Text>
                   <Text style={[styles.cardBio, { color: palette.textMuted }]} numberOfLines={1}>
-                    {searchResult.user.bio || 'Hey there! I am using MeshX.'}
+                    {searchResult.user.bio || 'Available on MeshX'}
                   </Text>
                 </View>
               </View>
               <BoldButton
-                title="Add & Chat"
+                title="Send Direct Message"
                 variant="primary"
-                icon={<UserPlus size={16} color="#FFFFFF" strokeWidth={2.5} />}
+                icon={<UserPlus size={15} color="#FFFFFF" />}
                 onPress={() => handleAddAndStartChat(searchResult.user!)}
                 size="md"
                 style={{ marginTop: 12 }}
               />
-            </BoldCard>
+            </View>
           ) : (
-            <BoldCard borderRadius={20} shadowOffset={4} style={styles.inviteCard}>
+            <View style={[styles.inviteCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               <View style={styles.inviteContent}>
-                <View style={[styles.inviteIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                  <Mail size={28} color={palette.primary} strokeWidth={2.5} />
+                <View style={[styles.inviteIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <Mail size={24} color={palette.primary} />
                 </View>
                 <Text style={[styles.inviteTitle, { color: palette.textPrimary }]}>
-                  No MeshX User Found
+                  No User Found
                 </Text>
                 <Text style={[styles.inviteSubtitle, { color: palette.textMuted }]}>
-                  No active user matches "{query}". Send an invite to start messaging!
+                  No active user matches "{query}". Send an invite link!
                 </Text>
 
                 {inviteSent ? (
-                  <View style={[styles.sentBadge, { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
-                    <Text style={styles.sentBadgeText}>✓ Invitation sent!</Text>
+                  <View style={[styles.sentBadge, { backgroundColor: palette.surfaceElevated }]}>
+                    <Text style={[styles.sentBadgeText, { color: palette.onlineGreen }]}>✓ Invitation sent</Text>
                   </View>
                 ) : (
                   <BoldButton
-                    title="Send Email Invite"
+                    title="Send Invite"
                     variant="primary"
                     loading={isInviting}
-                    icon={<Send size={16} color="#FFFFFF" strokeWidth={2.5} />}
+                    icon={<Send size={15} color="#FFFFFF" />}
                     onPress={handleSendInvite}
                     size="md"
                     style={{ width: '100%', marginTop: 8 }}
                   />
                 )}
               </View>
-            </BoldCard>
+            </View>
           )}
         </View>
       )}
@@ -234,19 +237,18 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
       {/* Quick Contacts List */}
       {(!query || query.trim().length === 0) && (
         <View style={styles.contactsSection}>
-          <Text style={[styles.sectionTitle, { color: palette.secondary }]}>
-            YOUR CONTACTS ({contacts.length})
+          <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>
+            DIRECT CONTACTS ({contacts.length})
           </Text>
           <FlatList
             data={contacts}
             keyExtractor={(item, index) => item.id || item._id || `contact_${index}`}
             contentContainerStyle={{ paddingBottom: 40 }}
             renderItem={({ item }) => (
-              <BoldCard
-                borderRadius={18}
-                shadowOffset={2}
+              <TouchableOpacity
+                activeOpacity={0.7}
                 onPress={() => handleAddAndStartChat(item)}
-                style={styles.contactCard}
+                style={[styles.contactCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
               >
                 <View style={styles.contactRow}>
                   <Avatar url={item.avatarUrl} name={item.name} size="md" />
@@ -259,12 +261,12 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
                     </Text>
                   </View>
                 </View>
-              </BoldCard>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContacts}>
                 <Text style={[styles.emptyText, { color: palette.textMuted }]}>
-                  No contacts found yet. Use the search bar above to find friends by email or phone!
+                  No contacts found. Use the search bar above to find users.
                 </Text>
               </View>
             }
@@ -278,114 +280,70 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    height: 64,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    borderBottomWidth: 2,
-  },
-  backBtnWrapper: {
-    position: 'relative',
-    width: 38,
-    height: 38,
-  },
-  backBtnShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    right: -2,
-    bottom: -2,
-    borderRadius: 12,
-    backgroundColor: '#000000',
+    borderBottomWidth: 1,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
-  headerTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.3 },
-  groupBtnWrapper: {
-    position: 'relative',
-    width: 38,
-    height: 38,
-  },
-  groupBtnShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    right: -2,
-    bottom: -2,
-    borderRadius: 12,
-    backgroundColor: '#000000',
-  },
+  headerTitle: { fontSize: 16, fontWeight: '700' },
   groupBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
-  searchSection: { padding: 16, position: 'relative' },
-  searchShadow: {
-    position: 'absolute',
-    top: 19,
-    left: 19,
-    right: 13,
-    bottom: 13,
-    borderRadius: 24,
-    backgroundColor: '#000000',
-  },
+  searchSection: { padding: 12 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 50,
-    borderRadius: 24,
-    borderWidth: 2,
-    paddingHorizontal: 16,
-    zIndex: 1,
+    height: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
   },
-  searchInput: { flex: 1, fontSize: 14, fontWeight: '700' },
-  resultContainer: { paddingHorizontal: 16, marginBottom: 12 },
-  resultCard: { padding: 14 },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: '400' },
+  resultContainer: { paddingHorizontal: 12, marginBottom: 10 },
+  resultCard: { padding: 14, borderRadius: 10, borderWidth: 1 },
   profileRow: { flexDirection: 'row', alignItems: 'center' },
   cardInfo: { flex: 1, marginLeft: 12 },
-  cardName: { fontSize: 16, fontWeight: '800' },
-  cardBio: { fontSize: 13, fontWeight: '600', marginTop: 2 },
-  inviteCard: { padding: 18 },
+  cardName: { fontSize: 15, fontWeight: '600' },
+  cardBio: { fontSize: 12, marginTop: 1 },
+  inviteCard: { padding: 16, borderRadius: 10, borderWidth: 1 },
   inviteContent: { alignItems: 'center' },
   inviteIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  inviteTitle: { fontSize: 17, fontWeight: '900', marginBottom: 4 },
-  inviteSubtitle: { fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 18, marginBottom: 12 },
+  inviteTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  inviteSubtitle: { fontSize: 12, textAlign: 'center', lineHeight: 16, marginBottom: 10 },
   sentBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 2,
-    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 4,
   },
-  sentBadgeText: { color: '#100F17', fontWeight: '900', fontSize: 13 },
-  contactsSection: { flex: 1, paddingHorizontal: 16 },
-  sectionTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, marginBottom: 10 },
-  contactCard: { marginVertical: 4 },
+  sentBadgeText: { fontWeight: '600', fontSize: 12 },
+  contactsSection: { flex: 1, paddingHorizontal: 12 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8, marginLeft: 4 },
+  contactCard: { marginVertical: 3, padding: 10, borderRadius: 8, borderWidth: 1 },
   contactRow: { flexDirection: 'row', alignItems: 'center' },
-  contactInfo: { flex: 1, marginLeft: 12 },
-  contactName: { fontSize: 15, fontWeight: '800' },
-  contactBio: { fontSize: 13, fontWeight: '600', marginTop: 2 },
-  emptyContacts: { paddingVertical: 30, alignItems: 'center', paddingHorizontal: 20 },
-  emptyText: { fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 19 },
+  contactInfo: { flex: 1, marginLeft: 10 },
+  contactName: { fontSize: 14, fontWeight: '600' },
+  contactBio: { fontSize: 12, marginTop: 1 },
+  emptyContacts: { paddingVertical: 24, alignItems: 'center', paddingHorizontal: 20 },
+  emptyText: { fontSize: 13, textAlign: 'center', lineHeight: 18 },
 });

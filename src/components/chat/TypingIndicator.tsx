@@ -9,13 +9,13 @@ interface TypingIndicatorProps {
 
 const Dot = ({ delay }: { delay: number }) => {
   const palette = useThemeStore((state) => state.palette);
-  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(0.3);
 
   useEffect(() => {
-    translateY.value = withDelay(
+    opacity.value = withDelay(
       delay,
       withRepeat(
-        withTiming(-5, { duration: 380, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 300, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       )
@@ -23,10 +23,10 @@ const Dot = ({ delay }: { delay: number }) => {
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
   }));
 
-  return <Animated.View style={[styles.dot, { backgroundColor: palette.primaryLight }, animatedStyle]} />;
+  return <Animated.View style={[styles.dot, { backgroundColor: palette.textSecondary }, animatedStyle]} />;
 };
 
 export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ senderName = 'Someone' }) => {
@@ -38,11 +38,7 @@ export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ senderName = '
         style={[
           styles.bubble,
           {
-            backgroundColor: palette.receivedBubble,
-            borderTopColor: palette.clayHighlight,
-            borderLeftColor: palette.clayHighlight,
-            borderBottomColor: 'rgba(0,0,0,0.35)',
-            borderRightColor: 'rgba(0,0,0,0.2)',
+            backgroundColor: palette.surface,
           },
         ]}
       >
@@ -59,32 +55,25 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 6,
+    marginVertical: 4,
     marginLeft: 14,
   },
   bubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderBottomLeftRadius: 6,
-    borderWidth: 1.5,
-    shadowColor: '#000000',
-    shadowOffset: { width: 3, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    marginHorizontal: 2.5,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginHorizontal: 2,
   },
   text: {
     fontSize: 12,
-    marginLeft: 10,
-    fontWeight: '600',
+    marginLeft: 8,
+    fontWeight: '500',
   },
 });

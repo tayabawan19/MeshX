@@ -54,7 +54,7 @@ export const StatusScreen: React.FC<StatusScreenProps> = ({ activeStatusId, onCl
   const uName = activeStatus.userName || 'User';
 
   return (
-    <Modal visible={!!activeStatusId} transparent animationType="slide">
+    <Modal visible={!!activeStatusId} transparent animationType="fade">
       <View style={styles.container}>
         <Image source={{ uri: activeStatus.mediaUrl }} style={styles.backgroundImage} />
 
@@ -71,7 +71,7 @@ export const StatusScreen: React.FC<StatusScreenProps> = ({ activeStatusId, onCl
             </View>
 
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={24} color="#FFFFFF" />
+              <X size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
@@ -86,12 +86,12 @@ export const StatusScreen: React.FC<StatusScreenProps> = ({ activeStatusId, onCl
               value={replyText}
               onChangeText={setReplyText}
               placeholder={`Reply to ${uName.split(' ')[0]}...`}
-              placeholderTextColor="rgba(255,255,255,0.7)"
+              placeholderTextColor="rgba(255,255,255,0.6)"
               style={styles.replyInput}
             />
 
             <TouchableOpacity onPress={handleReply} style={styles.sendReplyBtn}>
-              <Send size={18} color="#FFFFFF" />
+              <Send size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -101,20 +101,20 @@ export const StatusScreen: React.FC<StatusScreenProps> = ({ activeStatusId, onCl
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
+  container: { flex: 1, backgroundColor: '#1E1F22' },
   backgroundImage: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT, resizeMode: 'cover' },
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', padding: 16, paddingTop: 50, backgroundColor: 'rgba(0,0,0,0.3)' },
-  progressTrack: { height: 3, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 },
-  progressBar: { height: '100%', backgroundColor: '#FFFFFF' },
+  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', padding: 16, paddingTop: 44, backgroundColor: 'rgba(0,0,0,0.4)' },
+  progressTrack: { height: 2.5, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, overflow: 'hidden', marginBottom: 12 },
+  progressBar: { height: '100%', backgroundColor: '#5865F2' },
   header: { flexDirection: 'row', alignItems: 'center' },
-  userAvatar: { width: 42, height: 42, borderRadius: 21, marginRight: 10 },
+  userAvatar: { width: 38, height: 38, borderRadius: 19, marginRight: 10 },
   userInfo: { flex: 1 },
-  userName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  timeText: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
-  closeBtn: { padding: 8 },
-  captionBox: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, alignSelf: 'center', marginBottom: 20, maxWidth: '90%' },
-  captionText: { color: '#FFFFFF', fontSize: 15, textAlign: 'center', fontWeight: '500' },
-  replyBar: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  replyInput: { flex: 1, height: 48, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 24, paddingHorizontal: 18, color: '#FFFFFF', fontSize: 14, marginRight: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  sendReplyBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#7C3AED', justifyContent: 'center', alignItems: 'center' },
+  userName: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  timeText: { color: 'rgba(255,255,255,0.7)', fontSize: 11 },
+  closeBtn: { padding: 6 },
+  captionBox: { backgroundColor: 'rgba(30,31,34,0.85)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, alignSelf: 'center', marginBottom: 16, maxWidth: '90%' },
+  captionText: { color: '#FFFFFF', fontSize: 14, textAlign: 'center', fontWeight: '400' },
+  replyBar: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  replyInput: { flex: 1, height: 42, backgroundColor: 'rgba(43,45,49,0.9)', borderRadius: 8, paddingHorizontal: 14, color: '#FFFFFF', fontSize: 13, marginRight: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  sendReplyBtn: { width: 42, height: 42, borderRadius: 8, backgroundColor: '#5865F2', justifyContent: 'center', alignItems: 'center' },
 });

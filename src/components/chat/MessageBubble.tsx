@@ -12,8 +12,7 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
-  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import {
@@ -31,7 +30,6 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { formatMessageTime, formatCallDuration } from '../../utils/dateUtils';
 import { triggerHaptic } from '../../utils/haptics';
-import { getContactAccent } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -61,8 +59,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onToggleSelect,
   onLongPress,
 }) => {
-  const { palette, chatThemes, themeMode } = useThemeStore();
-  const { activeChatId, openMediaViewer } = useChatStore();
+  const { palette } = useThemeStore();
+  const { openMediaViewer } = useChatStore();
 
   // Audio Playback State
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -73,36 +71,20 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   );
   const soundRef = useRef<Audio.Sound | null>(null);
 
-  // Bold Maximalist Pop-In Bounce
-  const scale = useSharedValue(animateEntrance ? 0.7 : 1);
-  const pressedOffset = useSharedValue(0);
+  // Snappy Discord entrance: quick fade + slight translateY
+  const opacity = useSharedValue(animateEntrance ? 0 : 1);
+  const translateY = useSharedValue(animateEntrance ? 6 : 0);
 
   useEffect(() => {
     if (animateEntrance) {
-      scale.value = withSequence(
-        withSpring(1.14, { damping: 10, stiffness: 240 }),
-        withSpring(0.96, { damping: 12, stiffness: 220 }),
-        withSpring(1.0, { damping: 14, stiffness: 200 })
-      );
+      opacity.value = withTiming(1, { duration: 160 });
+      translateY.value = withTiming(0, { duration: 160 });
     }
   }, [animateEntrance]);
 
-  const handlePressIn = () => {
-    if (isSelectionMode) return;
-    pressedOffset.value = withSpring(2, { damping: 14, stiffness: 280 });
-  };
-
-  const handlePressOut = () => {
-    if (isSelectionMode) return;
-    pressedOffset.value = withSpring(0, { damping: 12, stiffness: 220 });
-  };
-
   const animatedBubbleStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value },
-      { translateX: pressedOffset.value },
-      { translateY: pressedOffset.value },
-    ],
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
   }));
 
   useEffect(() => {
@@ -189,37 +171,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   if (message.type === 'system') {
     return (
       <View style={styles.systemMessageWrapper}>
-        <View style={[styles.systemPill, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+        <View style={[styles.systemPill, { backgroundColor: palette.surfaceElevated }]}>
           <Text style={[styles.systemMessageText, { color: palette.textSecondary }]}>{message.text}</Text>
         </View>
       </View>
     );
   }
 
-  // Assigned Bold Accent for current chat
-  const currentChatTheme = activeChatId ? chatThemes[activeChatId] : undefined;
-  const sentSolidColor = currentChatTheme?.color || (isMe ? palette.primary : palette.accent);
-  const receivedSolidColor = palette.receivedBubble; // #1C1A2E
-
-  // Is text high contrast on sent color
-  const sentTextColor = (sentSolidColor === '#C6FF3D' || sentSolidColor === '#FFD23F' || sentSolidColor === '#00F0FF')
-    ? '#100F17'
-    : '#FFFFFF';
-
-  const bubbleRadius = 22;
-  const sentBorderRadius = {
-    borderTopLeftRadius: bubbleRadius,
-    borderTopRightRadius: isFirstInGroup ? bubbleRadius : 8,
-    borderBottomLeftRadius: bubbleRadius,
-    borderBottomRightRadius: isLastInGroup ? 4 : bubbleRadius,
-  };
-
-  const receivedBorderRadius = {
-    borderTopLeftRadius: isFirstInGroup ? bubbleRadius : 8,
-    borderTopRightRadius: bubbleRadius,
-    borderBottomLeftRadius: isLastInGroup ? 4 : bubbleRadius,
-    borderBottomRightRadius: bubbleRadius,
-  };
+  // Discord Colors: Sent is solid Blurple #5865F2, Received is solid Elevated surface #2B2D31
+  const sentSolidColor = palette.primary; // Blurple #5865F2
+  const receivedSolidColor = palette.surface; // #2B2D31
+  const sentTextColor = '#FFFFFF';
+  const receivedTextColor = palette.textPrimary; // #F2F3F5
 
   const handleBubblePress = () => {
     if (isSelectionMode && onToggleSelect) {
@@ -228,19 +191,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   const handleLongPress = () => {
-    triggerHaptic('heavy');
+    triggerHaptic('medium');
     if (onLongPress) onLongPress(message);
   };
 
   const renderReadStatus = () => {
     if (!isMe) return null;
-    if (message.status === 'read') {
-      return <CheckCheck size={15} color={palette.readReceiptBlue} style={styles.receiptIcon} />;
+    const iconColor = message.status === 'read' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)';
+    if (message.status === 'read' || message.status === 'delivered') {
+      return <CheckCheck size={14} color={iconColor} style={styles.receiptIcon} />;
     }
-    if (message.status === 'delivered') {
-      return <CheckCheck size={15} color={sentTextColor === '#100F17' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)'} style={styles.receiptIcon} />;
-    }
-    return <Check size={15} color={sentTextColor === '#100F17' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)'} style={styles.receiptIcon} />;
+    return <Check size={14} color={iconColor} style={styles.receiptIcon} />;
   };
 
   const renderReactions = () => {
@@ -263,13 +224,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     return (
       <View style={[styles.reactionsContainer, isMe ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}>
         {entries.map(([emoji, count]) => (
-          <View key={emoji} style={styles.reactionChipWrapper}>
-            <View style={styles.reactionHardShadow} />
-            <View style={[styles.reactionChip, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-              <Text style={styles.reactionText}>
-                {emoji} {count > 1 ? count : ''}
-              </Text>
-            </View>
+          <View
+            key={emoji}
+            style={[
+              styles.reactionChip,
+              {
+                backgroundColor: palette.surface,
+                borderColor: palette.border,
+              },
+            ]}
+          >
+            <Text style={styles.reactionText}>
+              {emoji} {count > 1 ? count : ''}
+            </Text>
           </View>
         ))}
       </View>
@@ -289,7 +256,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     if (isDeleted) {
       return (
         <View style={styles.deletedContainer}>
-          <Ban size={16} color={isMe ? sentTextColor : palette.textMuted} style={{ marginRight: 6 }} />
+          <Ban size={15} color={isMe ? sentTextColor : palette.textMuted} style={{ marginRight: 6 }} />
           <Text
             style={[
               styles.deletedText,
@@ -304,29 +271,29 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
     return (
       <View style={styles.innerContent}>
-        {/* Forwarded Header Indicator */}
+        {/* Forwarded Header */}
         {message.isForwarded && (
           <View style={styles.forwardedBadge}>
-            <CornerUpRight size={13} color={isMe ? sentTextColor : palette.secondary} style={{ marginRight: 4 }} />
-            <Text style={[styles.forwardedText, { color: isMe ? sentTextColor : palette.secondary }]}>
-              {(message.forwardCount || 0) >= 5 ? 'Forwarded many times' : 'Forwarded'}
+            <CornerUpRight size={12} color={isMe ? sentTextColor : palette.textSecondary} style={{ marginRight: 4 }} />
+            <Text style={[styles.forwardedText, { color: isMe ? sentTextColor : palette.textSecondary }]}>
+              Forwarded
             </Text>
           </View>
         )}
 
         {/* Sender Name in Group Chat */}
         {!isMe && senderName && isFirstInGroup && (
-          <Text style={[styles.senderName, { color: getContactAccent(senderName) }]}>{senderName}</Text>
+          <Text style={[styles.senderName, { color: palette.primary }]}>{senderName}</Text>
         )}
 
-        {/* Story Reply Preview Card */}
+        {/* Story Reply Preview */}
         {Boolean(
           message.storyReply &&
             (message.storyReply.storyId ||
               (typeof message.storyReply.mediaUrl === 'string' && message.storyReply.mediaUrl.trim().length > 0) ||
               (typeof message.storyReply.caption === 'string' && message.storyReply.caption.trim().length > 0))
         ) && (
-          <View style={[styles.storyReplyCard, { backgroundColor: isMe ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.06)', borderColor: '#000000' }]}>
+          <View style={[styles.storyReplyCard, { backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : palette.surfaceElevated }]}>
             {message.storyReply?.mediaUrl ? (
               <Image source={{ uri: message.storyReply.mediaUrl }} style={styles.storyReplyThumbnail} />
             ) : (
@@ -335,7 +302,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </View>
             )}
             <View style={styles.storyReplyMeta}>
-              <Text style={[styles.storyReplyTitle, { color: isMe ? sentTextColor : palette.secondary }]}>Story reply</Text>
+              <Text style={[styles.storyReplyTitle, { color: isMe ? sentTextColor : palette.primary }]}>Story reply</Text>
               <Text style={[styles.storyReplyCaption, { color: isMe ? sentTextColor : palette.textSecondary }]} numberOfLines={1}>
                 {message.storyReply?.caption || 'Status story'}
               </Text>
@@ -345,10 +312,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Standard Reply Preview */}
         {message.replyTo && (
-          <View style={[styles.replyContainer, { backgroundColor: isMe ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.08)', borderColor: '#000000' }]}>
-            <View style={[styles.replyBar, { backgroundColor: isMe ? sentTextColor : palette.secondary }]} />
+          <View style={[styles.replyContainer, { backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : palette.surfaceElevated }]}>
+            <View style={[styles.replyBar, { backgroundColor: isMe ? sentTextColor : palette.primary }]} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.replySender, { color: isMe ? sentTextColor : palette.secondary }]}>{message.replyTo.senderName || 'Replying'}</Text>
+              <Text style={[styles.replySender, { color: isMe ? sentTextColor : palette.primary }]}>{message.replyTo.senderName || 'Replying'}</Text>
               <Text style={[styles.replyText, { color: isMe ? sentTextColor : palette.textPrimary }]} numberOfLines={1}>
                 {message.replyTo.text}
               </Text>
@@ -361,7 +328,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <TouchableWithoutFeedback
             onPress={() => openMediaViewer(message.mediaUrl!, 'image', message.text)}
           >
-            <View style={[styles.imageWrapper, { borderColor: '#000000' }]}>
+            <View style={styles.imageWrapper}>
               <Image source={{ uri: message.mediaUrl }} style={styles.messageImage} />
             </View>
           </TouchableWithoutFeedback>
@@ -370,29 +337,25 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Voice Note */}
         {message.type === 'voice' && (
           <View style={styles.voiceContainer}>
-            <View style={styles.voicePlayBtnWrapper}>
-              <View style={styles.voicePlayShadow} />
-              <TouchableOpacity
-                onPress={toggleAudio}
-                activeOpacity={0.7}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                style={[
-                  styles.voicePlayBtn,
-                  {
-                    backgroundColor: isMe ? (sentTextColor === '#100F17' ? '#100F17' : '#FFFFFF') : palette.primary,
-                    borderColor: '#000000',
-                  },
-                ]}
-              >
-                {isLoadingAudio ? (
-                  <ActivityIndicator size="small" color={isMe ? sentSolidColor : '#FFFFFF'} />
-                ) : isPlayingAudio ? (
-                  <Pause size={18} color={isMe ? sentSolidColor : '#FFFFFF'} />
-                ) : (
-                  <Play size={18} color={isMe ? sentSolidColor : '#FFFFFF'} style={{ marginLeft: 2 }} />
-                )}
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={toggleAudio}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={[
+                styles.voicePlayBtn,
+                {
+                  backgroundColor: isMe ? '#FFFFFF' : palette.primary,
+                },
+              ]}
+            >
+              {isLoadingAudio ? (
+                <ActivityIndicator size="small" color={isMe ? sentSolidColor : '#FFFFFF'} />
+              ) : isPlayingAudio ? (
+                <Pause size={16} color={isMe ? sentSolidColor : '#FFFFFF'} />
+              ) : (
+                <Play size={16} color={isMe ? sentSolidColor : '#FFFFFF'} style={{ marginLeft: 2 }} />
+              )}
+            </TouchableOpacity>
             <View style={styles.waveformContainer}>
               <View style={styles.waveformBars}>
                 {[40, 70, 30, 90, 60, 100, 45, 80, 50, 95, 30, 70, 50].map((h, idx) => {
@@ -404,14 +367,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       style={[
                         styles.waveformBar,
                         {
-                          height: (h / 100) * 22,
+                          height: (h / 100) * 18,
                           backgroundColor: isMe
                             ? isFilled
                               ? sentTextColor
-                              : 'rgba(0,0,0,0.25)'
+                              : 'rgba(255,255,255,0.4)'
                             : isFilled
-                            ? palette.secondary
-                            : palette.border,
+                            ? palette.primary
+                            : palette.textMuted,
                         },
                       ]}
                     />
@@ -429,9 +392,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Document Message */}
         {message.type === 'document' && (
-          <View style={[styles.documentContainer, { borderColor: '#000000' }]}>
-            <View style={[styles.docIconWrapper, { backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : palette.accent, borderColor: '#000000' }]}>
-              <FileText size={22} color="#FFFFFF" />
+          <View style={[styles.documentContainer, { backgroundColor: isMe ? 'rgba(0,0,0,0.18)' : palette.surfaceElevated }]}>
+            <View style={[styles.docIconWrapper, { backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : palette.surfaceLight }]}>
+              <FileText size={20} color="#FFFFFF" />
             </View>
             <View style={styles.docDetails}>
               <Text style={[styles.docFileName, { color: isMe ? sentTextColor : palette.textPrimary }]} numberOfLines={1}>
@@ -441,8 +404,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 {message.mediaFileSize || '1.2 MB'}
               </Text>
             </View>
-            <TouchableOpacity style={[styles.docDownloadBtn, { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
-              <Download size={16} color="#100F17" />
+            <TouchableOpacity style={[styles.docDownloadBtn, { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : palette.surfaceLight }]}>
+              <Download size={15} color={isMe ? '#FFFFFF' : palette.textPrimary} />
             </TouchableOpacity>
           </View>
         )}
@@ -453,7 +416,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             style={[
               styles.messageText,
               {
-                color: isMe ? sentTextColor : palette.textPrimary,
+                color: isMe ? sentTextColor : receivedTextColor,
               },
             ]}
           >
@@ -461,7 +424,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </Text>
         ) : null}
 
-        {/* Footer: Timestamp, Edited status & Read Receipt */}
+        {/* Footer: Timestamp, Edited & Read Receipt */}
         <View style={styles.footerRow}>
           {message.isEdited && (
             <Text style={[styles.editedIndicator, { color: isMe ? sentTextColor : palette.textMuted }]}>
@@ -478,7 +441,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <View style={[styles.container, { marginBottom: isLastInGroup ? 8 : 4 }]}>
+    <View style={[styles.container, { marginBottom: isLastInGroup ? 6 : 2 }]}>
       <View style={[styles.bubbleRow, isMe ? styles.sentRow : styles.receivedRow]}>
         {/* Multi-Select Checkbox */}
         {isSelectionMode && (
@@ -487,7 +450,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             style={[
               styles.selectionCheckbox,
               {
-                borderColor: '#000000',
+                borderColor: palette.border,
                 backgroundColor: isSelected ? palette.primary : palette.surfaceLight,
               },
             ]}
@@ -505,48 +468,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         >
           <TouchableWithoutFeedback
             onPress={handleBubblePress}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
             onLongPress={handleLongPress}
-            delayLongPress={350}
+            delayLongPress={300}
           >
-            <View style={styles.bubbleShadowOuter}>
-              {/* Hard Offset Shadow */}
-              <View
-                style={[
-                  styles.hardBubbleShadow,
-                  isMe ? sentBorderRadius : receivedBorderRadius,
-                ]}
-              />
-
-              {/* Main Bubble Body */}
-              <View
-                style={[
-                  styles.bubble,
-                  isMe ? sentBorderRadius : receivedBorderRadius,
-                  {
-                    backgroundColor: isMe ? sentSolidColor : receivedSolidColor,
-                    borderColor: '#000000',
-                    borderWidth: 2,
-                  },
-                ]}
-              >
-                {renderContent()}
-              </View>
-
-              {/* Geometric Tail Nub */}
-              {isLastInGroup && !isDeleted && (
-                <View
-                  style={[
-                    styles.tailNub,
-                    isMe ? styles.sentTailNub : styles.receivedTailNub,
-                    {
-                      backgroundColor: isMe ? sentSolidColor : receivedSolidColor,
-                      borderColor: '#000000',
-                    },
-                  ]}
-                />
-              )}
+            <View
+              style={[
+                styles.bubble,
+                {
+                  backgroundColor: isMe ? sentSolidColor : receivedSolidColor,
+                  borderRadius: 16,
+                },
+              ]}
+            >
+              {renderContent()}
             </View>
           </TouchableWithoutFeedback>
         </Animated.View>
@@ -571,10 +505,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   selectionCheckbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    borderWidth: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -588,101 +522,69 @@ const styles = StyleSheet.create({
   receivedWrapper: {
     alignSelf: 'flex-start',
   },
-  bubbleShadowOuter: {
-    position: 'relative',
-  },
-  hardBubbleShadow: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#000000',
-    zIndex: 0,
-  },
   bubble: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 8,
-    zIndex: 1,
-  },
-  tailNub: {
-    position: 'absolute',
-    bottom: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 3,
-    borderWidth: 2,
-    zIndex: 2,
-  },
-  sentTailNub: {
-    right: -5,
-    transform: [{ rotate: '45deg' }],
-  },
-  receivedTailNub: {
-    left: -5,
-    transform: [{ rotate: '45deg' }],
+    paddingHorizontal: 13,
+    paddingTop: 8,
+    paddingBottom: 7,
   },
   innerContent: {},
   messageText: {
     fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 21,
-    letterSpacing: -0.1,
+    fontWeight: '400',
+    lineHeight: 20,
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: 4,
+    marginTop: 3,
     gap: 4,
   },
   timestamp: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '500',
+    opacity: 0.8,
   },
   editedIndicator: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
     fontStyle: 'italic',
+    opacity: 0.7,
   },
   receiptIcon: {
     marginLeft: 2,
   },
   senderName: {
     fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 4,
-    letterSpacing: -0.2,
+    fontWeight: '600',
+    marginBottom: 3,
   },
   forwardedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   forwardedText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     fontStyle: 'italic',
   },
   storyReplyCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 6,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    marginBottom: 8,
+    borderRadius: 8,
+    marginBottom: 6,
   },
   storyReplyThumbnail: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
     marginRight: 8,
   },
   storyReplyTextThumb: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -690,134 +592,113 @@ const styles = StyleSheet.create({
   storyReplyThumbText: {
     color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   storyReplyMeta: {
     flex: 1,
   },
   storyReplyTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   storyReplyCaption: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   replyContainer: {
     flexDirection: 'row',
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    marginBottom: 8,
+    padding: 6,
+    borderRadius: 8,
+    marginBottom: 6,
   },
   replyBar: {
-    width: 4,
+    width: 3,
     borderRadius: 2,
     marginRight: 8,
   },
   replySender: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   replyText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '400',
   },
   imageWrapper: {
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
-    borderWidth: 2,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   messageImage: {
     width: 220,
     height: 220,
-    borderRadius: 14,
+    borderRadius: 12,
   },
   voiceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
-    minWidth: 190,
-  },
-  voicePlayBtnWrapper: {
-    position: 'relative',
-  },
-  voicePlayShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#000000',
+    paddingVertical: 2,
+    minWidth: 180,
   },
   voicePlayBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   waveformContainer: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 8,
   },
   waveformBars: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    height: 24,
+    gap: 2.5,
+    height: 20,
   },
   waveformBar: {
-    width: 3.5,
-    borderRadius: 2,
+    width: 3,
+    borderRadius: 1.5,
   },
   audioTime: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '500',
     marginTop: 2,
   },
   documentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 16,
-    borderWidth: 2,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    marginBottom: 6,
+    padding: 8,
+    borderRadius: 10,
+    marginBottom: 4,
   },
   docIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   docDetails: {
     flex: 1,
   },
   docFileName: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   docFileSize: {
     fontSize: 11,
-    fontWeight: '600',
-    marginTop: 2,
+    marginTop: 1,
   },
   docDownloadBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    borderWidth: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 6,
   },
   deletedContainer: {
     flexDirection: 'row',
@@ -826,52 +707,37 @@ const styles = StyleSheet.create({
   },
   deletedText: {
     fontSize: 13,
-    fontWeight: '700',
     fontStyle: 'italic',
   },
   reactionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 4,
-  },
-  reactionChipWrapper: {
-    position: 'relative',
-  },
-  reactionHardShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    width: '100%',
-    height: '100%',
-    borderRadius: 14,
-    backgroundColor: '#000000',
+    gap: 4,
+    marginTop: 3,
   },
   reactionChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    zIndex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   reactionText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#F2F3F5',
   },
   systemMessageWrapper: {
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: 8,
   },
   systemPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   systemMessageText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '500',
     textAlign: 'center',
   },
 });

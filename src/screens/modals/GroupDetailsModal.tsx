@@ -9,7 +9,6 @@ import {
   Image,
   Alert,
   TextInput,
-  Switch,
   Clipboard,
   Dimensions,
 } from 'react-native';
@@ -26,6 +25,7 @@ import {
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { Chat, UserProfile } from '../../types';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -57,7 +57,6 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [groupName, setGroupName] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
 
   if (!visible || !chat || chat.type !== 'group') return null;
@@ -112,21 +111,20 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
   const handleShareInviteLink = async () => {
     triggerHaptic('light');
     const code = await getGroupInviteLink(chat.chatId);
-    setInviteCode(code);
     Clipboard.setString(`https://everchat.app/join/${code}`);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 3000);
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.overlay}>
         <View
           style={[
             styles.container,
             {
-              backgroundColor: palette.surface,
-              borderColor: '#000000',
+              backgroundColor: palette.surfaceElevated,
+              borderColor: palette.border,
             },
           ]}
         >
@@ -134,7 +132,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
           <View style={styles.header}>
             <Text style={[styles.title, { color: palette.textPrimary }]}>Group Info</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={22} color={palette.textMuted} />
+              <X size={20} color={palette.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -158,10 +156,10 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                     onChangeText={setGroupName}
                     placeholder="Group name"
                     placeholderTextColor={palette.textMuted}
-                    style={[styles.nameInput, { color: palette.textPrimary, borderColor: '#000000', backgroundColor: palette.inputBackground }]}
+                    style={[styles.nameInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: palette.inputBackground }]}
                   />
-                  <TouchableOpacity onPress={handleSaveGroupName} style={[styles.saveNameBtn, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
-                    <Check size={16} color="#FFFFFF" />
+                  <TouchableOpacity onPress={handleSaveGroupName} style={[styles.saveNameBtn, { backgroundColor: palette.primary }]}>
+                    <Check size={14} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -175,23 +173,23 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                       }}
                       style={styles.editBtn}
                     >
-                      <Edit2 size={16} color={palette.secondary} />
+                      <Edit2 size={14} color={palette.textMuted} />
                     </TouchableOpacity>
                   )}
                 </View>
               )}
 
               <Text style={[styles.participantCount, { color: palette.textMuted }]}>
-                Group • {participants.length} participants
+                {participants.length} Members
               </Text>
             </View>
 
             {/* Invite Link Card */}
             <TouchableOpacity
               onPress={handleShareInviteLink}
-              style={[styles.actionCard, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+              style={[styles.actionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
             >
-              <Share2 size={20} color={palette.secondary} style={{ marginRight: 12 }} />
+              <Share2 size={18} color={palette.primary} style={{ marginRight: 10 }} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>Invite via Link</Text>
                 <Text style={[styles.cardSubtitle, { color: palette.textMuted }]}>
@@ -202,22 +200,20 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
             {/* Admin Permissions */}
             {isMeAdmin && (
-              <View style={[styles.settingsBox, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                <Text style={[styles.settingsTitle, { color: palette.secondary }]}>GROUP PERMISSIONS</Text>
+              <View style={[styles.settingsBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+                <Text style={[styles.settingsTitle, { color: palette.textMuted }]}>PERMISSIONS</Text>
                 <View style={styles.settingRow}>
                   <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Only admins can send messages</Text>
-                  <Switch
+                  <ClaySwitch
                     value={!!chat.onlyAdminsCanMessage}
                     onValueChange={(val) => updateGroupSettings(chat.chatId, { onlyAdminsCanMessage: val })}
-                    trackColor={{ false: '#3E3E3E', true: palette.secondary }}
                   />
                 </View>
-                <View style={styles.settingRow}>
+                <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
                   <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Only admins can edit group info</Text>
-                  <Switch
+                  <ClaySwitch
                     value={!!chat.onlyAdminsCanEditInfo}
                     onValueChange={(val) => updateGroupSettings(chat.chatId, { onlyAdminsCanEditInfo: val })}
-                    trackColor={{ false: '#3E3E3E', true: palette.secondary }}
                   />
                 </View>
               </View>
@@ -225,8 +221,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
             {/* Participants Section */}
             <View style={styles.section}>
-              <Text style={[styles.sectionHeading, { color: palette.secondary }]}>
-                PARTICIPANTS ({participants.length})
+              <Text style={[styles.sectionHeading, { color: palette.textMuted }]}>
+                MEMBERS — {participants.length}
               </Text>
 
               {participants.map((p, idx) => {
@@ -254,9 +250,9 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                     </View>
 
                     {isAdmin && (
-                      <View style={[styles.adminBadge, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                        <Crown size={12} color={palette.highlight} style={{ marginRight: 4 }} />
-                        <Text style={[styles.adminText, { color: palette.highlight }]}>Admin</Text>
+                      <View style={[styles.adminBadge, { backgroundColor: palette.surfaceLight }]}>
+                        <Crown size={11} color={palette.warning} style={{ marginRight: 3 }} />
+                        <Text style={[styles.adminText, { color: palette.warning }]}>Admin</Text>
                       </View>
                     )}
 
@@ -264,16 +260,16 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                       <View style={styles.adminControls}>
                         <TouchableOpacity
                           onPress={() => handleToggleAdmin(pId, isAdmin)}
-                          style={[styles.smallIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+                          style={[styles.smallIconBtn, { backgroundColor: palette.surfaceLight }]}
                         >
-                          <Shield size={14} color={isAdmin ? palette.error : palette.secondary} />
+                          <Shield size={13} color={isAdmin ? palette.error : palette.primary} />
                         </TouchableOpacity>
 
                         <TouchableOpacity
                           onPress={() => handleRemoveMember(pId, p.name)}
-                          style={[styles.smallIconBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
+                          style={[styles.smallIconBtn, { backgroundColor: palette.surfaceLight }]}
                         >
-                          <Trash2 size={14} color={palette.error} />
+                          <Trash2 size={13} color={palette.error} />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -284,8 +280,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
             {/* Exit Group Button */}
             <TouchableOpacity onPress={handleLeaveGroup} style={[styles.leaveBtn, { borderColor: palette.error }]}>
-              <LogOut size={18} color={palette.error} style={{ marginRight: 8 }} />
-              <Text style={[styles.leaveText, { color: palette.error }]}>Exit Group</Text>
+              <LogOut size={16} color={palette.error} style={{ marginRight: 6 }} />
+              <Text style={[styles.leaveText, { color: palette.error }]}>Leave Group</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -297,65 +293,64 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   container: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 2,
-    padding: 22,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    padding: 18,
     maxHeight: SCREEN_HEIGHT * 0.8,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  title: { fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  title: { fontSize: 17, fontWeight: '700' },
   closeBtn: { padding: 4 },
   scroll: { maxHeight: SCREEN_HEIGHT * 0.7 },
-  groupHero: { alignItems: 'center', marginVertical: 14 },
-  heroAvatar: { width: 88, height: 88, borderRadius: 44, borderWidth: 2, borderColor: '#000000', marginBottom: 10 },
-  groupNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  groupName: { fontSize: 22, fontWeight: '900', letterSpacing: -0.4 },
+  groupHero: { alignItems: 'center', marginVertical: 10 },
+  heroAvatar: { width: 72, height: 72, borderRadius: 36, marginBottom: 8 },
+  groupNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  groupName: { fontSize: 18, fontWeight: '700' },
   editBtn: { padding: 4 },
-  participantCount: { fontSize: 13, fontWeight: '700', marginTop: 4 },
-  editNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  nameInput: { borderWidth: 2, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, fontSize: 16, fontWeight: '700' },
-  saveNameBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  participantCount: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  editNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nameInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, fontSize: 14, fontWeight: '500' },
+  saveNameBtn: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
   actionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 2,
-    marginVertical: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 6,
   },
-  cardTitle: { fontSize: 15, fontWeight: '800' },
-  cardSubtitle: { fontSize: 12, fontWeight: '600', marginTop: 2 },
-  settingsBox: { padding: 16, borderRadius: 18, borderWidth: 2, marginVertical: 8 },
-  settingsTitle: { fontSize: 12, fontWeight: '900', marginBottom: 10, letterSpacing: 0.5 },
-  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
-  settingLabel: { fontSize: 14, fontWeight: '700', flex: 1, marginRight: 10 },
-  section: { marginVertical: 14 },
-  sectionHeading: { fontSize: 13, fontWeight: '900', marginBottom: 10, letterSpacing: 0.5 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  memberAvatar: { width: 42, height: 42, borderRadius: 21, borderWidth: 2, borderColor: '#000000', marginRight: 10 },
+  cardTitle: { fontSize: 14, fontWeight: '600' },
+  cardSubtitle: { fontSize: 11, marginTop: 1 },
+  settingsBox: { padding: 12, borderRadius: 8, borderWidth: 1, marginVertical: 6 },
+  settingsTitle: { fontSize: 11, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
+  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
+  settingLabel: { fontSize: 13, fontWeight: '500', flex: 1, marginRight: 10 },
+  section: { marginVertical: 10 },
+  sectionHeading: { fontSize: 11, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  memberAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 8 },
   memberMeta: { flex: 1 },
-  memberName: { fontSize: 15, fontWeight: '800' },
-  memberBio: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  memberName: { fontSize: 14, fontWeight: '600' },
+  memberBio: { fontSize: 11, marginTop: 1 },
   adminBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  adminText: { fontSize: 11, fontWeight: '900' },
-  adminControls: { flexDirection: 'row', gap: 6, marginLeft: 8 },
-  smallIconBtn: { width: 30, height: 30, borderRadius: 10, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center' },
+  adminText: { fontSize: 10, fontWeight: '700' },
+  adminControls: { flexDirection: 'row', gap: 4, marginLeft: 6 },
+  smallIconBtn: { width: 28, height: 28, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
   leaveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 18,
-    borderWidth: 2,
-    marginVertical: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 12,
   },
-  leaveText: { fontSize: 15, fontWeight: '900' },
+  leaveText: { fontSize: 14, fontWeight: '700' },
 });

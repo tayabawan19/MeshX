@@ -7,7 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
-import { ArrowLeft, ArchiveRestore, Archive } from 'lucide-react-native';
+import { ChevronLeft, Archive } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -46,21 +46,24 @@ export const ArchivedChatsScreen: React.FC<{ navigation: any }> = ({ navigation 
           styles.header,
           {
             paddingTop: Math.max(insets.top, 12),
-            backgroundColor: palette.surface,
+            backgroundColor: palette.surfaceElevated,
             borderBottomColor: palette.border,
           },
         ]}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={24} color={palette.textPrimary} />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backBtn, { backgroundColor: palette.surfaceLight }]}
+        >
+          <ChevronLeft size={20} color={palette.textPrimary} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: palette.textPrimary }]}>Archived Chats</Text>
-        <View style={{ width: 32 }} />
+        <View style={{ width: 34 }} />
       </View>
 
       {/* Info notice */}
-      <View style={[styles.infoBanner, { backgroundColor: palette.surfaceElevated }]}>
-        <Archive size={16} color={palette.primaryLight} style={{ marginRight: 8 }} />
+      <View style={[styles.infoBanner, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <Archive size={15} color={palette.textMuted} style={{ marginRight: 8 }} />
         <Text style={[styles.infoText, { color: palette.textSecondary }]}>
           These chats stay archived when new messages are received.
         </Text>
@@ -90,7 +93,7 @@ export const ArchivedChatsScreen: React.FC<{ navigation: any }> = ({ navigation 
         }}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Archive size={48} color={palette.textMuted} style={{ marginBottom: 12 }} />
+            <Archive size={40} color={palette.textMuted} style={{ marginBottom: 10 }} />
             <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>No archived chats</Text>
             <Text style={[styles.emptySub, { color: palette.textMuted }]}>
               Swipe left on any conversation in your chats list to archive it.
@@ -105,18 +108,33 @@ export const ArchivedChatsScreen: React.FC<{ navigation: any }> = ({ navigation 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingBottom: 12,
+    paddingBottom: 10,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
   },
-  backBtn: { padding: 6 },
-  title: { fontSize: 18, fontWeight: '800' },
-  infoBanner: { flexDirection: 'row', alignItems: 'center', padding: 12, margin: 12, borderRadius: 14 },
+  backBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: { fontSize: 16, fontWeight: '700' },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
   infoText: { fontSize: 12, flex: 1 },
   emptyContainer: { padding: 50, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
   emptySub: { fontSize: 13, textAlign: 'center' },
 });

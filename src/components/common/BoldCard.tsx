@@ -3,7 +3,7 @@ import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -24,80 +24,48 @@ export const BoldCard: React.FC<BoldCardProps> = ({
   style,
   onPress,
   accentColor,
-  shadowOffset = 4,
-  borderRadius = 22,
-  borderWidth = 2,
+  borderRadius = 10,
+  borderWidth = 1,
   highlightBorder = false,
 }) => {
   const palette = useThemeStore((state) => state.palette);
-
-  const pressedOffset = useSharedValue(0);
+  const opacity = useSharedValue(1);
 
   const handlePressIn = () => {
     if (!onPress) return;
     triggerHaptic('light');
-    pressedOffset.value = withSpring(shadowOffset, {
-      damping: 14,
-      stiffness: 280,
-    });
+    opacity.value = withTiming(0.85, { duration: 100 });
   };
 
   const handlePressOut = () => {
     if (!onPress) return;
-    pressedOffset.value = withSpring(0, {
-      damping: 12,
-      stiffness: 220,
-    });
+    opacity.value = withTiming(1, { duration: 120 });
   };
 
-  const animatedCardStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: pressedOffset.value },
-      { translateY: pressedOffset.value },
-    ],
-  }));
-
-  const animatedShadowStyle = useAnimatedStyle(() => ({
-    opacity: pressedOffset.value >= shadowOffset - 1 ? 0 : 1,
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
   }));
 
   const borderColor = highlightBorder
-    ? (accentColor || palette.secondary)
-    : (accentColor ? accentColor : '#000000');
+    ? (accentColor || palette.primary)
+    : (accentColor || palette.border);
 
-  const content = (
-    <View style={[styles.container, style]}>
-      {/* Hard Offset Comic Shadow */}
-      {shadowOffset > 0 && (
-        <Animated.View
-          style={[
-            styles.hardShadow,
-            {
-              backgroundColor: '#000000',
-              top: shadowOffset,
-              left: shadowOffset,
-              borderRadius,
-            },
-            animatedShadowStyle,
-          ]}
-        />
-      )}
-
-      <Animated.View
-        style={[
-          styles.cardBody,
-          {
-            backgroundColor: palette.surface,
-            borderRadius,
-            borderWidth,
-            borderColor,
-          },
-          animatedCardStyle,
-        ]}
-      >
-        {children}
-      </Animated.View>
-    </View>
+  const cardContent = (
+    <Animated.View
+      style={[
+        styles.cardBody,
+        {
+          backgroundColor: palette.surface,
+          borderRadius,
+          borderWidth,
+          borderColor,
+        },
+        style,
+        onPress ? animatedStyle : undefined,
+      ]}
+    >
+      {children}
+    </Animated.View>
   );
 
   if (onPress) {
@@ -107,30 +75,17 @@ export const BoldCard: React.FC<BoldCardProps> = ({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        {content}
+        {cardContent}
       </Pressable>
     );
   }
 
-  return content;
+  return cardContent;
 };
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'relative',
-    marginVertical: 4,
-  },
-  hardShadow: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 0,
-  },
   cardBody: {
-    padding: 16,
-    zIndex: 1,
+    padding: 14,
     overflow: 'hidden',
   },
 });

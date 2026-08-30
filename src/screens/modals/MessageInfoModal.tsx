@@ -55,31 +55,31 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
   const readList = info?.readBy || [];
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.overlay}>
         <View
           style={[
             styles.container,
             {
-              backgroundColor: palette.surface,
-              borderColor: '#000000',
+              backgroundColor: palette.surfaceElevated,
+              borderColor: palette.border,
             },
           ]}
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: palette.textPrimary }]}>Message Info</Text>
+            <Text style={[styles.title, { color: palette.textPrimary }]}>Message Details</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={22} color={palette.textMuted} />
+              <X size={20} color={palette.textMuted} />
             </TouchableOpacity>
           </View>
 
           {/* Message Preview Snippet */}
-          <View style={[styles.previewBox, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
+          <View style={[styles.previewBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
             <Text style={[styles.previewText, { color: palette.textPrimary }]} numberOfLines={2}>
               {message.text || `[${message.type}]`}
             </Text>
-            <Text style={[styles.previewTime, { color: palette.secondary }]}>
+            <Text style={[styles.previewTime, { color: palette.textMuted }]}>
               Sent {formatMessageTime(Number(message.createdAt) || Date.now())}
             </Text>
           </View>
@@ -92,7 +92,7 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
             <ScrollView style={styles.content}>
               {/* Read Section */}
               <View style={styles.sectionHeader}>
-                <CheckCheck size={20} color={palette.readReceiptBlue} />
+                <CheckCheck size={16} color={palette.onlineGreen} />
                 <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Read by</Text>
               </View>
               {readList.length === 0 ? (
@@ -115,8 +115,8 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
               )}
 
               {/* Delivered Section */}
-              <View style={[styles.sectionHeader, { marginTop: 16 }]}>
-                <Check size={20} color="#FFFFFF" />
+              <View style={[styles.sectionHeader, { marginTop: 14 }]}>
+                <Check size={16} color={palette.textMuted} />
                 <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>Delivered to</Text>
               </View>
               {deliveredList.length === 0 ? (
@@ -148,31 +148,31 @@ export const MessageInfoModal: React.FC<MessageInfoModalProps> = ({
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
   container: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 2,
-    padding: 22,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    padding: 18,
     maxHeight: SCREEN_HEIGHT * 0.7,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  title: { fontSize: 20, fontWeight: '900', letterSpacing: -0.3 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  title: { fontSize: 17, fontWeight: '700' },
   closeBtn: { padding: 4 },
   previewBox: {
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 2,
-    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 14,
   },
-  previewText: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  previewTime: { fontSize: 12, fontWeight: '800' },
-  loadingContainer: { padding: 40, alignItems: 'center' },
+  previewText: { fontSize: 14, fontWeight: '500', marginBottom: 4 },
+  previewTime: { fontSize: 11 },
+  loadingContainer: { padding: 30, alignItems: 'center' },
   content: { maxHeight: SCREEN_HEIGHT * 0.45 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  sectionTitle: { fontSize: 15, fontWeight: '900', letterSpacing: -0.2 },
-  emptyText: { fontSize: 13, fontStyle: 'italic', marginHorizontal: 12, marginBottom: 8 },
-  recipientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 4 },
-  avatar: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: '#000000', marginRight: 10 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  sectionTitle: { fontSize: 14, fontWeight: '700' },
+  emptyText: { fontSize: 12, marginHorizontal: 8, marginBottom: 6 },
+  recipientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4 },
+  avatar: { width: 32, height: 32, borderRadius: 16, marginRight: 8 },
   meta: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '800' },
-  time: { fontSize: 12, fontWeight: '600', marginTop: 2 },
+  name: { fontSize: 13, fontWeight: '600' },
+  time: { fontSize: 11, marginTop: 1 },
 });

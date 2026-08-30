@@ -1,8 +1,6 @@
 import React from 'react';
 import { View, Image, StyleSheet, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../store/useThemeStore';
-import { getContactAccent } from '../../theme/colors';
 
 interface AvatarProps {
   url?: string;
@@ -15,10 +13,10 @@ interface AvatarProps {
 }
 
 const SIZE_MAP = {
-  sm: 38,
-  md: 50,
-  lg: 64,
-  xl: 84,
+  sm: 36,
+  md: 44,
+  lg: 56,
+  xl: 72,
 };
 
 export const Avatar: React.FC<AvatarProps> = ({
@@ -28,19 +26,14 @@ export const Avatar: React.FC<AvatarProps> = ({
   isOnline = false,
   hasStory = false,
   storyViewed = false,
-  accentColor,
 }) => {
   const palette = useThemeStore((state) => state.palette);
   const dimension = SIZE_MAP[size];
-  const borderPadding = hasStory ? 4 : 0;
-  const imageSize = dimension - borderPadding * 2;
+  const storyPadding = hasStory ? 2.5 : 0;
+  const imageSize = dimension - storyPadding * 2;
   const initial = name ? name.charAt(0).toUpperCase() : '?';
-  const assignedColor = accentColor || getContactAccent(name);
 
-  // Dual-tone candy story rings: Coral & Lime
-  const storyGradients: [string, string] = storyViewed
-    ? ['#4A485A', '#2E2B48']
-    : ['#FF4D5E', '#C6FF3D'];
+  const storyBorderColor = storyViewed ? '#4E5058' : palette.primary;
 
   const renderContent = () => (
     <View
@@ -50,7 +43,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           width: imageSize,
           height: imageSize,
           borderRadius: imageSize / 2,
-          borderColor: '#000000',
+          backgroundColor: '#35373C',
         },
       ]}
     >
@@ -67,7 +60,7 @@ export const Avatar: React.FC<AvatarProps> = ({
               width: imageSize,
               height: imageSize,
               borderRadius: imageSize / 2,
-              backgroundColor: assignedColor,
+              backgroundColor: palette.primary,
             },
           ]}
         >
@@ -75,8 +68,8 @@ export const Avatar: React.FC<AvatarProps> = ({
             style={[
               styles.fallbackText,
               {
-                fontSize: imageSize * 0.44,
-                color: assignedColor === '#C6FF3D' || assignedColor === '#FFD23F' ? '#100F17' : '#FFFFFF',
+                fontSize: imageSize * 0.42,
+                color: '#FFFFFF',
               },
             ]}
           >
@@ -87,24 +80,24 @@ export const Avatar: React.FC<AvatarProps> = ({
     </View>
   );
 
+  const dotSize = size === 'sm' ? 10 : size === 'md' ? 13 : size === 'lg' ? 16 : 18;
+
   return (
     <View style={{ width: dimension, height: dimension, position: 'relative' }}>
       {hasStory ? (
-        <LinearGradient
-          colors={storyGradients}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <View
           style={[
             styles.storyRing,
             {
               width: dimension,
               height: dimension,
               borderRadius: dimension / 2,
+              borderColor: storyBorderColor,
             },
           ]}
         >
           {renderContent()}
-        </LinearGradient>
+        </View>
       ) : (
         renderContent()
       )}
@@ -114,13 +107,14 @@ export const Avatar: React.FC<AvatarProps> = ({
           style={[
             styles.onlineDot,
             {
-              backgroundColor: palette.onlineGreen, // #C6FF3D
-              borderColor: '#000000',
-              width: size === 'sm' ? 12 : size === 'md' ? 15 : 19,
-              height: size === 'sm' ? 12 : size === 'md' ? 15 : 19,
-              borderRadius: 99,
-              right: size === 'sm' ? -1 : 1,
-              bottom: size === 'sm' ? -1 : 1,
+              backgroundColor: palette.onlineGreen, // Discord status green #23A55A
+              borderColor: palette.background,       // Base dark mask cutout
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotSize / 2,
+              borderWidth: 2,
+              right: 0,
+              bottom: 0,
             },
           ]}
         />
@@ -132,28 +126,24 @@ export const Avatar: React.FC<AvatarProps> = ({
 const styles = StyleSheet.create({
   avatarWrapper: {
     overflow: 'hidden',
-    backgroundColor: '#1E1C30',
-    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   storyRing: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 3,
     borderWidth: 2,
-    borderColor: '#000000',
+    padding: 1,
   },
   fallback: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   fallbackText: {
-    fontWeight: '900',
+    fontWeight: '700',
   },
   onlineDot: {
     position: 'absolute',
-    borderWidth: 2,
     zIndex: 2,
   },
 });

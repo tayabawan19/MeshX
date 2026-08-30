@@ -25,7 +25,6 @@ import {
   Edit3,
   CheckSquare,
   X,
-  Users,
 } from 'lucide-react-native';
 import { Avatar } from '../../components/common/Avatar';
 import { MessageBubble } from '../../components/chat/MessageBubble';
@@ -43,7 +42,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageInfoModal } from '../modals/MessageInfoModal';
 import { ForwardPickerModal } from '../modals/ForwardPickerModal';
 import { GroupDetailsModal } from '../modals/GroupDetailsModal';
-import { getContactAccent } from '../../theme/colors';
 
 interface ChatScreenProps {
   chatId?: string;
@@ -89,7 +87,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
-  const [disappearingEnabled, setDisappearingEnabled] = useState(false);
+  const [disappearingEnabled] = useState(false);
 
   // Multi-Select Mode
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -151,7 +149,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const headerAvatar = isGroup ? (currentChat?.groupAvatar || currentChat?.groupAvatarUrl) : recipient?.avatarUrl;
   const isOnline = !isGroup && !!recipient?.isOnline;
   const recUserId = recipient?.id || recipient?._id || recipient?.userId || 'usr_peer';
-  const assignedAccent = getContactAccent(headerName);
 
   const isTyping = typingMap[chatId] || false;
 
@@ -399,9 +396,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           style={[
             styles.selectionHeader,
             {
-              paddingTop: Math.max(insets.top, 14),
-              backgroundColor: palette.secondary, // Electric Lime #C6FF3D
-              borderBottomColor: '#000000',
+              paddingTop: Math.max(insets.top, 12),
+              backgroundColor: palette.surfaceElevated,
+              borderBottomColor: palette.border,
             },
           ]}
         >
@@ -412,24 +409,24 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             }}
             style={styles.backBtn}
           >
-            <X size={24} color="#100F17" strokeWidth={2.5} />
+            <X size={20} color={palette.textPrimary} />
           </TouchableOpacity>
 
-          <Text style={[styles.selectionCount, { color: '#100F17' }]}>
+          <Text style={[styles.selectionCount, { color: palette.textPrimary }]}>
             {selectedMessageIds.length} Selected
           </Text>
 
           <View style={styles.selectionActions}>
             <TouchableOpacity onPress={handleBulkStar} style={styles.actionIconPill}>
-              <Star size={18} color="#100F17" />
+              <Star size={16} color={palette.textPrimary} />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleBulkForward} style={styles.actionIconPill}>
-              <CornerUpRight size={18} color="#100F17" />
+              <CornerUpRight size={16} color={palette.textPrimary} />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={handleBulkDelete} style={[styles.actionIconPill, { backgroundColor: palette.error }]}>
-              <Trash2 size={18} color="#FFFFFF" />
+              <Trash2 size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -438,21 +435,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           style={[
             styles.header,
             {
-              paddingTop: Math.max(insets.top, 14),
-              backgroundColor: palette.background,
-              borderBottomColor: '#000000',
+              paddingTop: Math.max(insets.top, 12),
+              backgroundColor: palette.surfaceElevated,
+              borderBottomColor: palette.border,
             },
           ]}
         >
-          <View style={styles.headerBackWrapper}>
-            <View style={styles.headerBackShadow} />
-            <TouchableOpacity onPress={onBack} style={[styles.backBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-              <ChevronLeft size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={onBack} style={[styles.backBtn, { backgroundColor: palette.surfaceLight }]}>
+            <ChevronLeft size={20} color={palette.textPrimary} />
+          </TouchableOpacity>
 
           <TouchableOpacity onPress={handleHeaderPress} style={styles.headerInfo}>
-            <Avatar url={headerAvatar} name={headerName} size="sm" isOnline={!!isOnline} accentColor={assignedAccent} />
+            <Avatar url={headerAvatar} name={headerName} size="sm" isOnline={!!isOnline} />
             <View style={styles.headerTextContainer}>
               <Text style={[styles.headerName, { color: palette.textPrimary }]} numberOfLines={1}>
                 {headerName}
@@ -460,7 +454,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               <Text
                 style={[
                   styles.headerStatus,
-                  { color: isOnline ? palette.secondary : palette.textMuted },
+                  { color: isOnline ? palette.onlineGreen : palette.textMuted },
                 ]}
               >
                 {isGroup ? `${currentChat?.participants?.length || 2} members` : isOnline ? 'Online' : 'Offline'}
@@ -469,28 +463,22 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
           </TouchableOpacity>
 
           <View style={styles.headerActions}>
-            <View style={styles.headerActionBtnWrapper}>
-              <View style={styles.headerActionBtnShadow} />
-              <TouchableOpacity onPress={handleVoiceCall} style={[styles.actionBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                <Phone size={18} color={palette.secondary} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity onPress={handleVoiceCall} style={[styles.actionBtn, { backgroundColor: palette.surfaceLight }]}>
+              <Phone size={16} color={palette.textPrimary} />
+            </TouchableOpacity>
 
-            <View style={styles.headerActionBtnWrapper}>
-              <View style={styles.headerActionBtnShadow} />
-              <TouchableOpacity onPress={handleVideoCall} style={[styles.actionBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                <Video size={19} color={palette.primary} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity onPress={handleVideoCall} style={[styles.actionBtn, { backgroundColor: palette.surfaceLight }]}>
+              <Video size={16} color={palette.textPrimary} />
+            </TouchableOpacity>
           </View>
         </View>
       )}
 
       {/* Disappearing Messages Notice */}
       {disappearingEnabled && (
-        <View style={[styles.disappearingNotice, { backgroundColor: palette.surface, borderColor: '#000000' }]}>
-          <Clock size={14} color={palette.secondary} />
-          <Text style={[styles.disappearingText, { color: palette.textPrimary }]}>
+        <View style={[styles.disappearingNotice, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+          <Clock size={13} color={palette.textMuted} />
+          <Text style={[styles.disappearingText, { color: palette.textSecondary }]}>
             Disappearing messages ON (24 hours).
           </Text>
         </View>
@@ -556,16 +544,15 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         }}
       />
 
-      {/* Jump to Bottom Button with Hard Shadow */}
+      {/* Jump to Bottom Button */}
       {showJumpToBottom && (
         <View style={styles.jumpBtnWrapper}>
-          <View style={styles.jumpBtnShadow} />
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={scrollToBottom}
-            style={[styles.jumpBtn, { backgroundColor: palette.secondary, borderColor: '#000000' }]}
+            style={[styles.jumpBtn, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}
           >
-            <ChevronDown size={22} color="#100F17" strokeWidth={2.5} />
+            <ChevronDown size={18} color={palette.textPrimary} />
           </TouchableOpacity>
         </View>
       )}
@@ -595,8 +582,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             style={[
               styles.actionSheetContainer,
               {
-                backgroundColor: palette.surface,
-                borderColor: '#000000',
+                backgroundColor: palette.surfaceElevated,
+                borderColor: palette.border,
               },
             ]}
           >
@@ -604,61 +591,61 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
 
             <View style={styles.actionGrid}>
               <TouchableOpacity onPress={handleReplyMessage} style={styles.actionItem}>
-                <View style={[styles.actionIconCircle, { backgroundColor: '#2E4BFF', borderColor: '#000000' }]}>
-                  <CornerUpLeft size={18} color="#FFFFFF" />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <CornerUpLeft size={16} color={palette.textPrimary} />
                 </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Reply</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleCopyMessage} style={styles.actionItem}>
-                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                  <Copy size={18} color="#FFFFFF" />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <Copy size={16} color={palette.textPrimary} />
                 </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Copy</Text>
               </TouchableOpacity>
 
               {isSelectedMsgEditable && (
                 <TouchableOpacity onPress={handleOpenEdit} style={styles.actionItem}>
-                  <View style={[styles.actionIconCircle, { backgroundColor: '#00F0FF', borderColor: '#000000' }]}>
-                    <Edit3 size={18} color="#100F17" />
+                  <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                    <Edit3 size={16} color={palette.textPrimary} />
                   </View>
                   <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Edit</Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity onPress={handleOpenForwardSingle} style={styles.actionItem}>
-                <View style={[styles.actionIconCircle, { backgroundColor: '#C6FF3D', borderColor: '#000000' }]}>
-                  <CornerUpRight size={18} color="#100F17" />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <CornerUpRight size={16} color={palette.textPrimary} />
                 </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Forward</Text>
               </TouchableOpacity>
 
               {isSelectedMsgMine && (
                 <TouchableOpacity onPress={handleOpenMessageInfo} style={styles.actionItem}>
-                  <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                    <Info size={18} color="#FFFFFF" />
+                  <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                    <Info size={16} color={palette.textPrimary} />
                   </View>
                   <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Info</Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity onPress={handleStarMsg} style={styles.actionItem}>
-                <View style={[styles.actionIconCircle, { backgroundColor: '#FFD23F', borderColor: '#000000' }]}>
-                  <Star size={18} color="#100F17" />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <Star size={16} color={palette.textPrimary} />
                 </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Star</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleStartSelection} style={styles.actionItem}>
-                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-                  <CheckSquare size={18} color="#FFFFFF" />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <CheckSquare size={16} color={palette.textPrimary} />
                 </View>
                 <Text style={[styles.actionLabel, { color: palette.textPrimary }]}>Select</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={handleDeletePrompt} style={styles.actionItem}>
-                <View style={[styles.actionIconCircle, { backgroundColor: '#FF4D5E', borderColor: '#000000' }]}>
-                  <Trash2 size={18} color="#FFFFFF" />
+                <View style={[styles.actionIconCircle, { backgroundColor: palette.surfaceLight }]}>
+                  <Trash2 size={16} color={palette.error} />
                 </View>
                 <Text style={[styles.actionLabel, { color: palette.error }]}>Delete</Text>
               </TouchableOpacity>
@@ -670,21 +657,21 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       {/* Inline Edit Modal */}
       <Modal visible={showEditModal} transparent animationType="fade" onRequestClose={() => setShowEditModal(false)}>
         <View style={styles.editModalOverlay}>
-          <View style={[styles.editModalContainer, { backgroundColor: palette.surface, borderColor: '#000000' }]}>
+          <View style={[styles.editModalContainer, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
             <Text style={[styles.editModalTitle, { color: palette.textPrimary }]}>Edit Message</Text>
             <TextInput
               value={editText}
               onChangeText={setEditText}
-              style={[styles.editModalInput, { color: palette.textPrimary, borderColor: '#000000', backgroundColor: palette.inputBackground }]}
+              style={[styles.editModalInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: palette.inputBackground }]}
               multiline
               autoFocus
             />
             <View style={styles.editModalButtons}>
               <TouchableOpacity onPress={() => setShowEditModal(false)} style={styles.editModalCancel}>
-                <Text style={{ color: palette.textMuted, fontWeight: '800' }}>Cancel</Text>
+                <Text style={{ color: palette.textMuted, fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveEdit} style={[styles.editModalSave, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
-                <Text style={{ color: '#FFFFFF', fontWeight: '900' }}>Save Changes</Text>
+              <TouchableOpacity onPress={handleSaveEdit} style={[styles.editModalSave, { backgroundColor: palette.primary }]}>
+                <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -732,77 +719,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingBottom: 12,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    borderBottomWidth: 2,
-  },
-  headerBackWrapper: {
-    position: 'relative',
-    marginRight: 10,
-  },
-  headerBackShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#000000',
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   selectionHeader: {
-    paddingBottom: 12,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    borderBottomWidth: 2,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
   },
-  selectionCount: { fontSize: 18, fontWeight: '900', letterSpacing: -0.3 },
-  selectionActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  selectionCount: { fontSize: 16, fontWeight: '700' },
+  selectionActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionIconPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#000000',
-    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    backgroundColor: '#35373C',
   },
-  headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 4 },
-  headerTextContainer: { marginLeft: 10, flex: 1 },
-  headerName: { fontSize: 17, fontWeight: '900', letterSpacing: -0.3 },
-  headerStatus: { fontSize: 12, fontWeight: '700', marginTop: 1 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerActionBtnWrapper: {
-    position: 'relative',
-  },
-  headerActionBtnShadow: {
-    position: 'absolute',
-    top: 2,
-    left: 2,
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#000000',
-  },
+  headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
+  headerTextContainer: { marginLeft: 8, flex: 1 },
+  headerName: { fontSize: 15, fontWeight: '700', letterSpacing: -0.1 },
+  headerStatus: { fontSize: 11, fontWeight: '500', marginTop: 1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 2,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   disappearingNotice: {
     flexDirection: 'row',
@@ -810,69 +766,108 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    gap: 6,
     borderBottomWidth: 1,
+    gap: 6,
   },
-  disappearingText: { fontSize: 12, fontWeight: '700' },
-  messagesList: { paddingVertical: 12 },
+  disappearingText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  messagesList: {
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
   jumpBtnWrapper: {
     position: 'absolute',
-    bottom: 84,
-    right: 20,
-  },
-  jumpBtnShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#000000',
+    bottom: 70,
+    right: 16,
+    zIndex: 10,
   },
   jumpBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
   actionSheetContainer: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 2,
-    padding: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    paddingBottom: 32,
   },
   actionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingTop: 14,
+    justifyContent: 'space-around',
+    gap: 12,
   },
-  actionItem: { alignItems: 'center', width: '25%', paddingVertical: 10 },
+  actionItem: {
+    alignItems: 'center',
+    width: 62,
+  },
   actionIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  actionLabel: { fontSize: 12, fontWeight: '800' },
+  actionLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
   editModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
   },
-  editModalContainer: { width: '100%', borderRadius: 24, borderWidth: 2, padding: 20 },
-  editModalTitle: { fontSize: 18, fontWeight: '900', marginBottom: 12, letterSpacing: -0.3 },
-  editModalInput: { borderWidth: 2, borderRadius: 16, padding: 14, fontSize: 15, fontWeight: '600', minHeight: 88, textAlignVertical: 'top' },
-  editModalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 14 },
-  editModalCancel: { paddingHorizontal: 16, paddingVertical: 10, justifyContent: 'center' },
-  editModalSave: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 14, borderWidth: 2 },
+  editModalContainer: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 18,
+  },
+  editModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  editModalInput: {
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  editModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  editModalCancel: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  editModalSave: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
 });

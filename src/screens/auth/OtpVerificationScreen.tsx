@@ -14,7 +14,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { ArrowLeft, ShieldCheck, RefreshCw } from 'lucide-react-native';
+import { ChevronLeft, ShieldCheck, RefreshCw } from 'lucide-react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { BoldButton } from '../../components/common/BoldButton';
@@ -27,7 +27,7 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
   const email = route.params?.email || useAuthStore.getState().pendingEmail || 'user@meshx.app';
   const mode = route.params?.mode || 'signup';
 
-  const { verifyOtp, resendOtp, isLoading, error, clearError } = useAuthStore();
+  const { verifyOtp, resendOtp, error, clearError } = useAuthStore();
   const palette = useThemeStore((state) => state.palette);
 
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -51,11 +51,11 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
   const triggerShake = () => {
     triggerHaptic('heavy');
     shakeTranslateX.value = withSequence(
-      withTiming(-12, { duration: 50 }),
-      withTiming(12, { duration: 50 }),
-      withTiming(-8, { duration: 50 }),
-      withTiming(8, { duration: 50 }),
-      withTiming(0, { duration: 50 })
+      withTiming(-8, { duration: 40 }),
+      withTiming(8, { duration: 40 }),
+      withTiming(-4, { duration: 40 }),
+      withTiming(4, { duration: 40 }),
+      withTiming(0, { duration: 40 })
     );
   };
 
@@ -130,28 +130,22 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
         style={{ flex: 1, justifyContent: 'space-between' }}
       >
         <View>
-          <View style={styles.backWrapper}>
-            <View style={styles.backShadow} />
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={[styles.backBtn, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}
-            >
-              <ArrowLeft size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.backBtn, { backgroundColor: palette.surfaceElevated }]}
+          >
+            <ChevronLeft size={20} color={palette.textPrimary} />
+          </TouchableOpacity>
 
           <View style={styles.header}>
-            <View style={styles.iconShadowWrapper}>
-              <View style={styles.iconHardShadow} />
-              <View style={[styles.iconBadge, { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
-                <ShieldCheck size={40} color="#100F17" strokeWidth={2.5} />
-              </View>
+            <View style={[styles.iconBadge, { backgroundColor: palette.primary }]}>
+              <ShieldCheck size={36} color="#FFFFFF" strokeWidth={2.2} />
             </View>
 
             <Text style={[styles.title, { color: palette.textPrimary }]}>Verification Code</Text>
             <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
               We sent a 6-digit verification code to{'\n'}
-              <Text style={{ color: palette.secondary, fontWeight: '800' }}>{email}</Text>
+              <Text style={{ color: palette.textPrimary, fontWeight: '600' }}>{email}</Text>
             </Text>
           </View>
 
@@ -161,38 +155,36 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
             </View>
           ) : null}
 
-          {/* Chunky Digit Boxes with Hard Shadows */}
+          {/* Clean Digit Boxes */}
           <Animated.View style={[styles.digitsRow, shakeAnimatedStyle]}>
             {otpDigits.map((digit, idx) => {
               const isFilled = !!digit;
               return (
-                <View key={idx} style={styles.digitBoxWrapper}>
-                  <View style={styles.digitBoxShadow} />
-                  <View
+                <View
+                  key={idx}
+                  style={[
+                    styles.digitBox,
+                    {
+                      backgroundColor: palette.surface,
+                      borderColor: isFilled ? palette.primary : palette.border,
+                    },
+                  ]}
+                >
+                  <TextInput
+                    ref={(r) => {
+                      inputRefs.current[idx] = r;
+                    }}
                     style={[
-                      styles.digitBox,
-                      {
-                        backgroundColor: isFilled ? palette.surfaceElevated : palette.surface,
-                        borderColor: isFilled ? palette.secondary : '#000000',
-                      },
+                      styles.digitInput,
+                      { color: palette.textPrimary },
                     ]}
-                  >
-                    <TextInput
-                      ref={(r) => {
-                        inputRefs.current[idx] = r;
-                      }}
-                      style={[
-                        styles.digitInput,
-                        { color: isFilled ? palette.secondary : palette.textPrimary },
-                      ]}
-                      keyboardType="number-pad"
-                      maxLength={1}
-                      value={digit}
-                      onChangeText={(t) => handleDigitChange(t, idx)}
-                      onKeyPress={(e) => handleKeyPress(e, idx)}
-                      selectTextOnFocus
-                    />
-                  </View>
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    value={digit}
+                    onChangeText={(t) => handleDigitChange(t, idx)}
+                    onKeyPress={(e) => handleKeyPress(e, idx)}
+                    selectTextOnFocus
+                  />
                 </View>
               );
             })}
@@ -202,12 +194,12 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
           <View style={styles.resendRow}>
             {canResend ? (
               <TouchableOpacity onPress={handleResend} style={styles.resendBtn}>
-                <RefreshCw size={15} color={palette.secondary} style={{ marginRight: 6 }} />
-                <Text style={[styles.resendText, { color: palette.secondary }]}>Resend Code</Text>
+                <RefreshCw size={14} color={palette.primary} style={{ marginRight: 6 }} />
+                <Text style={[styles.resendText, { color: palette.primary }]}>Resend Code</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={[styles.cooldownText, { color: palette.textSecondary }]}>
-                Resend code in <Text style={{ color: palette.secondary, fontWeight: '900' }}>{cooldown}s</Text>
+              <Text style={[styles.cooldownText, { color: palette.textMuted }]}>
+                Resend code in <Text style={{ color: palette.textPrimary, fontWeight: '700' }}>{cooldown}s</Text>
               </Text>
             )}
           </View>
@@ -215,7 +207,7 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
 
         <View style={styles.footer}>
           <BoldButton
-            title="Verify & Continue"
+            title="Verify Code"
             onPress={() => submitOtp()}
             loading={isSubmitting}
             variant="primary"
@@ -231,135 +223,96 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    paddingTop: 54,
-  },
-  backWrapper: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  backShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#000000',
+    padding: 20,
+    paddingTop: 50,
   },
   backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    marginBottom: 16,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 28,
-  },
-  iconShadowWrapper: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  iconHardShadow: {
-    position: 'absolute',
-    top: 5,
-    left: 5,
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: '#000000',
-    zIndex: 0,
+    marginBottom: 24,
   },
   iconBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    borderWidth: 2,
+    width: 68,
+    height: 68,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 6,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 21,
-    fontWeight: '600',
-  },
-  errorBox: {
-    backgroundColor: 'rgba(255, 77, 94, 0.15)',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    padding: 10,
-    marginBottom: 16,
-  },
-  errorText: {
     fontSize: 13,
     textAlign: 'center',
-    fontWeight: '800',
+    lineHeight: 18,
+  },
+  errorBox: {
+    backgroundColor: 'rgba(242, 63, 66, 0.15)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 12,
+  },
+  errorText: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   digitsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 20,
     gap: 8,
   },
-  digitBoxWrapper: {
-    flex: 1,
-    position: 'relative',
-  },
-  digitBoxShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    width: '100%',
-    height: 58,
-    borderRadius: 16,
-    backgroundColor: '#000000',
-  },
   digitBox: {
-    height: 58,
-    borderRadius: 16,
-    borderWidth: 2,
+    flex: 1,
+    height: 50,
+    borderRadius: 8,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   digitInput: {
-    fontSize: 26,
-    fontWeight: '900',
+    fontSize: 22,
+    fontWeight: '700',
     textAlign: 'center',
     width: '100%',
     height: '100%',
   },
   resendRow: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   resendBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    padding: 6,
   },
   resendText: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  cooldownText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
+  cooldownText: {
+    fontSize: 13,
+  },
   footer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
 });

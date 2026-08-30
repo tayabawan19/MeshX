@@ -12,43 +12,30 @@ export const DateDivider: React.FC<DateDividerProps> = ({ timestamp }) => {
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.pill,
-          {
-            backgroundColor: palette.surfaceElevated,
-            borderTopColor: palette.clayHighlight,
-            borderLeftColor: palette.clayHighlight,
-            borderBottomColor: 'rgba(0, 0, 0, 0.35)',
-            borderRightColor: 'rgba(0, 0, 0, 0.20)',
-          },
-        ]}
-      >
-        <Text style={[styles.text, { color: palette.textMuted }]}>{formatDateDivider(timestamp)}</Text>
-      </View>
+      <View style={[styles.line, { backgroundColor: palette.border }]} />
+      <Text style={[styles.text, { color: palette.textMuted, backgroundColor: palette.background }]}>
+        {formatDateDivider(timestamp)}
+      </Text>
+      <View style={[styles.line, { backgroundColor: palette.border }]} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 14,
-  },
-  pill: {
+    justifyContent: 'center',
+    marginVertical: 12,
     paddingHorizontal: 16,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1.2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 3,
+  },
+  line: {
+    flex: 1,
+    height: 1,
   },
   text: {
+    paddingHorizontal: 8,
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontWeight: '600',
   },
 });

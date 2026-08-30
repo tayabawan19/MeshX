@@ -8,7 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { ArrowLeft, KeyRound, Mail } from 'lucide-react-native';
+import { ChevronLeft, KeyRound, Mail } from 'lucide-react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -46,37 +46,17 @@ export const ForgotPasswordScreen: React.FC<{ navigation: any }> = ({ navigation
       >
         <View>
           <View style={styles.header}>
-            <View style={styles.backWrapper}>
-              <View style={styles.backShadow} />
-              <TouchableOpacity
-                style={[
-                  styles.backButton,
-                  {
-                    backgroundColor: palette.surfaceElevated,
-                    borderColor: '#000000',
-                  },
-                ]}
-                onPress={() => navigation.goBack()}
-              >
-                <ArrowLeft color="#FFFFFF" size={22} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.backButton, { backgroundColor: palette.surfaceElevated }]}
+              onPress={() => navigation.goBack()}
+            >
+              <ChevronLeft color={palette.textPrimary} size={20} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.content}>
-            <View style={styles.iconShadowWrapper}>
-              <View style={styles.iconHardShadow} />
-              <View
-                style={[
-                  styles.iconBadge,
-                  {
-                    backgroundColor: palette.primary,
-                    borderColor: '#000000',
-                  },
-                ]}
-              >
-                <KeyRound size={40} color="#FFFFFF" strokeWidth={2.5} />
-              </View>
+            <View style={[styles.iconBadge, { backgroundColor: palette.primary }]}>
+              <KeyRound size={36} color="#FFFFFF" strokeWidth={2.2} />
             </View>
 
             <Text style={[styles.title, { color: palette.textPrimary }]}>Forgot Password?</Text>
@@ -91,7 +71,7 @@ export const ForgotPasswordScreen: React.FC<{ navigation: any }> = ({ navigation
             ) : null}
 
             <ClayInput style={styles.inputWrapper}>
-              <Mail size={20} color={palette.textMuted} style={{ marginRight: 12 }} />
+              <Mail size={18} color={palette.textMuted} style={{ marginRight: 8 }} />
               <TextInput
                 style={[styles.input, { color: palette.textPrimary }]}
                 placeholder="Enter your registered email"
@@ -126,97 +106,72 @@ export const ForgotPasswordScreen: React.FC<{ navigation: any }> = ({ navigation
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    paddingTop: 54,
+    padding: 20,
+    paddingTop: 50,
   },
   header: {
-    marginBottom: 20,
-  },
-  backWrapper: {
-    position: 'relative',
-  },
-  backShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#000000',
+    marginBottom: 16,
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   content: {
     alignItems: 'center',
   },
-  iconShadowWrapper: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  iconHardShadow: {
-    position: 'absolute',
-    top: 5,
-    left: 5,
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: '#000000',
-    zIndex: 0,
-  },
   iconBadge: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    borderWidth: 2,
+    width: 68,
+    height: 68,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 6,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
+    lineHeight: 19,
+    marginBottom: 24,
     paddingHorizontal: 12,
-    fontWeight: '600',
   },
   errorBox: {
     width: '100%',
-    backgroundColor: 'rgba(255, 77, 94, 0.15)',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    padding: 10,
-    marginBottom: 16,
+    backgroundColor: 'rgba(242, 63, 66, 0.15)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 12,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: 12,
     textAlign: 'center',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   inputWrapper: {
     width: '100%',
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '400',
     height: '100%',
   },
   footer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
 });

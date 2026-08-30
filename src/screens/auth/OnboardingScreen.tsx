@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MessageSquare, ShieldCheck, Video, ArrowRight } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GradientButton } from '../../components/common/GradientButton';
+import { BoldButton } from '../../components/common/BoldButton';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -10,24 +9,21 @@ import { triggerHaptic } from '../../utils/haptics';
 const SLIDES = [
   {
     id: 1,
-    title: 'Clay-Pillow Chat UI',
-    description: 'Soft tactile bubbles, clay squeeze physics, reactions, and audio voice notes with real-time tactile waveforms.',
+    title: 'Fast & Fluid Messaging',
+    description: 'Clean channels, quick replies, emoji reactions, voice notes, and realtime communication.',
     icon: MessageSquare,
-    colors: ['#8B7FD1', '#7B93D6'] as [string, string],
   },
   {
     id: 2,
-    title: 'Private & Disappearing Chats',
-    description: 'End-to-end feel with disappearing messages timer, read receipts control, and last-seen privacy.',
+    title: 'Private & Secure Chats',
+    description: 'Direct message privacy controls, disappearing messages timer, and online presence toggles.',
     icon: ShieldCheck,
-    colors: ['#6FAFA0', '#7B93D6'] as [string, string],
   },
   {
     id: 3,
     title: 'Crystal Clear Voice & Video',
-    description: 'Instant RTC calling with mute controls, camera flip, and speaker toggles anywhere in the world.',
+    description: 'Instant high quality voice and video calling with group audio channels.',
     icon: Video,
-    colors: ['#E58A8A', '#8B7FD1'] as [string, string],
   },
 ];
 
@@ -51,32 +47,22 @@ export const OnboardingScreen: React.FC = () => {
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
       <View style={styles.content}>
-        {/* Raised Clay Icon Pod */}
+        {/* Discord Icon Pod */}
         <View
           style={[
-            styles.clayPodWrapper,
+            styles.iconPod,
             {
-              borderTopColor: palette.clayHighlight,
-              borderLeftColor: palette.clayHighlight,
-              borderBottomColor: 'rgba(0, 0, 0, 0.45)',
-              borderRightColor: 'rgba(0, 0, 0, 0.30)',
+              backgroundColor: palette.primary,
             },
           ]}
         >
-          <LinearGradient
-            colors={currentSlide.colors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.podGradient}
-          >
-            <IconComponent size={64} color="#FFFFFF" />
-          </LinearGradient>
+          <IconComponent size={48} color="#FFFFFF" strokeWidth={2} />
         </View>
 
         <Text style={[styles.title, { color: palette.textPrimary }]}>{currentSlide.title}</Text>
         <Text style={[styles.description, { color: palette.textSecondary }]}>{currentSlide.description}</Text>
 
-        {/* Tactile Clay Pagination Dots */}
+        {/* Pagination Dots */}
         <View style={styles.pagination}>
           {SLIDES.map((_, idx) => (
             <TouchableOpacity
@@ -90,12 +76,10 @@ export const OnboardingScreen: React.FC = () => {
                 styles.dot,
                 idx === activeIndex
                   ? {
-                      width: 28,
-                      backgroundColor: currentSlide.colors[0],
-                      borderTopColor: palette.clayHighlight,
-                      borderWidth: 1,
+                      width: 24,
+                      backgroundColor: palette.primary,
                     }
-                  : { width: 10, backgroundColor: palette.surfaceElevated },
+                  : { width: 8, backgroundColor: palette.surfaceElevated },
               ]}
             />
           ))}
@@ -103,11 +87,11 @@ export const OnboardingScreen: React.FC = () => {
       </View>
 
       <View style={styles.footer}>
-        <GradientButton
+        <BoldButton
           title={activeIndex === SLIDES.length - 1 ? 'Get Started' : 'Continue'}
           onPress={handleNext}
-          colors={currentSlide.colors}
-          icon={<ArrowRight size={20} color="#FFFFFF" />}
+          variant="primary"
+          icon={<ArrowRight size={18} color="#FFFFFF" />}
         />
       </View>
     </View>
@@ -125,50 +109,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  clayPodWrapper: {
-    width: 140,
-    height: 140,
-    borderRadius: 50,
-    borderWidth: 2.2,
-    overflow: 'hidden',
-    marginBottom: 36,
-    shadowColor: '#000000',
-    shadowOffset: { width: 8, height: 12 },
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    elevation: 12,
-  },
-  podGradient: {
-    width: '100%',
-    height: '100%',
+  iconPod: {
+    width: 100,
+    height: 100,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 28,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   title: {
-    fontSize: 27,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     paddingHorizontal: 16,
-    letterSpacing: 0.2,
+    letterSpacing: -0.2,
   },
   description: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 20,
     paddingHorizontal: 20,
   },
   pagination: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 36,
-    gap: 8,
+    marginTop: 28,
+    gap: 6,
   },
   dot: {
-    height: 10,
-    borderRadius: 5,
+    height: 8,
+    borderRadius: 4,
   },
   footer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
 });

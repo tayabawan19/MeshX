@@ -150,12 +150,11 @@ export const ProfileSetupScreen: React.FC = () => {
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8} style={styles.avatarTouchable}>
-            <View style={styles.avatarShadow} />
-            <View style={[styles.avatarRing, { borderColor: '#000000', backgroundColor: palette.surfaceElevated }]}>
+            <View style={[styles.avatarRing, { borderColor: palette.border, backgroundColor: palette.surfaceElevated }]}>
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
               ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: palette.accent }]}>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: palette.primary }]}>
                   <Text style={styles.initialText}>
                     {name ? name.charAt(0).toUpperCase() : 'M'}
                   </Text>
@@ -163,8 +162,8 @@ export const ProfileSetupScreen: React.FC = () => {
               )}
             </View>
 
-            <View style={[styles.cameraBadge, { backgroundColor: palette.secondary, borderColor: '#000000' }]}>
-              <Camera size={18} color="#100F17" strokeWidth={2.5} />
+            <View style={[styles.cameraBadge, { backgroundColor: palette.surfaceLight }]}>
+              <Camera size={16} color={palette.textPrimary} />
             </View>
           </TouchableOpacity>
 
@@ -174,56 +173,50 @@ export const ProfileSetupScreen: React.FC = () => {
         </View>
 
         {errorMsg ? (
-          <View style={[styles.errorContainer, { backgroundColor: 'rgba(255, 77, 94, 0.15)', borderColor: palette.error }]}>
+          <View style={[styles.errorContainer, { backgroundColor: 'rgba(242, 63, 66, 0.15)', borderColor: palette.error }]}>
             <Text style={[styles.errorText, { color: palette.error }]}>{errorMsg}</Text>
           </View>
         ) : null}
 
         {/* Display Name Input */}
         <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: palette.secondary }]}>DISPLAY NAME</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputShadow} />
-            <View style={[styles.inputBox, { backgroundColor: palette.surfaceElevated, borderColor: '#000000' }]}>
-              <User size={20} color={palette.secondary} strokeWidth={2.5} style={styles.inputIcon} />
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your name"
-                placeholderTextColor={palette.textMuted}
-                style={[styles.input, { color: palette.textPrimary }]}
-              />
-            </View>
+          <Text style={[styles.label, { color: palette.textSecondary }]}>DISPLAY NAME</Text>
+          <View style={[styles.inputBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <User size={18} color={palette.textMuted} style={styles.inputIcon} />
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your name"
+              placeholderTextColor={palette.textMuted}
+              style={[styles.input, { color: palette.textPrimary }]}
+            />
           </View>
         </View>
 
         {/* Status / Bio Input */}
         <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: palette.secondary }]}>STATUS / BIO</Text>
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputShadow} />
-            <View
-              style={[
-                styles.inputBox,
-                {
-                  backgroundColor: palette.surfaceElevated,
-                  borderColor: '#000000',
-                  height: 80,
-                  alignItems: 'flex-start',
-                  paddingTop: 12,
-                },
-              ]}
-            >
-              <FileText size={20} color={palette.primary} strokeWidth={2.5} style={[styles.inputIcon, { marginTop: 2 }]} />
-              <TextInput
-                value={bio}
-                onChangeText={setBio}
-                placeholder="Write a short bio..."
-                placeholderTextColor={palette.textMuted}
-                multiline
-                style={[styles.input, { color: palette.textPrimary, height: 60 }]}
-              />
-            </View>
+          <Text style={[styles.label, { color: palette.textSecondary }]}>STATUS / BIO</Text>
+          <View
+            style={[
+              styles.inputBox,
+              {
+                backgroundColor: palette.surface,
+                borderColor: palette.border,
+                height: 72,
+                alignItems: 'flex-start',
+                paddingTop: 10,
+              },
+            ]}
+          >
+            <FileText size={18} color={palette.textMuted} style={[styles.inputIcon, { marginTop: 2 }]} />
+            <TextInput
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Write a short bio..."
+              placeholderTextColor={palette.textMuted}
+              multiline
+              style={[styles.input, { color: palette.textPrimary, height: 50 }]}
+            />
           </View>
         </View>
 
@@ -232,14 +225,14 @@ export const ProfileSetupScreen: React.FC = () => {
           onPress={handleSave}
           loading={isSaving}
           disabled={isSaving || isUploadingAvatar}
-          icon={<Check size={20} color="#FFFFFF" strokeWidth={3} />}
+          icon={<Check size={18} color="#FFFFFF" />}
           size="lg"
-          style={{ marginTop: 16 }}
+          style={{ marginTop: 14 }}
         />
 
         <TouchableOpacity onPress={handleSkip} style={styles.skipBottomButton}>
-          <Text style={[styles.skipBottomText, { color: palette.textSecondary }]}>Continue to Chats</Text>
-          <ArrowRight size={16} color={palette.textSecondary} strokeWidth={2.5} style={{ marginLeft: 4 }} />
+          <Text style={[styles.skipBottomText, { color: palette.textMuted }]}>Skip for now</Text>
+          <ArrowRight size={14} color={palette.textMuted} style={{ marginLeft: 4 }} />
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -251,35 +244,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 24,
+    padding: 20,
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
   },
   avatarTouchable: {
     position: 'relative',
-    width: 114,
-    height: 114,
-  },
-  avatarShadow: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 57,
-    backgroundColor: '#000000',
+    width: 96,
+    height: 96,
   },
   avatarRing: {
-    width: 114,
-    height: 114,
-    borderRadius: 57,
-    borderWidth: 3,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
   },
   avatarImage: {
     width: '100%',
@@ -292,85 +275,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   initialText: {
-    fontSize: 44,
-    fontWeight: '900',
+    fontSize: 36,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   cameraBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 2,
   },
   avatarSubtext: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 12,
+    fontSize: 12,
+    marginTop: 8,
   },
   errorContainer: {
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 2,
-    marginBottom: 16,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 14,
   },
   errorText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '600',
     textAlign: 'center',
   },
   formGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    position: 'relative',
-  },
-  inputShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    right: -3,
-    bottom: -3,
-    borderRadius: 20,
-    backgroundColor: '#000000',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 6,
   },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
-    borderRadius: 20,
-    borderWidth: 2,
-    paddingHorizontal: 16,
-    zIndex: 1,
+    height: 46,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '400',
   },
   skipBottomButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
-    paddingVertical: 10,
+    marginTop: 20,
+    paddingVertical: 8,
   },
   skipBottomText: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

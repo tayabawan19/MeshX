@@ -101,32 +101,31 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSendVoiceNote, o
 
   return (
     <Animated.View
-      entering={FadeIn.duration(200)}
-      exiting={FadeOut.duration(200)}
+      entering={FadeIn.duration(150)}
+      exiting={FadeOut.duration(150)}
       style={styles.container}
     >
-      <View style={styles.hardShadow} />
       <View
         style={[
           styles.recorderBody,
           {
             backgroundColor: palette.surface,
-            borderColor: '#000000',
+            borderColor: palette.border,
           },
         ]}
       >
         <TouchableOpacity onPress={handleCancel} style={styles.trashBtn}>
-          <Trash2 size={22} color={palette.error} />
+          <Trash2 size={20} color={palette.error} />
         </TouchableOpacity>
 
         <View style={styles.recordingStatus}>
-          <View style={[styles.redDot, { backgroundColor: palette.primary }]} />
+          <View style={[styles.redDot, { backgroundColor: palette.error }]} />
           <Text style={[styles.timerText, { color: palette.textPrimary }]}>{formatCallDuration(seconds)}</Text>
-          <Text style={[styles.slideText, { color: palette.textMuted }]}>Tap trash to cancel</Text>
+          <Text style={[styles.slideText, { color: palette.textMuted }]}>Recording voice note...</Text>
         </View>
 
-        <TouchableOpacity onPress={handleSend} style={[styles.sendBtn, { backgroundColor: palette.primary, borderColor: '#000000' }]}>
-          <Send size={18} color="#FFFFFF" strokeWidth={2.5} />
+        <TouchableOpacity onPress={handleSend} style={[styles.sendBtn, { backgroundColor: palette.primary }]}>
+          <Send size={15} color="#FFFFFF" strokeWidth={2.2} />
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -135,59 +134,45 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onSendVoiceNote, o
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
     marginHorizontal: 12,
-    marginBottom: 8,
-  },
-  hardShadow: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    right: -3,
-    bottom: -3,
-    borderRadius: 22,
-    backgroundColor: '#000000',
-    zIndex: 0,
+    marginBottom: 6,
   },
   recorderBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 22,
-    borderWidth: 2,
-    zIndex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   trashBtn: {
-    padding: 8,
+    padding: 6,
   },
   recordingStatus: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 6,
   },
   redDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
   timerText: {
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: -0.3,
+    fontSize: 14,
+    fontWeight: '700',
   },
   slideText: {
     fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 12,
+    fontWeight: '400',
+    marginLeft: 8,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },

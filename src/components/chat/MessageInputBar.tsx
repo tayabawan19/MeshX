@@ -3,477 +3,230 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  Pressable,
   StyleSheet,
   Text,
-  Modal,
-  ActivityIndicator,
-  Platform,
-  Alert,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Send, Mic, Image, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
-import {
-  Smile,
-  Paperclip,
-  Mic,
-  Send,
-  Camera,
-  ImageIcon,
-  FileText,
-  X,
-} from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeStore } from '../../store/useThemeStore';
-import { triggerHaptic } from '../../utils/haptics';
 import { VoiceRecorder } from './VoiceRecorder';
-import { apiClient } from '../../config/api';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface MessageInputBarProps {
-  onSendMessage: (text: string) => void;
-  onSendMedia: (type: 'image' | 'voice' | 'document', url: string, extra?: any) => void;
-  onTyping: (isTyping: boolean) => void;
-  replyPreview?: { id: string; text: string; senderName?: string } | null;
-  setReplyPreview: (preview: any) => void;
+  onSendMessage: (
+    text: string,
+    type?: 'text' | 'image' | 'voice' | 'document' | 'system',
+    mediaUrl?: string
+  ) => void;
+  replyingMessage?: any;
+  onCancelReply?: () => void;
 }
 
 export const MessageInputBar: React.FC<MessageInputBarProps> = ({
   onSendMessage,
-  onSendMedia,
-  onTyping,
-  replyPreview,
-  setReplyPreview,
+  replyingMessage,
+  onCancelReply,
 }) => {
-  const palette = useThemeStore((state) => state.palette);
   const [text, setText] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showAttachments, setShowAttachments] = useState(false);
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const insets = useSafeAreaInsets();
-
-  const sendBtnScale = useSharedValue(1);
-
-  const handleTextChange = (val: string) => {
-    setText(val);
-    onTyping(val.length > 0);
-  };
 
   const handleSend = () => {
     if (!text.trim()) return;
     triggerHaptic('light');
-    onSendMessage(text);
+    onSendMessage(text.trim(), 'text');
     setText('');
-    onTyping(false);
   };
 
-  const handleSendPressIn = () => {
-    triggerHaptic('light');
-    sendBtnScale.value = withTiming(0.92, { duration: 100 });
-  };
-
-  const handleSendPressOut = () => {
-    sendBtnScale.value = withTiming(1, { duration: 100 });
-  };
-
-  const sendBtnAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: sendBtnScale.value }],
-  }));
-
-  const uploadAndSend = async (uri: string, type: 'image' | 'voice' | 'document', extra?: any) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      const filename = uri.split('/').pop() || `file_${Date.now()}`;
-      const match = /\.(\w+)$/.exec(filename);
-      const ext = match ? match[1].toLowerCase() : '';
-      const mime = type === 'image'
-        ? `image/${ext === 'png' ? 'png' : 'jpeg'}`
-        : type === 'voice'
-        ? `audio/${ext || 'm4a'}`
-        : `application/${ext || 'pdf'}`;
-
-      formData.append('file', {
-        uri,
-        name: filename,
-        type: mime,
-      } as any);
-
-      const res = await apiClient.post('/media/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const finalUrl = res.data?.mediaUrl || res.data?.url;
-      if (finalUrl) {
-        onSendMedia(type, finalUrl, extra);
-      } else {
-        onSendMedia(type, uri, extra);
-      }
-    } catch (err: any) {
-      console.warn('[MediaUpload Failed, using local fallback]:', err?.message || err);
-      onSendMedia(type, uri, extra);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const pickImage = async () => {
-    setShowAttachments(false);
+  const handlePickImage = async () => {
     triggerHaptic('selection');
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photo library in device settings to send images.'
-        );
-        return;
-      }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        await uploadAndSend(asset.uri, 'image');
-      }
-    } catch (error: any) {
-      console.error('[PickImage Error]', error);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      onSendMessage('', 'image', result.assets[0].uri);
     }
   };
-
-  const takePhoto = async () => {
-    setShowAttachments(false);
-    triggerHaptic('selection');
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          'Camera Permission Required',
-          'Please allow camera access in device settings to take photos.'
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        await uploadAndSend(asset.uri, 'image');
-      }
-    } catch (error: any) {
-      console.error('[TakePhoto Error]', error);
-    }
-  };
-
-  const pickDocument = async () => {
-    setShowAttachments(false);
-    triggerHaptic('selection');
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const doc = result.assets[0];
-        await uploadAndSend(doc.uri, 'document', {
-          mediaFileName: doc.name,
-          mediaFileSize: doc.size ? `${(doc.size / (1024 * 1024)).toFixed(1)} MB` : '1.2 MB',
-        });
-      }
-    } catch (error) {
-      console.error('[PickDocument Error]', error);
-    }
-  };
-
-  if (isRecordingVoice) {
-    return (
-      <VoiceRecorder
-        onSendVoiceNote={async (url, duration) => {
-          setIsRecordingVoice(false);
-          await uploadAndSend(url, 'voice', { audioDuration: duration, duration });
-        }}
-        onCancel={() => setIsRecordingVoice(false)}
-      />
-    );
-  }
-
-  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 10 : 6) + 2;
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: palette.background, paddingBottom: bottomInset }]}>
-      {/* Reply Preview Banner */}
-      {replyPreview && (
-        <View style={[styles.replyBanner, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-          <View style={[styles.replyBar, { backgroundColor: palette.primary }]} />
-          <View style={styles.replyTextContainer}>
-            <Text style={[styles.replyTitle, { color: palette.primary }]}>
-              Replying to {replyPreview.senderName || 'Message'}
-            </Text>
-            <Text style={[styles.replySubtext, { color: palette.textPrimary }]} numberOfLines={1}>
-              {replyPreview.text}
+    <View
+      style={[
+        styles.container,
+        {
+          paddingBottom: Math.max(insets.bottom, 10),
+        },
+      ]}
+    >
+      {/* Reply Preview Bar */}
+      {replyingMessage && (
+        <View style={styles.replyPreview}>
+          <View style={styles.replyBar} />
+          <View style={styles.replyContent}>
+            <Text style={styles.replySender}>{replyingMessage.senderName || 'Replying'}</Text>
+            <Text style={styles.replyText} numberOfLines={1}>
+              {replyingMessage.text || `[${replyingMessage.type}]`}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => setReplyPreview(null)} style={styles.closeReplyBtn}>
-            <X size={16} color={palette.textMuted} />
+          <TouchableOpacity onPress={onCancelReply} style={styles.cancelReplyBtn}>
+            <X size={16} color="#757575" />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Quick Emoji Bar */}
-      {showEmojiPicker && (
-        <View
-          style={[
-            styles.emojiBar,
-            {
-              backgroundColor: palette.surfaceElevated,
-              borderColor: palette.border,
-            },
-          ]}
-        >
-          {['🔥', '😂', '❤️', '👍', '🎉', '🙌', '💯', '✨', '⚡'].map((emoji) => (
-            <TouchableOpacity
-              key={emoji}
-              onPress={() => {
-                triggerHaptic('light');
-                setText((prev) => prev + emoji);
-              }}
-              style={styles.emojiBtn}
-            >
-              <Text style={{ fontSize: 20 }}>{emoji}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {/* Main Discord-Style Input Row */}
-      <View
-        style={[
-          styles.inputRow,
-          {
-            backgroundColor: palette.surface,
-            borderColor: palette.border,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => {
-            triggerHaptic('light');
-            setShowEmojiPicker(!showEmojiPicker);
+      {isRecording ? (
+        <VoiceRecorder
+          onSendVoiceNote={(uri: string) => {
+            setIsRecording(false);
+            if (uri) onSendMessage('', 'voice', uri);
           }}
-          style={styles.iconBtn}
-        >
-          <Smile size={20} color={showEmojiPicker ? palette.primary : palette.textMuted} />
-        </TouchableOpacity>
-
-        <TextInput
-          value={text}
-          onChangeText={handleTextChange}
-          placeholder="Message"
-          placeholderTextColor={palette.textMuted}
-          multiline
-          style={[styles.textInput, { color: palette.textPrimary }]}
+          onCancel={() => setIsRecording(false)}
         />
-
-        <TouchableOpacity
-          onPress={() => {
-            triggerHaptic('light');
-            setShowAttachments(true);
-          }}
-          style={styles.iconBtn}
-        >
-          <Paperclip size={19} color={palette.textMuted} />
-        </TouchableOpacity>
-
-        {isUploading ? (
-          <View style={styles.iconBtn}>
-            <ActivityIndicator size="small" color={palette.primary} />
-          </View>
-        ) : text.trim().length > 0 ? (
-          <Pressable
-            onPressIn={handleSendPressIn}
-            onPressOut={handleSendPressOut}
-            onPress={handleSend}
-          >
-            <Animated.View
-              style={[
-                styles.sendBtn,
-                {
-                  backgroundColor: palette.primary, // Blurple #5865F2
-                },
-                sendBtnAnimatedStyle,
-              ]}
-            >
-              <Send size={15} color="#FFFFFF" strokeWidth={2.2} />
-            </Animated.View>
-          </Pressable>
-        ) : (
-          <TouchableOpacity
-            onPress={() => {
-              triggerHaptic('medium');
-              setIsRecordingVoice(true);
-            }}
-            style={styles.iconBtn}
-          >
-            <Mic size={20} color={palette.textMuted} />
+      ) : (
+        <View style={styles.inputRow}>
+          {/* Attach Button */}
+          <TouchableOpacity onPress={handlePickImage} style={styles.iconButton}>
+            <Image size={20} color="#757575" />
           </TouchableOpacity>
-        )}
-      </View>
 
-      {/* Attachment Options Modal */}
-      <Modal visible={showAttachments} transparent animationType="fade" onRequestClose={() => setShowAttachments(false)}>
-        <TouchableOpacity activeOpacity={1} onPress={() => setShowAttachments(false)} style={styles.modalOverlay}>
-          <View style={[styles.attachmentSheet, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-            <Text style={[styles.sheetTitle, { color: palette.textPrimary }]}>Share Content</Text>
-            <View style={styles.optionsRow}>
-              <TouchableOpacity onPress={pickImage} style={styles.optionItem}>
-                <View style={[styles.optionIcon, { backgroundColor: palette.surfaceLight }]}>
-                  <ImageIcon size={22} color={palette.primary} />
-                </View>
-                <Text style={[styles.optionLabel, { color: palette.textPrimary }]}>Gallery</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={takePhoto} style={styles.optionItem}>
-                <View style={[styles.optionIcon, { backgroundColor: palette.surfaceLight }]}>
-                  <Camera size={22} color={palette.primary} />
-                </View>
-                <Text style={[styles.optionLabel, { color: palette.textPrimary }]}>Camera</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={pickDocument} style={styles.optionItem}>
-                <View style={[styles.optionIcon, { backgroundColor: palette.surfaceLight }]}>
-                  <FileText size={22} color={palette.primary} />
-                </View>
-                <Text style={[styles.optionLabel, { color: palette.textPrimary }]}>Document</Text>
-              </TouchableOpacity>
-            </View>
+          {/* Text Input Container */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type a message..."
+              placeholderTextColor="#9E9E9E"
+              value={text}
+              onChangeText={setText}
+              multiline
+              maxLength={2000}
+            />
           </View>
-        </TouchableOpacity>
-      </Modal>
+
+          {/* Mic or Gradient Send Button */}
+          {text.trim().length === 0 ? (
+            <TouchableOpacity
+              onPress={() => {
+                triggerHaptic('selection');
+                setIsRecording(true);
+              }}
+              style={styles.micButton}
+            >
+              <Mic size={20} color="#8E0E2C" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleSend}
+              style={styles.sendButtonWrapper}
+            >
+              <LinearGradient
+                colors={['#8E0E2C', '#540F27']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.sendButtonGradient}
+              >
+                <Send size={16} color="#FFFFFF" strokeWidth={2.5} />
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
+  container: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingTop: 8,
   },
-  replyBanner: {
+  replyPreview: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    backgroundColor: '#F5F5F5',
     borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
   },
   replyBar: {
     width: 3,
     height: '100%',
-    borderRadius: 1.5,
+    backgroundColor: '#8E0E2C',
+    borderRadius: 2,
     marginRight: 8,
   },
-  replyTextContainer: {
+  replyContent: {
     flex: 1,
   },
-  replyTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  replySubtext: {
+  replySender: {
     fontSize: 12,
-    fontWeight: '400',
-    marginTop: 1,
+    fontWeight: '700',
+    color: '#8E0E2C',
   },
-  closeReplyBtn: {
+  replyText: {
+    fontSize: 12,
+    color: '#616161',
+  },
+  cancelReplyBtn: {
     padding: 4,
-  },
-  emojiBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 6,
-  },
-  emojiBtn: {
-    paddingHorizontal: 5,
-    paddingVertical: 3,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
   },
-  iconBtn: {
-    padding: 6,
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 6,
+  },
+  inputContainer: {
+    flex: 1,
+    backgroundColor: '#F5F5F7',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    maxHeight: 100,
+    marginRight: 8,
   },
   textInput: {
-    flex: 1,
     fontSize: 14,
-    maxHeight: 90,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    color: '#1A1A1A',
+    fontWeight: '400',
+    paddingTop: 0,
+    paddingBottom: 0,
   },
-  sendBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  micButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(142, 14, 44, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 2,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
+  sendButtonWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#8E0E2C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  attachmentSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    paddingBottom: 36,
-  },
-  sheetTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  optionItem: {
-    alignItems: 'center',
-  },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  sendButtonGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
-  },
-  optionLabel: {
-    fontSize: 12,
-    fontWeight: '500',
   },
 });

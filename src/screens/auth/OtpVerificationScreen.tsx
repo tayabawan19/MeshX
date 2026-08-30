@@ -14,16 +14,18 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { ChevronLeft, ShieldCheck, RefreshCw } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ArrowLeft, ShieldCheck, RefreshCw } from 'lucide-react-native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { BoldButton } from '../../components/common/BoldButton';
 import { triggerHaptic } from '../../utils/haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = ({
   navigation,
   route,
 }) => {
+  const insets = useSafeAreaInsets();
   const email = route.params?.email || useAuthStore.getState().pendingEmail || 'user@meshx.app';
   const mode = route.params?.mode || 'signup';
 
@@ -124,181 +126,191 @@ export const OtpVerificationScreen: React.FC<{ navigation: any; route: any }> = 
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}>
+    <LinearGradient
+      colors={['#8E0E2C', '#540F27', '#251025', '#160D1E']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.85, y: 1 }}
+      style={[styles.container, { paddingTop: Math.max(insets.top, 20) }]}
+    >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1, justifyContent: 'space-between' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
       >
-        <View>
+        {/* Header */}
+        <View style={styles.formHeader}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={[styles.backBtn, { backgroundColor: palette.surfaceElevated }]}
+            style={styles.backBtn}
           >
-            <ChevronLeft size={20} color={palette.textPrimary} />
+            <ArrowLeft size={20} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <View style={styles.header}>
-            <View style={[styles.iconBadge, { backgroundColor: palette.primary }]}>
-              <ShieldCheck size={36} color="#FFFFFF" strokeWidth={2.2} />
-            </View>
-
-            <Text style={[styles.title, { color: palette.textPrimary }]}>Verification Code</Text>
-            <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-              We sent a 6-digit verification code to{'\n'}
-              <Text style={{ color: palette.textPrimary, fontWeight: '600' }}>{email}</Text>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.screenHeading}>Verification</Text>
+            <Text style={styles.screenHeading}>Code</Text>
+            <Text style={styles.headerSubtitle}>
+              We sent a 6-digit code to {email}
             </Text>
           </View>
+        </View>
 
-          {error ? (
-            <View style={[styles.errorBox, { borderColor: palette.error }]}>
-              <Text style={[styles.errorText, { color: palette.error }]}>{error}</Text>
-            </View>
-          ) : null}
+        {/* White Curved Container */}
+        <View style={styles.whiteCardContainer}>
+          <View style={styles.whiteCardContent}>
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorBoxText}>{error}</Text>
+              </View>
+            ) : null}
 
-          {/* Clean Digit Boxes */}
-          <Animated.View style={[styles.digitsRow, shakeAnimatedStyle]}>
-            {otpDigits.map((digit, idx) => {
-              const isFilled = !!digit;
-              return (
-                <View
-                  key={idx}
-                  style={[
-                    styles.digitBox,
-                    {
-                      backgroundColor: palette.surface,
-                      borderColor: isFilled ? palette.primary : palette.border,
-                    },
-                  ]}
-                >
-                  <TextInput
-                    ref={(r) => {
-                      inputRefs.current[idx] = r;
-                    }}
+            {/* Digit Underline Boxes */}
+            <Animated.View style={[styles.digitsRow, shakeAnimatedStyle]}>
+              {otpDigits.map((digit, idx) => {
+                const isFilled = !!digit;
+                return (
+                  <View
+                    key={idx}
                     style={[
-                      styles.digitInput,
-                      { color: palette.textPrimary },
+                      styles.digitBox,
+                      isFilled && styles.digitBoxFilled,
                     ]}
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    value={digit}
-                    onChangeText={(t) => handleDigitChange(t, idx)}
-                    onKeyPress={(e) => handleKeyPress(e, idx)}
-                    selectTextOnFocus
-                  />
-                </View>
-              );
-            })}
-          </Animated.View>
+                  >
+                    <TextInput
+                      ref={(r) => {
+                        inputRefs.current[idx] = r;
+                      }}
+                      style={styles.digitInput}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      value={digit}
+                      onChangeText={(t) => handleDigitChange(t, idx)}
+                      onKeyPress={(e) => handleKeyPress(e, idx)}
+                      selectTextOnFocus
+                    />
+                  </View>
+                );
+              })}
+            </Animated.View>
 
-          {/* Resend Cooldown */}
-          <View style={styles.resendRow}>
-            {canResend ? (
-              <TouchableOpacity onPress={handleResend} style={styles.resendBtn}>
-                <RefreshCw size={14} color={palette.primary} style={{ marginRight: 6 }} />
-                <Text style={[styles.resendText, { color: palette.primary }]}>Resend Code</Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={[styles.cooldownText, { color: palette.textMuted }]}>
-                Resend code in <Text style={{ color: palette.textPrimary, fontWeight: '700' }}>{cooldown}s</Text>
-              </Text>
-            )}
+            {/* Resend Cooldown */}
+            <View style={styles.resendRow}>
+              {canResend ? (
+                <TouchableOpacity onPress={handleResend} style={styles.resendBtn}>
+                  <RefreshCw size={14} color="#8E0E2C" style={{ marginRight: 6 }} />
+                  <Text style={styles.resendText}>Resend Code</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.cooldownText}>
+                  Resend code in <Text style={{ color: '#8E0E2C', fontWeight: '800' }}>{cooldown}s</Text>
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => submitOtp()}
+              disabled={otpDigits.some((d) => d === '') || isSubmitting}
+              style={styles.submitBtnWrapper}
+            >
+              <LinearGradient
+                colors={['#8E0E2C', '#540F27', '#251025']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submitGradientBtn}
+              >
+                <Text style={styles.submitBtnText}>VERIFY CODE</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.footer}>
-          <BoldButton
-            title="Verify Code"
-            onPress={() => submitOtp()}
-            loading={isSubmitting}
-            variant="primary"
-            size="lg"
-            disabled={otpDigits.some((d) => d === '')}
-          />
-        </View>
       </KeyboardAvoidingView>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 50,
-  },
+  container: { flex: 1 },
+  formHeader: { paddingHorizontal: 20, paddingBottom: 24 },
   backBtn: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 24,
+  headerTitleContainer: {
+    paddingHorizontal: 8,
   },
-  iconBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+  screenHeading: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '800',
+    lineHeight: 38,
+    letterSpacing: -0.5,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: 6,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
+  headerSubtitle: {
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 13,
-    textAlign: 'center',
+    marginTop: 8,
     lineHeight: 18,
   },
-  errorBox: {
-    backgroundColor: 'rgba(242, 63, 66, 0.15)',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 12,
+  whiteCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    justifyContent: 'space-between',
+    padding: 28,
+    paddingBottom: 36,
   },
-  errorText: {
-    fontSize: 12,
-    textAlign: 'center',
+  whiteCardContent: {
+    paddingTop: 10,
+  },
+  errorBox: {
+    backgroundColor: '#FFEBEE',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  errorBoxText: {
+    color: '#C62828',
+    fontSize: 13,
     fontWeight: '600',
+    textAlign: 'center',
   },
   digitsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
     gap: 8,
   },
   digitBox: {
     flex: 1,
-    height: 50,
-    borderRadius: 8,
-    borderWidth: 1,
+    height: 52,
+    borderBottomWidth: 2,
+    borderBottomColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  digitBoxFilled: {
+    borderBottomColor: '#8E0E2C',
+  },
   digitInput: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     textAlign: 'center',
+    color: '#1A1A1A',
     width: '100%',
     height: '100%',
   },
   resendRow: {
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 10,
   },
   resendBtn: {
     flexDirection: 'row',
@@ -307,12 +319,37 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#8E0E2C',
   },
   cooldownText: {
     fontSize: 13,
+    color: '#757575',
   },
   footer: {
-    marginBottom: 16,
+    width: '100%',
+  },
+  submitBtnWrapper: {
+    width: '100%',
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    shadowColor: '#8E0E2C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitGradientBtn: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
 });

@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Mic, MicOff, Video, VideoOff, Volume2, PhoneOff, Phone, RefreshCw, Users, AlertCircle } from 'lucide-react-native';
 import { useChatStore } from '../../store/useChatStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -78,7 +79,10 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
   }));
 
   return (
-    <View
+    <LinearGradient
+      colors={['#8E0E2C', '#540F27', '#251025', '#160D1E']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.85, y: 1 }}
       style={[
         styles.container,
         {
@@ -91,9 +95,9 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
       <View style={styles.header}>
         {isBusy ? (
           <View style={styles.busyContainer}>
-            <AlertCircle size={56} color="#F23F42" style={{ marginBottom: 14 }} />
+            <AlertCircle size={56} color="#FFCDD2" style={{ marginBottom: 14 }} />
             <Text style={styles.peerName}>{activeCall.peerName}</Text>
-            <Text style={[styles.callStatus, { color: '#F23F42' }]}>User is busy on another call</Text>
+            <Text style={styles.callStatus}>User is busy on another call</Text>
           </View>
         ) : (
           <>
@@ -101,7 +105,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
               <View style={styles.avatarHolder}>
                 <View style={styles.avatarWrapper}>
                   {activeCall.isGroupCall ? (
-                    <View style={[styles.avatar, { backgroundColor: '#5865F2', justifyContent: 'center', alignItems: 'center' }]}>
+                    <View style={[styles.avatar, { backgroundColor: '#8E0E2C', justifyContent: 'center', alignItems: 'center' }]}>
                       <Users size={48} color="#FFFFFF" />
                     </View>
                   ) : (
@@ -167,7 +171,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
 
           {activeCall.isVideoEnabled && (
             <View style={styles.pipView}>
-              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#2B2D31' }]} />
+              <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#8E0E2C' }]} />
               <Text style={styles.pipLabel}>You</Text>
             </View>
           )}
@@ -215,7 +219,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
               toggleMuteCall();
             }}
           >
-            {activeCall.isMuted ? <MicOff size={22} color="#F23F42" /> : <Mic size={22} color="#FFFFFF" />}
+            {activeCall.isMuted ? <MicOff size={22} color="#EF5350" /> : <Mic size={22} color="#FFFFFF" />}
           </TouchableOpacity>
 
           {activeCall.type === 'video' && (
@@ -226,7 +230,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
                 toggleVideoCall();
               }}
             >
-              {activeCall.isVideoEnabled ? <Video size={22} color="#FFFFFF" /> : <VideoOff size={22} color="#F23F42" />}
+              {activeCall.isVideoEnabled ? <Video size={22} color="#FFFFFF" /> : <VideoOff size={22} color="#EF5350" />}
             </TouchableOpacity>
           )}
 
@@ -249,7 +253,7 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
               toggleSpeakerCall();
             }}
           >
-            <Volume2 size={22} color={activeCall.isSpeakerOn ? '#5865F2' : '#FFFFFF'} />
+            <Volume2 size={22} color={activeCall.isSpeakerOn ? '#8E0E2C' : '#FFFFFF'} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.endBtn} onPress={handleEndCall}>
@@ -257,14 +261,13 @@ export const CallModal: React.FC<{ navigation?: any }> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1F22',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -289,6 +292,8 @@ const styles = StyleSheet.create({
     height: 110,
     borderRadius: 55,
     overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   avatar: {
     width: '100%',
@@ -296,23 +301,23 @@ const styles = StyleSheet.create({
   },
   peerName: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#F2F3F5',
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 4,
     letterSpacing: -0.3,
   },
   callStatus: {
     fontSize: 14,
-    color: '#949BA4',
+    color: 'rgba(255, 255, 255, 0.75)',
     fontWeight: '500',
   },
   videoCanvas: {
     width: '100%',
     height: 360,
-    borderRadius: 14,
+    borderRadius: 20,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#2B2D31',
+    backgroundColor: '#160D1E',
   },
   groupVideoGrid: {
     flex: 1,
@@ -323,7 +328,6 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: '#313338',
   },
   tileLabel: {
     position: 'absolute',
@@ -347,7 +351,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    color: '#5865F2',
+    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -357,10 +361,10 @@ const styles = StyleSheet.create({
     right: 12,
     width: 80,
     height: 110,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -369,26 +373,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#2B2D31',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 24,
+    borderRadius: 28,
     marginBottom: 24,
   },
   controlBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  controlBtnActive: { backgroundColor: 'rgba(255,255,255,0.15)' },
+  controlBtnActive: { backgroundColor: '#FFFFFF' },
   endBtn: {
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#F23F42', // Discord status red
+    backgroundColor: '#C62828',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -397,7 +401,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#F23F42', // Discord status red
+    backgroundColor: '#C62828',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -405,7 +409,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#23A55A', // Discord status green
+    backgroundColor: '#2E7D32',
     justifyContent: 'center',
     alignItems: 'center',
   },

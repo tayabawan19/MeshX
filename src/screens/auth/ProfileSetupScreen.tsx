@@ -10,19 +10,18 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, User, FileText, Check, ArrowRight } from 'lucide-react-native';
-import { Header } from '../../components/common/Header';
-import { BoldButton } from '../../components/common/BoldButton';
+import { Camera, Check, ArrowRight } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useThemeStore } from '../../store/useThemeStore';
 import { apiClient } from '../../config/api';
 import { triggerHaptic } from '../../utils/haptics';
 
 export const ProfileSetupScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { user, updateProfile, updateUserProfile } = useAuthStore();
-  const palette = useThemeStore((state) => state.palette);
 
   const [name, setName] = useState(user?.name || '');
   const [bio, setBio] = useState(user?.bio || 'Hey there! I am using MeshX.');
@@ -39,7 +38,7 @@ export const ProfileSetupScreen: React.FC = () => {
       if (!permission.granted) {
         Alert.alert(
           'Permission Required',
-          'Please allow photo library access in device settings to choose an avatar.'
+          'Please allow photo library access in device settings.'
         );
         return;
       }
@@ -74,7 +73,7 @@ export const ProfileSetupScreen: React.FC = () => {
             triggerHaptic('success');
           }
         } catch (uploadErr) {
-          console.warn('Direct avatar upload failed, will upload on save:', uploadErr);
+          console.warn('Direct avatar upload error:', uploadErr);
         } finally {
           setIsUploadingAvatar(false);
         }
@@ -97,7 +96,6 @@ export const ProfileSetupScreen: React.FC = () => {
 
     try {
       let finalAvatarUrl = avatarUrl;
-
       if (avatarUrl && avatarUrl.startsWith('file://')) {
         try {
           const formData = new FormData();
@@ -123,7 +121,7 @@ export const ProfileSetupScreen: React.FC = () => {
       if (navigation.canGoBack()) {
         navigation.goBack();
       } else {
-        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
       }
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Failed to update profile');
@@ -138,117 +136,138 @@ export const ProfileSetupScreen: React.FC = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}>
-      <Header title="Set Up Profile" />
+    <LinearGradient
+      colors={['#8E0E2C', '#540F27', '#251025', '#160D1E']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.85, y: 1 }}
+      style={[styles.container, { paddingTop: Math.max(insets.top, 20) }]}
+    >
+      {/* Header Area */}
+      <View style={styles.formHeader}>
+        <Text style={styles.screenHeading}>Set Up Your</Text>
+        <Text style={styles.screenHeading}>Profile</Text>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8} style={styles.avatarTouchable}>
-            <View style={[styles.avatarRing, { borderColor: palette.border, backgroundColor: palette.surfaceElevated }]}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-              ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: palette.primary }]}>
-                  <Text style={styles.initialText}>
-                    {name ? name.charAt(0).toUpperCase() : 'M'}
-                  </Text>
-                </View>
-              )}
-            </View>
+      {/* White Curved Sheet */}
+      <View style={styles.whiteCardContainer}>
+        <ScrollView contentContainerStyle={styles.whiteCardScroll} keyboardShouldPersistTaps="handled">
+          {/* Avatar Section */}
+          <View style={styles.avatarSection}>
+            <TouchableOpacity onPress={pickAvatar} activeOpacity={0.85} style={styles.avatarTouchable}>
+              <View style={styles.avatarRing}>
+                {avatarUrl ? (
+                  <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Text style={styles.initialText}>
+                      {name ? name.charAt(0).toUpperCase() : 'M'}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
-            <View style={[styles.cameraBadge, { backgroundColor: palette.surfaceLight }]}>
-              <Camera size={16} color={palette.textPrimary} />
+              <View style={styles.cameraBadge}>
+                <Camera size={16} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+
+            <Text style={styles.avatarSubtext}>
+              {isUploadingAvatar ? 'Uploading avatar...' : 'Tap to change photo'}
+            </Text>
+          </View>
+
+          {errorMsg ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorBoxText}>{errorMsg}</Text>
             </View>
+          ) : null}
+
+          {/* Full Name */}
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Display Name</Text>
+            <View style={styles.inputUnderlineRow}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="John Smith"
+                placeholderTextColor="#BDBDBD"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+              />
+              {name.trim().length > 0 && <Check size={18} color="#8E0E2C" strokeWidth={2.5} />}
+            </View>
+          </View>
+
+          {/* Status / Bio */}
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>Status / Bio</Text>
+            <View style={styles.inputUnderlineRow}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Hey there! I am using MeshX."
+                placeholderTextColor="#BDBDBD"
+                value={bio}
+                onChangeText={setBio}
+              />
+            </View>
+          </View>
+
+          {/* Submit Pill Button */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleSave}
+            disabled={isSaving || isUploadingAvatar}
+            style={styles.submitBtnWrapper}
+          >
+            <LinearGradient
+              colors={['#8E0E2C', '#540F27', '#251025']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.submitGradientBtn}
+            >
+              <Text style={styles.submitBtnText}>SAVE PROFILE</Text>
+            </LinearGradient>
           </TouchableOpacity>
 
-          <Text style={[styles.avatarSubtext, { color: palette.textMuted }]}>
-            {isUploadingAvatar ? 'Uploading avatar...' : 'Tap to change photo'}
-          </Text>
-        </View>
-
-        {errorMsg ? (
-          <View style={[styles.errorContainer, { backgroundColor: 'rgba(242, 63, 66, 0.15)', borderColor: palette.error }]}>
-            <Text style={[styles.errorText, { color: palette.error }]}>{errorMsg}</Text>
-          </View>
-        ) : null}
-
-        {/* Display Name Input */}
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: palette.textSecondary }]}>DISPLAY NAME</Text>
-          <View style={[styles.inputBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <User size={18} color={palette.textMuted} style={styles.inputIcon} />
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your name"
-              placeholderTextColor={palette.textMuted}
-              style={[styles.input, { color: palette.textPrimary }]}
-            />
-          </View>
-        </View>
-
-        {/* Status / Bio Input */}
-        <View style={styles.formGroup}>
-          <Text style={[styles.label, { color: palette.textSecondary }]}>STATUS / BIO</Text>
-          <View
-            style={[
-              styles.inputBox,
-              {
-                backgroundColor: palette.surface,
-                borderColor: palette.border,
-                height: 72,
-                alignItems: 'flex-start',
-                paddingTop: 10,
-              },
-            ]}
-          >
-            <FileText size={18} color={palette.textMuted} style={[styles.inputIcon, { marginTop: 2 }]} />
-            <TextInput
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Write a short bio..."
-              placeholderTextColor={palette.textMuted}
-              multiline
-              style={[styles.input, { color: palette.textPrimary, height: 50 }]}
-            />
-          </View>
-        </View>
-
-        <BoldButton
-          title="Save Profile"
-          onPress={handleSave}
-          loading={isSaving}
-          disabled={isSaving || isUploadingAvatar}
-          icon={<Check size={18} color="#FFFFFF" />}
-          size="lg"
-          style={{ marginTop: 14 }}
-        />
-
-        <TouchableOpacity onPress={handleSkip} style={styles.skipBottomButton}>
-          <Text style={[styles.skipBottomText, { color: palette.textMuted }]}>Skip for now</Text>
-          <ArrowRight size={14} color={palette.textMuted} style={{ marginLeft: 4 }} />
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+          <TouchableOpacity onPress={handleSkip} style={styles.skipBottomButton}>
+            <Text style={styles.skipBottomText}>Skip for now</Text>
+            <ArrowRight size={14} color="#757575" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  formHeader: { paddingHorizontal: 28, paddingBottom: 24 },
+  screenHeading: {
+    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '800',
+    lineHeight: 38,
+    letterSpacing: -0.5,
   },
-  content: {
-    padding: 20,
+  whiteCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+    overflow: 'hidden',
+  },
+  whiteCardScroll: {
+    padding: 28,
+    paddingTop: 32,
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 26,
   },
   avatarTouchable: {
     position: 'relative',
@@ -259,7 +278,8 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    borderWidth: 2,
+    borderWidth: 2.5,
+    borderColor: '#8E0E2C',
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
@@ -271,12 +291,13 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
+    backgroundColor: '#8E0E2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
   initialText: {
     fontSize: 36,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
   },
   cameraBadge: {
@@ -286,48 +307,74 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
+    backgroundColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarSubtext: {
     fontSize: 12,
+    color: '#757575',
     marginTop: 8,
+    fontWeight: '600',
   },
-  errorContainer: {
+  errorBox: {
+    backgroundColor: '#FFEBEE',
     padding: 10,
     borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  errorText: {
-    fontSize: 12,
+  errorBoxText: {
+    color: '#C62828',
+    fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
   },
-  formGroup: {
-    marginBottom: 16,
+  fieldWrapper: {
+    marginBottom: 22,
   },
-  label: {
-    fontSize: 11,
+  fieldLabel: {
+    color: '#8E0E2C',
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.5,
     marginBottom: 6,
   },
-  inputBox: {
+  inputUnderlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 46,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 12,
+    borderBottomWidth: 1.2,
+    borderBottomColor: '#E0E0E0',
+    paddingBottom: 6,
   },
-  inputIcon: {
-    marginRight: 8,
-  },
-  input: {
+  textInput: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 15,
+    color: '#212121',
+    fontWeight: '500',
+    paddingVertical: 2,
+  },
+  submitBtnWrapper: {
+    width: '100%',
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    marginTop: 10,
+    shadowColor: '#8E0E2C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitGradientBtn: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   skipBottomButton: {
     flexDirection: 'row',
@@ -338,6 +385,7 @@ const styles = StyleSheet.create({
   },
   skipBottomText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#757575',
   },
 });

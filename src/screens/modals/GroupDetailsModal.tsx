@@ -4,86 +4,130 @@ import {
   Text,
   StyleSheet,
   Modal,
-  TouchableOpacity,
   ScrollView,
-  Image,
-  Alert,
+  TouchableOpacity,
   TextInput,
-  Clipboard,
-  Dimensions,
+  Alert,
 } from 'react-native';
 import {
-  X,
-  Crown,
-  Trash2,
-  Share2,
+  UserPlus,
+  ShieldCheck,
   LogOut,
+  Trash2,
   Edit2,
-  Check,
-  Shield,
+  Copy,
+  Link,
 } from 'lucide-react-native';
+import { Header } from '../../components/common/Header';
+import { Avatar } from '../../components/common/Avatar';
+import { BoldButton } from '../../components/common/BoldButton';
+import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { ClaySwitch } from '../../components/common/ClaySwitch';
-import { Chat, UserProfile } from '../../types';
 import { triggerHaptic } from '../../utils/haptics';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { apiClient } from '../../config/api';
 
 interface GroupDetailsModalProps {
-  visible: boolean;
-  chat: Chat | null;
+  chat: any | null;
   onClose: () => void;
-  onLeaveGroupSuccess?: () => void;
 }
 
-export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
-  visible,
-  chat,
-  onClose,
-  onLeaveGroupSuccess,
-}) => {
-  const { palette } = useThemeStore();
+export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onClose }) => {
+  const palette = useThemeStore((state) => state.palette);
   const { user } = useAuthStore();
-  const {
-    promoteDemoteAdmin,
-    removeGroupMember,
-    leaveGroup,
-    updateGroupSettings,
-    updateGroupInfo,
-    getGroupInviteLink,
-  } = useChatStore();
+  const { deleteChat, contacts } = useChatStore();
 
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [groupName, setGroupName] = useState('');
-  const [copiedLink, setCopiedLink] = useState(false);
+  const currentUserId = user?.id || user?._id || 'usr_me';
+  const isAdmin =
+    chat?.groupAdmins?.includes(currentUserId) ||
+    chat?.groupAdmin === currentUserId ||
+    chat?.createdBy === currentUserId;
 
-  if (!visible || !chat || chat.type !== 'group') return null;
+  const [groupName, setGroupName] = useState(chat?.groupName || 'Group Chat');
+  const [groupDescription, setGroupDescription] = useState(
+    chat?.groupDescription || 'No description provided.'
+  );
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [inviteLink, setInviteLink] = useState(chat?.inviteLink || '');
+  const [onlyAdminsCanSend, setOnlyAdminsCanSend] = useState(
+    chat?.groupSettings?.onlyAdminsCanSend ?? false
+  );
 
-  const currentUserId = user?.id || user?._id || user?.userId || '';
-  const adminIds = (chat.admins || []).map((a: any) => (typeof a === 'object' ? a._id || a.id : a));
-  const isMeAdmin = adminIds.includes(currentUserId);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [selectedContactToAdd, setSelectedContactToAdd] = useState<string | null>(null);
 
-  const participants = chat.participantProfiles || (chat.participants as UserProfile[]) || [];
+  const participants = chat?.participants || [];
 
-  const handleToggleAdmin = (targetId: string, isCurrentlyAdmin: boolean) => {
-    triggerHaptic('selection');
-    promoteDemoteAdmin(chat.chatId, targetId, isCurrentlyAdmin ? 'demote' : 'promote');
+  const handleSaveInfo = async () => {
+    triggerHaptic('medium');
+    try {
+      await apiClient.patch(`/chats/${chat.chatId || chat.id || chat._id}/group-info`, {
+        groupName,
+        groupDescription,
+      });
+      setIsEditingInfo(false);
+      triggerHaptic('success');
+    } catch (err) {
+      console.error('Update group info error:', err);
+    }
   };
 
-  const handleRemoveMember = (targetId: string, memberName: string) => {
-    Alert.alert('Remove Member', `Are you sure you want to remove ${memberName} from this group?`, [
+  const handleToggleAdminOnly = async (val: boolean) => {
+    triggerHaptic('selection');
+    setOnlyAdminsCanSend(val);
+    try {
+      await apiClient.patch(`/chats/${chat.chatId || chat.id || chat._id}/settings`, {
+        onlyAdminsCanSend: val,
+      });
+    } catch (err) {
+      console.error('Update settings error:', err);
+    }
+  };
+
+  const handleGenerateInviteLink = async () => {
+    triggerHaptic('selection');
+    try {
+      const res = await apiClient.post(`/chats/${chat.chatId || chat.id || chat._id}/invite-link`);
+      setInviteLink(res.data.inviteLink || `https://meshx.app/join/${chat.chatId || chat.id}`);
+      triggerHaptic('success');
+    } catch (err) {
+      setInviteLink(`https://meshx.app/join/${chat.chatId || chat.id}`);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    Alert.alert('Remove Member', 'Are you sure you want to remove this member?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
           triggerHaptic('heavy');
-          removeGroupMember(chat.chatId, targetId);
+          try {
+            await apiClient.delete(`/chats/${chat.chatId || chat.id || chat._id}/members/${memberId}`);
+            triggerHaptic('success');
+          } catch (err) {
+            console.error('Remove member error:', err);
+          }
         },
       },
     ]);
+  };
+
+  const handleAddMember = async () => {
+    if (!selectedContactToAdd) return;
+    triggerHaptic('selection');
+    try {
+      await apiClient.post(`/chats/${chat.chatId || chat.id || chat._id}/members`, {
+        userId: selectedContactToAdd,
+      });
+      setShowAddMemberModal(false);
+      setSelectedContactToAdd(null);
+      triggerHaptic('success');
+    } catch (err) {
+      console.error('Add member error:', err);
+    }
   };
 
   const handleLeaveGroup = () => {
@@ -94,263 +138,268 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
         style: 'destructive',
         onPress: async () => {
           triggerHaptic('heavy');
-          await leaveGroup(chat.chatId);
-          if (onLeaveGroupSuccess) onLeaveGroupSuccess();
-          onClose();
+          try {
+            await apiClient.post(`/chats/${chat.chatId || chat.id || chat._id}/leave`);
+            onClose();
+          } catch (err) {
+            console.error('Leave group error:', err);
+          }
         },
       },
     ]);
   };
 
-  const handleSaveGroupName = async () => {
-    if (!groupName.trim()) return;
-    await updateGroupInfo(chat.chatId, { groupName: groupName.trim() });
-    setIsEditingName(false);
-  };
-
-  const handleShareInviteLink = async () => {
-    triggerHaptic('light');
-    const code = await getGroupInviteLink(chat.chatId);
-    Clipboard.setString(`https://everchat.app/join/${code}`);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 3000);
-  };
+  if (!chat) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity activeOpacity={1} onPress={onClose} style={styles.overlay}>
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: palette.surfaceElevated,
-              borderColor: palette.border,
-            },
-          ]}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: palette.textPrimary }]}>Group Info</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={20} color={palette.textMuted} />
-            </TouchableOpacity>
-          </View>
+    <Modal visible={!!chat} animationType="slide" onRequestClose={onClose}>
+      <View style={styles.container}>
+        <Header title="Group Info" showBack onBackPress={onClose} />
 
-          <ScrollView style={styles.scroll}>
-            {/* Group Banner & Avatar */}
-            <View style={styles.groupHero}>
-              <Image
-                source={{
-                  uri:
-                    chat.groupAvatar ||
-                    chat.groupAvatarUrl ||
-                    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=400&q=80',
-                }}
-                style={styles.heroAvatar}
-              />
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* Group Header Hero */}
+          <View style={styles.profileHeader}>
+            <Avatar url={chat.groupAvatar || chat.groupAvatarUrl} name={groupName} size="xl" />
 
-              {isEditingName ? (
-                <View style={styles.editNameRow}>
-                  <TextInput
-                    value={groupName}
-                    onChangeText={setGroupName}
-                    placeholder="Group name"
-                    placeholderTextColor={palette.textMuted}
-                    style={[styles.nameInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: palette.inputBackground }]}
-                  />
-                  <TouchableOpacity onPress={handleSaveGroupName} style={[styles.saveNameBtn, { backgroundColor: palette.primary }]}>
-                    <Check size={14} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.groupNameRow}>
-                  <Text style={[styles.groupName, { color: palette.textPrimary }]}>{chat.groupName || 'Group'}</Text>
-                  {isMeAdmin && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        setGroupName(chat.groupName || '');
-                        setIsEditingName(true);
-                      }}
-                      style={styles.editBtn}
-                    >
-                      <Edit2 size={14} color={palette.textMuted} />
+            {isEditingInfo ? (
+              <View style={styles.editInfoContainer}>
+                <TextInput
+                  value={groupName}
+                  onChangeText={setGroupName}
+                  style={styles.editInput}
+                  placeholder="Group Name"
+                  placeholderTextColor="#9E9E9E"
+                />
+                <TextInput
+                  value={groupDescription}
+                  onChangeText={setGroupDescription}
+                  style={[styles.editInput, { height: 60 }]}
+                  placeholder="Group Description"
+                  placeholderTextColor="#9E9E9E"
+                  multiline
+                />
+                <BoldButton title="Save Changes" size="sm" onPress={handleSaveInfo} />
+              </View>
+            ) : (
+              <>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>{groupName}</Text>
+                  {isAdmin && (
+                    <TouchableOpacity onPress={() => setIsEditingInfo(true)} style={styles.editBtn}>
+                      <Edit2 size={15} color="#8E0E2C" />
                     </TouchableOpacity>
                   )}
                 </View>
-              )}
-
-              <Text style={[styles.participantCount, { color: palette.textMuted }]}>
-                {participants.length} Members
-              </Text>
-            </View>
-
-            {/* Invite Link Card */}
-            <TouchableOpacity
-              onPress={handleShareInviteLink}
-              style={[styles.actionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
-            >
-              <Share2 size={18} color={palette.primary} style={{ marginRight: 10 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>Invite via Link</Text>
-                <Text style={[styles.cardSubtitle, { color: palette.textMuted }]}>
-                  {copiedLink ? 'Link copied to clipboard!' : 'Share a joinable link or code'}
+                <Text style={styles.bio}>{groupDescription}</Text>
+                <Text style={styles.memberCountText}>
+                  {participants.length} Members
                 </Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Admin Permissions */}
-            {isMeAdmin && (
-              <View style={[styles.settingsBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-                <Text style={[styles.settingsTitle, { color: palette.textMuted }]}>PERMISSIONS</Text>
-                <View style={styles.settingRow}>
-                  <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Only admins can send messages</Text>
-                  <ClaySwitch
-                    value={!!chat.onlyAdminsCanMessage}
-                    onValueChange={(val) => updateGroupSettings(chat.chatId, { onlyAdminsCanMessage: val })}
-                  />
-                </View>
-                <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
-                  <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Only admins can edit group info</Text>
-                  <ClaySwitch
-                    value={!!chat.onlyAdminsCanEditInfo}
-                    onValueChange={(val) => updateGroupSettings(chat.chatId, { onlyAdminsCanEditInfo: val })}
-                  />
-                </View>
-              </View>
+              </>
             )}
+          </View>
 
-            {/* Participants Section */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionHeading, { color: palette.textMuted }]}>
-                MEMBERS — {participants.length}
-              </Text>
-
-              {participants.map((p, idx) => {
-                const pId = p.id || p._id || (p as any).userId;
-                const isAdmin = adminIds.includes(pId);
-                const isMe = pId === currentUserId;
-
-                return (
-                  <View key={idx} style={styles.memberRow}>
-                    <Image
-                      source={{
-                        uri:
-                          p.avatarUrl ||
-                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-                      }}
-                      style={styles.memberAvatar}
-                    />
-                    <View style={styles.memberMeta}>
-                      <Text style={[styles.memberName, { color: palette.textPrimary }]}>
-                        {p.name} {isMe ? '(You)' : ''}
-                      </Text>
-                      <Text style={[styles.memberBio, { color: palette.textMuted }]} numberOfLines={1}>
-                        {p.bio || p.email}
-                      </Text>
-                    </View>
-
-                    {isAdmin && (
-                      <View style={[styles.adminBadge, { backgroundColor: palette.surfaceLight }]}>
-                        <Crown size={11} color={palette.warning} style={{ marginRight: 3 }} />
-                        <Text style={[styles.adminText, { color: palette.warning }]}>Admin</Text>
-                      </View>
-                    )}
-
-                    {isMeAdmin && !isMe && (
-                      <View style={styles.adminControls}>
-                        <TouchableOpacity
-                          onPress={() => handleToggleAdmin(pId, isAdmin)}
-                          style={[styles.smallIconBtn, { backgroundColor: palette.surfaceLight }]}
-                        >
-                          <Shield size={13} color={isAdmin ? palette.error : palette.primary} />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => handleRemoveMember(pId, p.name)}
-                          style={[styles.smallIconBtn, { backgroundColor: palette.surfaceLight }]}
-                        >
-                          <Trash2 size={13} color={palette.error} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
+          {/* Group Admin Permissions */}
+          {isAdmin && (
+            <>
+              <Text style={styles.sectionTitle}>GROUP SETTINGS</Text>
+              <View style={styles.optionsCard}>
+                <View style={styles.optionRow}>
+                  <View style={styles.optionLeft}>
+                    <ShieldCheck size={18} color="#8E0E2C" />
+                    <Text style={styles.optionText}>Only Admins Can Send</Text>
                   </View>
-                );
-              })}
-            </View>
+                  <ClaySwitch
+                    value={onlyAdminsCanSend}
+                    onValueChange={handleToggleAdminOnly}
+                  />
+                </View>
 
-            {/* Exit Group Button */}
-            <TouchableOpacity onPress={handleLeaveGroup} style={[styles.leaveBtn, { borderColor: palette.error }]}>
-              <LogOut size={16} color={palette.error} style={{ marginRight: 6 }} />
-              <Text style={[styles.leaveText, { color: palette.error }]}>Leave Group</Text>
+                <TouchableOpacity
+                  onPress={handleGenerateInviteLink}
+                  style={[styles.optionRow, { borderBottomWidth: 0 }]}
+                >
+                  <View style={styles.optionLeft}>
+                    <Link size={18} color="#8E0E2C" />
+                    <Text style={styles.optionText}>
+                      {inviteLink ? 'Copy Invite Link' : 'Generate Invite Link'}
+                    </Text>
+                  </View>
+                  {inviteLink ? (
+                    <Copy size={16} color="#8E0E2C" />
+                  ) : null}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {/* Participants List Card */}
+          <View style={styles.participantsHeaderRow}>
+            <Text style={styles.sectionTitle}>MEMBERS ({participants.length})</Text>
+            {isAdmin && (
+              <TouchableOpacity
+                onPress={() => setShowAddMemberModal(true)}
+                style={styles.addMemberBtn}
+              >
+                <UserPlus size={14} color="#8E0E2C" style={{ marginRight: 4 }} />
+                <Text style={styles.addMemberText}>Add Member</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.optionsCard}>
+            {participants.map((p: any, idx: number) => {
+              const pId = p.id || p._id || p.userId;
+              const isPAdmin =
+                chat.groupAdmins?.includes(pId) ||
+                chat.groupAdmin === pId ||
+                chat.createdBy === pId;
+              const isMe = pId === currentUserId;
+
+              return (
+                <View
+                  key={pId || idx}
+                  style={[
+                    styles.participantRow,
+                    idx === participants.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                >
+                  <Avatar url={p.avatarUrl} name={p.name || 'User'} size="md" />
+                  <View style={styles.pInfo}>
+                    <Text style={styles.pName}>
+                      {p.name || 'Member'} {isMe && '(You)'}
+                    </Text>
+                    <Text style={styles.pRole}>{isPAdmin ? 'Admin' : 'Member'}</Text>
+                  </View>
+
+                  {isAdmin && !isMe && (
+                    <TouchableOpacity onPress={() => handleRemoveMember(pId)} style={styles.removeBtn}>
+                      <Trash2 size={15} color="#C62828" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Leave / Delete Group Card */}
+          <View style={[styles.optionsCard, { marginTop: 14 }]}>
+            <TouchableOpacity onPress={handleLeaveGroup} style={[styles.optionRow, { borderBottomWidth: 0 }]}>
+              <View style={styles.optionLeft}>
+                <LogOut size={18} color="#C62828" />
+                <Text style={[styles.optionText, { color: '#C62828' }]}>Exit Group</Text>
+              </View>
             </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Add Member Modal */}
+        <Modal visible={showAddMemberModal} transparent animationType="fade">
+          <View style={styles.addModalOverlay}>
+            <View style={styles.addCard}>
+              <Text style={styles.addTitle}>Add Member</Text>
+              <ScrollView style={{ maxHeight: 240, marginVertical: 10 }}>
+                {contacts.map((c) => {
+                  const cId = c.id || c._id || '';
+                  const isSelected = selectedContactToAdd === cId;
+                  return (
+                    <TouchableOpacity
+                      key={cId}
+                      onPress={() => setSelectedContactToAdd(cId || null)}
+                      style={[styles.addContactRow, isSelected && styles.addContactSelected]}
+                    >
+                      <Avatar url={c.avatarUrl} name={c.name} size="sm" />
+                      <Text style={styles.addContactName}>{c.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              <View style={styles.addBtnsRow}>
+                <BoldButton
+                  title="Cancel"
+                  variant="surface"
+                  onPress={() => setShowAddMemberModal(false)}
+                  style={{ flex: 1, marginRight: 8 }}
+                />
+                <BoldButton
+                  title="Add"
+                  variant="primary"
+                  disabled={!selectedContactToAdd}
+                  onPress={handleAddMember}
+                  style={{ flex: 1, marginLeft: 8 }}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
-  container: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    maxHeight: SCREEN_HEIGHT * 0.8,
-  },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  title: { fontSize: 17, fontWeight: '700' },
-  closeBtn: { padding: 4 },
-  scroll: { maxHeight: SCREEN_HEIGHT * 0.7 },
-  groupHero: { alignItems: 'center', marginVertical: 10 },
-  heroAvatar: { width: 72, height: 72, borderRadius: 36, marginBottom: 8 },
-  groupNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  groupName: { fontSize: 18, fontWeight: '700' },
+  container: { flex: 1, backgroundColor: '#F8F9FB' },
+  content: { padding: 18, paddingBottom: 50 },
+  profileHeader: { alignItems: 'center', marginVertical: 16 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  name: { fontSize: 20, fontWeight: '800', color: '#1A1A1A' },
   editBtn: { padding: 4 },
-  participantCount: { fontSize: 12, fontWeight: '500', marginTop: 2 },
-  editNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nameInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, fontSize: 14, fontWeight: '500' },
-  saveNameBtn: { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  actionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
+  bio: { fontSize: 13, color: '#757575', textAlign: 'center', marginTop: 3 },
+  memberCountText: { fontSize: 12, fontWeight: '600', color: '#8E0E2C', marginTop: 4 },
+  editInfoContainer: { width: '100%', marginTop: 14, gap: 10 },
+  editInput: {
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
-    marginVertical: 6,
+    borderColor: '#E0E0E0',
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    color: '#1A1A1A',
   },
-  cardTitle: { fontSize: 14, fontWeight: '600' },
-  cardSubtitle: { fontSize: 11, marginTop: 1 },
-  settingsBox: { padding: 12, borderRadius: 8, borderWidth: 1, marginVertical: 6 },
-  settingsTitle: { fontSize: 11, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
-  settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
-  settingLabel: { fontSize: 13, fontWeight: '500', flex: 1, marginRight: 10 },
-  section: { marginVertical: 10 },
-  sectionHeading: { fontSize: 11, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  memberAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 8 },
-  memberMeta: { flex: 1 },
-  memberName: { fontSize: 14, fontWeight: '600' },
-  memberBio: { fontSize: 11, marginTop: 1 },
-  adminBadge: {
+  sectionTitle: { fontSize: 11, fontWeight: '800', color: '#8E0E2C', letterSpacing: 0.8, marginBottom: 8, marginLeft: 4 },
+  participantsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  addMemberBtn: { flexDirection: 'row', alignItems: 'center', padding: 4 },
+  addMemberText: { fontSize: 12, fontWeight: '700', color: '#8E0E2C' },
+  optionsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    marginBottom: 14,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  optionText: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
+  participantRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  adminText: { fontSize: 10, fontWeight: '700' },
-  adminControls: { flexDirection: 'row', gap: 4, marginLeft: 6 },
-  smallIconBtn: { width: 28, height: 28, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  leaveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  leaveText: { fontSize: 14, fontWeight: '700' },
+  pInfo: { flex: 1, marginLeft: 12 },
+  pName: { fontSize: 14, fontWeight: '700', color: '#1A1A1A' },
+  pRole: { fontSize: 11, color: '#757575' },
+  removeBtn: { padding: 8 },
+  addModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  addCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20 },
+  addTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
+  addContactRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 8 },
+  addContactSelected: { backgroundColor: 'rgba(142, 14, 44, 0.08)' },
+  addContactName: { fontSize: 14, fontWeight: '600', marginLeft: 10, color: '#1A1A1A' },
+  addBtnsRow: { flexDirection: 'row', marginTop: 10 },
 });

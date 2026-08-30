@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { X, Camera, ImageIcon, Type, Check, Send, Lock } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { apiClient } from '../../config/api';
@@ -20,12 +21,12 @@ import { triggerHaptic } from '../../utils/haptics';
 import { BoldButton } from '../../components/common/BoldButton';
 
 const FLAT_PALETTES: string[] = [
-  '#5865F2', // Discord Blurple
-  '#23A55A', // Discord Green
-  '#F23F42', // Discord Red
-  '#FEE75C', // Discord Yellow
-  '#EB459E', // Discord Fuchsia
-  '#2B2D31', // Discord Dark Charcoal
+  '#8E0E2C', // Crimson Velvet
+  '#540F27', // Plum Wine
+  '#251025', // Dark Velvet
+  '#C2185B', // Deep Rose
+  '#D81B60', // Fuchsia Berry
+  '#160D1E', // Dark Plum Charcoal
 ];
 
 interface CreateStoryModalProps {
@@ -71,7 +72,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
         if (!perm.granted) {
           Alert.alert(
             'Permission Required',
-            'Please allow photo library access in device settings to select story photos or videos.'
+            'Please allow photo library access in device settings.'
           );
           return;
         }
@@ -94,7 +95,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
         if (!perm.granted) {
           Alert.alert(
             'Permission Required',
-            'Please allow camera access in device settings to take story photos or videos.'
+            'Please allow camera access in device settings.'
           );
           return;
         }
@@ -115,7 +116,6 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
       }
     } catch (err: any) {
       console.error('[CreateStory pickMedia Error]', err?.message || err);
-      Alert.alert('Media Picker Error', 'Could not open media picker. Please try again.');
     }
   };
 
@@ -182,7 +182,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
       handleClose();
     } catch (err: any) {
       console.error('[CreateStory Post Error]', err?.message || err);
-      Alert.alert('Upload Failed', 'Failed to upload story. Please check your internet connection.');
+      Alert.alert('Upload Failed', 'Failed to upload story.');
     } finally {
       setIsPosting(false);
     }
@@ -191,26 +191,26 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.container}>
         {/* Mode: Picker Sheet */}
         {mode === 'picker' && (
           <TouchableOpacity activeOpacity={1} onPress={handleClose} style={styles.modalOverlay}>
-            <View style={[styles.pickerSheet, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
+            <View style={styles.pickerSheet}>
               <View style={styles.sheetHeader}>
-                <Text style={[styles.sheetTitle, { color: palette.textPrimary }]}>Create Status</Text>
+                <Text style={styles.sheetTitle}>Create Status</Text>
                 <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-                  <X size={20} color={palette.textMuted} />
+                  <X size={20} color="#757575" />
                 </TouchableOpacity>
               </View>
 
               {/* Privacy Trigger Pill */}
               <TouchableOpacity
                 onPress={() => setShowPrivacySheet(true)}
-                style={[styles.privacyTrigger, { backgroundColor: palette.surface, borderColor: palette.border }]}
+                style={styles.privacyTrigger}
               >
-                <Lock size={13} color={palette.primary} style={{ marginRight: 6 }} />
-                <Text style={[styles.privacyTriggerText, { color: palette.textSecondary }]}>
+                <Lock size={13} color="#8E0E2C" style={{ marginRight: 6 }} />
+                <Text style={styles.privacyTriggerText}>
                   {visibility === 'contacts'
                     ? 'My contacts'
                     : visibility === 'except'
@@ -221,17 +221,17 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
 
               <View style={styles.optionsRow}>
                 <TouchableOpacity onPress={() => pickMedia('camera')} style={styles.optionBtn}>
-                  <View style={[styles.optionIcon, { backgroundColor: palette.surfaceLight }]}>
-                    <Camera size={24} color={palette.textPrimary} />
+                  <View style={[styles.optionIcon, { backgroundColor: 'rgba(142, 14, 44, 0.08)' }]}>
+                    <Camera size={26} color="#8E0E2C" />
                   </View>
-                  <Text style={[styles.optionLabel, { color: palette.textSecondary }]}>Camera</Text>
+                  <Text style={styles.optionLabel}>Camera</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => pickMedia('gallery')} style={styles.optionBtn}>
-                  <View style={[styles.optionIcon, { backgroundColor: palette.surfaceLight }]}>
-                    <ImageIcon size={24} color={palette.textPrimary} />
+                  <View style={[styles.optionIcon, { backgroundColor: 'rgba(142, 14, 44, 0.08)' }]}>
+                    <ImageIcon size={26} color="#8E0E2C" />
                   </View>
-                  <Text style={[styles.optionLabel, { color: palette.textSecondary }]}>Media</Text>
+                  <Text style={styles.optionLabel}>Gallery</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -241,10 +241,15 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                   }}
                   style={styles.optionBtn}
                 >
-                  <View style={[styles.optionIcon, { backgroundColor: palette.primary }]}>
-                    <Type size={24} color="#FFFFFF" strokeWidth={2.2} />
-                  </View>
-                  <Text style={[styles.optionLabel, { color: palette.textSecondary }]}>Text</Text>
+                  <LinearGradient
+                    colors={['#8E0E2C', '#540F27']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.optionIcon}
+                  >
+                    <Type size={26} color="#FFFFFF" strokeWidth={2.5} />
+                  </LinearGradient>
+                  <Text style={styles.optionLabel}>Text</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -255,7 +260,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
         {mode === 'text' && (
           <View style={[styles.fullScreenContent, { backgroundColor: selectedColor }]}>
             <View style={styles.topHeader}>
-              <TouchableOpacity onPress={handleReset} style={[styles.iconCircle, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+              <TouchableOpacity onPress={handleReset} style={styles.iconCircle}>
                 <X size={20} color="#FFFFFF" />
               </TouchableOpacity>
 
@@ -276,7 +281,7 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
               <TouchableOpacity
                 onPress={handlePost}
                 disabled={isPosting || !text.trim()}
-                style={[styles.postBtn, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: text.trim() ? 1 : 0.5 }]}
+                style={[styles.postBtn, { opacity: text.trim() ? 1 : 0.5 }]}
               >
                 {isPosting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Send size={16} color="#FFFFFF" />}
               </TouchableOpacity>
@@ -302,21 +307,21 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
             <Image source={{ uri: mediaUri }} style={StyleSheet.absoluteFillObject} resizeMode="contain" />
 
             <View style={styles.topHeader}>
-              <TouchableOpacity onPress={handleReset} style={[styles.iconCircle, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+              <TouchableOpacity onPress={handleReset} style={styles.iconCircle}>
                 <X size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.bottomCaptionRow}>
-              <View style={[styles.captionInputSlot, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <View style={styles.captionInputSlot}>
                 <TextInput
                   value={caption}
                   onChangeText={setCaption}
                   placeholder="Add a caption..."
-                  placeholderTextColor={palette.textMuted}
-                  style={[styles.captionTextInput, { color: palette.textPrimary }]}
+                  placeholderTextColor="#9E9E9E"
+                  style={styles.captionTextInput}
                 />
-                <TouchableOpacity onPress={handlePost} disabled={isPosting} style={[styles.sendMediaBtn, { backgroundColor: palette.primary }]}>
+                <TouchableOpacity onPress={handlePost} disabled={isPosting} style={styles.sendMediaBtn}>
                   {isPosting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Send size={16} color="#FFFFFF" />}
                 </TouchableOpacity>
               </View>
@@ -327,9 +332,9 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
         {/* Privacy Selector Modal Sheet */}
         <Modal visible={showPrivacySheet} transparent animationType="fade" onRequestClose={() => setShowPrivacySheet(false)}>
           <View style={styles.privacyModalOverlay}>
-            <View style={[styles.privacySheetCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-              <Text style={[styles.privacySheetTitle, { color: palette.textPrimary }]}>Status Privacy</Text>
-              <Text style={[styles.privacySheetSub, { color: palette.textMuted }]}>
+            <View style={styles.privacySheetCard}>
+              <Text style={styles.privacySheetTitle}>Status Privacy</Text>
+              <Text style={styles.privacySheetSub}>
                 Who can see my status updates:
               </Text>
 
@@ -340,8 +345,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                 }}
                 style={[styles.privacyOption, visibility === 'contacts' && styles.privacyOptionActive]}
               >
-                <Text style={[styles.privacyOptionText, { color: palette.textPrimary }]}>My contacts</Text>
-                {visibility === 'contacts' && <Check size={16} color={palette.primary} />}
+                <Text style={styles.privacyOptionText}>My contacts</Text>
+                {visibility === 'contacts' && <Check size={16} color="#8E0E2C" />}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -351,8 +356,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                 }}
                 style={[styles.privacyOption, visibility === 'except' && styles.privacyOptionActive]}
               >
-                <Text style={[styles.privacyOptionText, { color: palette.textPrimary }]}>My contacts except...</Text>
-                {visibility === 'except' && <Check size={16} color={palette.primary} />}
+                <Text style={styles.privacyOptionText}>My contacts except...</Text>
+                {visibility === 'except' && <Check size={16} color="#8E0E2C" />}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -362,14 +367,14 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                 }}
                 style={[styles.privacyOption, visibility === 'only' && styles.privacyOptionActive]}
               >
-                <Text style={[styles.privacyOptionText, { color: palette.textPrimary }]}>Only share with...</Text>
-                {visibility === 'only' && <Check size={16} color={palette.primary} />}
+                <Text style={styles.privacyOptionText}>Only share with...</Text>
+                {visibility === 'only' && <Check size={16} color="#8E0E2C" />}
               </TouchableOpacity>
 
               {/* Contacts Selection List */}
               {(visibility === 'except' || visibility === 'only') && (
                 <View style={styles.contactListWrapper}>
-                  <Text style={[styles.contactListHeader, { color: palette.textSecondary }]}>
+                  <Text style={styles.contactListHeader}>
                     {visibility === 'except' ? 'Hide status from:' : 'Share status only with:'}
                   </Text>
                   <FlatList
@@ -384,8 +389,8 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
                           onPress={() => toggleSelectPrivacyContact(cId)}
                           style={styles.contactRow}
                         >
-                          <Text style={[styles.contactName, { color: palette.textPrimary }]}>{item.name}</Text>
-                          <View style={[styles.checkbox, isSelected && { backgroundColor: palette.primary, borderColor: palette.primary }]}>
+                          <Text style={styles.contactName}>{item.name}</Text>
+                          <View style={[styles.checkbox, isSelected && { backgroundColor: '#8E0E2C', borderColor: '#8E0E2C' }]}>
                             {isSelected && <Check size={12} color="#FFFFFF" strokeWidth={2.5} />}
                           </View>
                         </TouchableOpacity>
@@ -410,13 +415,13 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({ visible, onC
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1E1F22' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' },
+  container: { flex: 1, backgroundColor: '#000000' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   pickerSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderWidth: 1,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
     paddingBottom: 36,
   },
   sheetHeader: {
@@ -425,7 +430,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  sheetTitle: { fontSize: 17, fontWeight: '700' },
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A' },
   closeBtn: { padding: 4 },
   privacyTrigger: {
     flexDirection: 'row',
@@ -433,22 +438,22 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: 'rgba(142, 14, 44, 0.08)',
+    marginBottom: 24,
   },
-  privacyTriggerText: { fontSize: 12, fontWeight: '500' },
+  privacyTriggerText: { fontSize: 12, fontWeight: '600', color: '#8E0E2C' },
   optionsRow: { flexDirection: 'row', justifyContent: 'space-around' },
   optionBtn: { alignItems: 'center' },
   optionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
   },
-  optionLabel: { fontSize: 12, fontWeight: '600' },
+  optionLabel: { fontSize: 12, fontWeight: '700', color: '#1A1A1A' },
   fullScreenContent: { flex: 1, justifyContent: 'space-between' },
   topHeader: {
     flexDirection: 'row',
@@ -461,6 +466,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -478,6 +484,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -485,11 +492,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   textStoryInput: {
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: '800',
     textAlign: 'center',
     width: '100%',
     lineHeight: 34,
@@ -502,43 +509,49 @@ const styles = StyleSheet.create({
   captionInputSlot: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 44,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    height: 48,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  captionTextInput: { flex: 1, fontSize: 14, fontWeight: '400' },
+  captionTextInput: { flex: 1, fontSize: 14, color: '#1A1A1A' },
   sendMediaBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#8E0E2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  privacyModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', padding: 20 },
-  privacySheetCard: { borderRadius: 14, borderWidth: 1, padding: 18 },
-  privacySheetTitle: { fontSize: 17, fontWeight: '700', marginBottom: 2 },
-  privacySheetSub: { fontSize: 12, fontWeight: '400', marginBottom: 14 },
+  privacyModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  privacySheetCard: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20 },
+  privacySheetTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A1A', marginBottom: 2 },
+  privacySheetSub: { fontSize: 12, color: '#757575', marginBottom: 14 },
   privacyOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: '#F0F0F0',
   },
-  privacyOptionActive: { borderRadius: 8, paddingHorizontal: 6 },
-  privacyOptionText: { fontSize: 14, fontWeight: '600' },
+  privacyOptionActive: { backgroundColor: 'rgba(142, 14, 44, 0.05)', borderRadius: 8, paddingHorizontal: 6 },
+  privacyOptionText: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
   contactListWrapper: { marginTop: 10 },
-  contactListHeader: { fontSize: 11, fontWeight: '700', marginBottom: 6 },
-  contactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
-  contactName: { fontSize: 13, fontWeight: '500' },
+  contactListHeader: { fontSize: 11, fontWeight: '700', color: '#8E0E2C', marginBottom: 6 },
+  contactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  contactName: { fontSize: 13, fontWeight: '600', color: '#1A1A1A' },
   checkbox: {
     width: 18,
     height: 18,
     borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#949BA4',
+    borderWidth: 1.5,
+    borderColor: '#BDBDBD',
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -10,9 +10,6 @@ import {
   Alert,
 } from 'react-native';
 import {
-  Moon,
-  Sun,
-  Palette,
   Bell,
   Shield,
   ChevronRight,
@@ -21,27 +18,23 @@ import {
   Trash2,
   UserX,
   Camera,
+  Edit2,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { Header } from '../../components/common/Header';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/common/Avatar';
 import { BoldButton } from '../../components/common/BoldButton';
 import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { useChatStore } from '../../store/useChatStore';
-import { BUBBLE_THEMES } from '../../theme/colors';
 import { triggerHaptic } from '../../utils/haptics';
 import { apiClient } from '../../config/api';
 
-interface SettingsScreenProps {
-  onOpenProfileSetup?: () => void;
-}
-
-export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
+export const SettingsScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { user, logout, updateUserProfile } = useAuthStore();
-  const { themeMode, setThemeMode, palette, setChatBubbleTheme } = useThemeStore();
-  const { chats, activeChatId } = useChatStore();
+  const { palette } = useThemeStore();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [lastSeenVisible, setLastSeenVisible] = useState(user?.privacy?.lastSeenVisible ?? true);
@@ -49,7 +42,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
 
   // Modals
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showThemeModal, setShowThemeModal] = useState(false);
   const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -61,11 +53,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
 
   // Blocked users state
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
-
-  // Delete account confirmation
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
-
-  const targetChatId = activeChatId || (chats.length > 0 ? chats[0].chatId : '');
 
   const handlePickAvatar = async () => {
     try {
@@ -112,13 +100,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
           }
           triggerHaptic('success');
           Alert.alert('Success', 'Profile photo updated successfully!');
-        } else {
-          Alert.alert('Upload Error', 'Could not obtain image URL from server.');
         }
       }
     } catch (err: any) {
       console.error('[Avatar Pick/Upload Error]', err?.message || err);
-      Alert.alert('Upload Failed', 'Failed to upload profile picture. Please check your connection.');
+      Alert.alert('Upload Failed', 'Failed to upload profile picture.');
     }
   };
 
@@ -197,198 +183,151 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
     }
   };
 
-  const handleSelectBubbleTheme = (color: string, receivedColor: string) => {
-    triggerHaptic('success');
-    if (targetChatId) {
-      setChatBubbleTheme(targetChatId, color, receivedColor);
-      apiClient.patch(`/chats/${targetChatId}/theme`, { color, receivedColor });
-    }
-    setShowThemeModal(false);
-  };
-
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}>
-      <Header title="Settings" />
+    <View style={styles.container}>
+      {/* Profile Hero Header */}
+      <LinearGradient
+        colors={['#8E0E2C', '#540F27', '#251025']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0.8 }}
+        style={[styles.profileHero, { paddingTop: Math.max(insets.top + 8, 20) }]}
+      >
+        <Text style={styles.screenTitle}>Settings</Text>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* User Card */}
         <TouchableOpacity
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           onPress={() => {
             setEditName(user?.name || '');
             setEditBio(user?.bio || '');
             setEditAvatarUrl(user?.avatarUrl || '');
             setShowProfileModal(true);
           }}
-          style={[styles.userCard, { backgroundColor: palette.surface, borderColor: palette.border }]}
+          style={styles.heroCard}
         >
-          <View style={styles.userCardRow}>
-            <Avatar url={user?.avatarUrl} name={user?.name} size="lg" isOnline={true} />
-            <View style={styles.userInfo}>
-              <Text style={[styles.userName, { color: palette.textPrimary }]}>{user?.name}</Text>
-              <Text style={[styles.userBio, { color: palette.textSecondary }]} numberOfLines={1}>
-                {user?.bio || 'Online'}
-              </Text>
-              <Text style={[styles.userEmail, { color: palette.textMuted }]}>{user?.email}</Text>
-            </View>
-            <ChevronRight size={18} color={palette.textMuted} />
+          <Avatar url={user?.avatarUrl} name={user?.name} size="lg" isOnline={true} />
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroName}>{user?.name}</Text>
+            <Text style={styles.heroBio} numberOfLines={1}>
+              {user?.bio || 'Available on MeshX'}
+            </Text>
+            <Text style={styles.heroEmail}>{user?.email}</Text>
+          </View>
+          <View style={styles.editProfileBtn}>
+            <Edit2 size={16} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
+      </LinearGradient>
 
-        {/* Section: Appearance */}
-        <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>APPEARANCE</Text>
-        <View style={[styles.sectionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          {/* Segmented Theme Switcher */}
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              {themeMode === 'dark' ? <Moon size={18} color={palette.textPrimary} /> : <Sun size={18} color={palette.textPrimary} />}
-              <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Theme</Text>
+      {/* White Curved Sheet for Settings Options */}
+      <View style={styles.whiteCardContainer}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Privacy & Security */}
+          <Text style={styles.sectionHeading}>PRIVACY & PREFERENCES</Text>
+          <View style={styles.sectionCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Bell size={18} color="#8E0E2C" />
+                <Text style={styles.settingLabel}>Notifications</Text>
+              </View>
+              <ClaySwitch
+                value={notificationsEnabled}
+                onValueChange={(val) => {
+                  triggerHaptic('selection');
+                  setNotificationsEnabled(val);
+                }}
+              />
             </View>
 
-            <View style={[styles.segmentedContainer, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-              {(['dark', 'light', 'system'] as const).map((mode) => (
-                <TouchableOpacity
-                  key={mode}
-                  onPress={() => {
-                    triggerHaptic('selection');
-                    setThemeMode(mode);
-                  }}
-                  style={[
-                    styles.segmentBtn,
-                    themeMode === mode && [
-                      styles.segmentBtnActive,
-                      {
-                        backgroundColor: palette.primary,
-                      },
-                    ],
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      { color: themeMode === mode ? '#FFFFFF' : palette.textMuted },
-                    ]}
-                  >
-                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Shield size={18} color="#8E0E2C" />
+                <Text style={styles.settingLabel}>Last Seen Online</Text>
+              </View>
+              <ClaySwitch
+                value={lastSeenVisible}
+                onValueChange={(val) => handleTogglePrivacy('lastSeenVisible', val)}
+              />
             </View>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Check size={18} color="#8E0E2C" />
+                <Text style={styles.settingLabel}>Read Receipts</Text>
+              </View>
+              <ClaySwitch
+                value={readReceiptsEnabled}
+                onValueChange={(val) => handleTogglePrivacy('readReceiptsEnabled', val)}
+              />
+            </View>
+
+            <TouchableOpacity onPress={handleOpenBlockedModal} style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+              <View style={styles.settingLeft}>
+                <UserX size={18} color="#8E0E2C" />
+                <Text style={styles.settingLabel}>Blocked Contacts</Text>
+              </View>
+              <ChevronRight size={16} color="#9E9E9E" />
+            </TouchableOpacity>
           </View>
 
-          {/* Per-Chat Bubble Customization */}
-          <TouchableOpacity onPress={() => setShowThemeModal(true)} style={[styles.settingRow, { borderBottomWidth: 0 }]}>
-            <View style={styles.settingLeft}>
-              <Palette size={18} color={palette.textPrimary} />
-              <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Chat Theme</Text>
-            </View>
-            <ChevronRight size={16} color={palette.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Section: Privacy & Notifications */}
-        <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>PRIVACY & SECURITY</Text>
-        <View style={[styles.sectionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Bell size={18} color={palette.textPrimary} />
-              <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Notifications</Text>
-            </View>
-            <ClaySwitch
-              value={notificationsEnabled}
-              onValueChange={(val) => {
-                triggerHaptic('selection');
-                setNotificationsEnabled(val);
+          {/* Account Actions */}
+          <Text style={styles.sectionHeading}>ACCOUNT</Text>
+          <View style={styles.sectionCard}>
+            <TouchableOpacity
+              onPress={() => {
+                triggerHaptic('heavy');
+                logout();
               }}
-            />
+              style={styles.settingRow}
+            >
+              <View style={styles.settingLeft}>
+                <LogOut size={18} color="#C62828" />
+                <Text style={[styles.settingLabel, { color: '#C62828' }]}>Log Out</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowDeleteModal(true)}
+              style={[styles.settingRow, { borderBottomWidth: 0 }]}
+            >
+              <View style={styles.settingLeft}>
+                <Trash2 size={18} color="#C62828" />
+                <Text style={[styles.settingLabel, { color: '#C62828' }]}>Delete Account</Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Shield size={18} color={palette.textPrimary} />
-              <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Last Seen Online</Text>
-            </View>
-            <ClaySwitch
-              value={lastSeenVisible}
-              onValueChange={(val) => handleTogglePrivacy('lastSeenVisible', val)}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingLeft}>
-              <Check size={18} color={palette.textPrimary} />
-              <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Read Receipts</Text>
-            </View>
-            <ClaySwitch
-              value={readReceiptsEnabled}
-              onValueChange={(val) => handleTogglePrivacy('readReceiptsEnabled', val)}
-            />
-          </View>
-
-          <TouchableOpacity onPress={handleOpenBlockedModal} style={[styles.settingRow, { borderBottomWidth: 0 }]}>
-            <View style={styles.settingLeft}>
-              <UserX size={18} color={palette.textPrimary} />
-              <Text style={[styles.settingLabel, { color: palette.textPrimary }]}>Blocked Users</Text>
-            </View>
-            <ChevronRight size={16} color={palette.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Section: Account Actions */}
-        <Text style={[styles.sectionTitle, { color: palette.textMuted }]}>ACCOUNT</Text>
-        <View style={[styles.sectionCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-          <TouchableOpacity
-            onPress={() => {
-              triggerHaptic('heavy');
-              logout();
-            }}
-            style={styles.settingRow}
-          >
-            <View style={styles.settingLeft}>
-              <LogOut size={18} color={palette.error} />
-              <Text style={[styles.settingLabel, { color: palette.error }]}>Log Out</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setShowDeleteModal(true)}
-            style={[styles.settingRow, { borderBottomWidth: 0 }]}
-          >
-            <View style={styles.settingLeft}>
-              <Trash2 size={18} color={palette.error} />
-              <Text style={[styles.settingLabel, { color: palette.error }]}>Delete Account</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </View>
 
       {/* Edit Profile Modal */}
       <Modal visible={showProfileModal} transparent animationType="fade" onRequestClose={() => setShowProfileModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-            <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Edit Profile</Text>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
 
             <TouchableOpacity onPress={handlePickAvatar} style={styles.avatarPickerWrapper}>
               <Avatar url={editAvatarUrl} name={editName} size="xl" />
-              <View style={[styles.cameraBadge, { backgroundColor: palette.primary }]}>
+              <View style={styles.cameraBadge}>
                 <Camera size={14} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
 
-            <Text style={[styles.inputLabel, { color: palette.textSecondary }]}>Display Name</Text>
+            <Text style={styles.inputLabel}>Display Name</Text>
             <TextInput
               value={editName}
               onChangeText={setEditName}
-              style={[styles.modalInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: palette.inputBackground }]}
+              style={styles.modalInput}
             />
 
-            <Text style={[styles.inputLabel, { color: palette.textSecondary }]}>Bio / Status</Text>
+            <Text style={styles.inputLabel}>Bio / Status</Text>
             <TextInput
               value={editBio}
               onChangeText={setEditBio}
-              style={[styles.modalInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: palette.inputBackground }]}
+              style={styles.modalInput}
             />
 
             <View style={styles.modalButtonsRow}>
@@ -410,52 +349,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
         </View>
       </Modal>
 
-      {/* Bubble Theme Palette Modal */}
-      <Modal visible={showThemeModal} transparent animationType="fade" onRequestClose={() => setShowThemeModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-            <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Chat Theme</Text>
-            <Text style={[styles.modalSub, { color: palette.textMuted }]}>
-              Default Blurple identity color for sent messages.
-            </Text>
-
-            <View style={styles.themeGrid}>
-              {BUBBLE_THEMES.map((th) => (
-                <TouchableOpacity
-                  key={th.name}
-                  onPress={() => handleSelectBubbleTheme(th.color, th.receivedColorDark)}
-                  style={styles.themeOption}
-                >
-                  <View style={[styles.themeSwatch, { backgroundColor: th.color }]}>
-                    <Text style={styles.themeSwatchLabel}>
-                      {th.name}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <BoldButton
-              title="Close"
-              variant="surface"
-              onPress={() => setShowThemeModal(false)}
-              style={{ marginTop: 16 }}
-            />
-          </View>
-        </View>
-      </Modal>
-
       {/* Blocked Users Modal */}
       <Modal visible={showBlockedModal} transparent animationType="fade" onRequestClose={() => setShowBlockedModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-            <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>Blocked Contacts</Text>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Blocked Contacts</Text>
             {blockedUsers.length === 0 ? (
-              <Text style={[styles.emptyBlocked, { color: palette.textMuted }]}>No blocked users.</Text>
+              <Text style={styles.emptyBlocked}>No blocked contacts.</Text>
             ) : (
               blockedUsers.map((b) => (
-                <View key={b._id} style={[styles.blockedRow, { borderBottomColor: palette.border }]}>
-                  <Text style={[styles.blockedName, { color: palette.textPrimary }]}>{b.name || 'User'}</Text>
+                <View key={b._id} style={styles.blockedRow}>
+                  <Text style={styles.blockedName}>{b.name || 'User'}</Text>
                   <BoldButton
                     title="Unblock"
                     size="sm"
@@ -478,9 +382,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
       {/* Delete Account Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: palette.surfaceElevated, borderColor: palette.border }]}>
-            <Text style={[styles.modalTitle, { color: palette.error }]}>Delete Account</Text>
-            <Text style={[styles.modalSub, { color: palette.textSecondary }]}>
+          <View style={styles.modalCard}>
+            <Text style={[styles.modalTitle, { color: '#C62828' }]}>Delete Account</Text>
+            <Text style={styles.modalSub}>
               This action is permanent and cannot be undone. Type DELETE to confirm.
             </Text>
 
@@ -488,8 +392,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
               value={deleteConfirmText}
               onChangeText={setDeleteConfirmText}
               placeholder="DELETE"
-              placeholderTextColor={palette.textMuted}
-              style={[styles.modalInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: palette.inputBackground }]}
+              placeholderTextColor="#9E9E9E"
+              style={styles.modalInput}
             />
 
             <View style={styles.modalButtonsRow}>
@@ -515,82 +419,114 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 14 },
-  userCard: {
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
+  container: { flex: 1, backgroundColor: '#8E0E2C' },
+  profileHero: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  screenTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: 1.5,
     marginBottom: 16,
   },
-  userCardRow: {
+  heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    padding: 14,
   },
-  userInfo: { flex: 1, marginLeft: 14 },
-  userName: { fontSize: 16, fontWeight: '700' },
-  userBio: { fontSize: 13, fontWeight: '400', marginTop: 1 },
-  userEmail: { fontSize: 12, marginTop: 2 },
-  sectionTitle: {
+  heroInfo: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  heroName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  heroBio: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  heroEmail: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.65)',
+    marginTop: 2,
+  },
+  editProfileBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  whiteCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    overflow: 'hidden',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  sectionHeading: {
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: 14,
-    marginBottom: 6,
+    fontWeight: '800',
+    color: '#8E0E2C',
+    letterSpacing: 0.8,
+    marginTop: 12,
+    marginBottom: 8,
     marginLeft: 4,
   },
   sectionCard: {
-    borderRadius: 10,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    paddingHorizontal: 14,
     borderWidth: 1,
-    marginBottom: 10,
-    overflow: 'hidden',
+    borderColor: '#EEEEEE',
+    marginBottom: 14,
   },
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: '#EEEEEE',
   },
   settingLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  settingLabel: { fontSize: 14, fontWeight: '500' },
-  segmentedContainer: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 2,
-  },
-  segmentBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  segmentBtnActive: {},
-  segmentText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  settingLabel: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     padding: 20,
   },
   modalCard: {
-    borderRadius: 14,
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#1A1A1A',
     marginBottom: 6,
   },
   modalSub: {
     fontSize: 13,
-    fontWeight: '400',
+    color: '#757575',
     marginBottom: 14,
   },
   avatarPickerWrapper: {
@@ -605,50 +541,35 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
+    backgroundColor: '#8E0E2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
   inputLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#8E0E2C',
     marginTop: 8,
     marginBottom: 4,
   },
   modalInput: {
-    height: 42,
-    borderRadius: 8,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
+    borderColor: '#E0E0E0',
     paddingHorizontal: 12,
     fontSize: 14,
-    marginBottom: 6,
+    backgroundColor: '#F8F9FA',
+    color: '#1A1A1A',
+    marginBottom: 8,
   },
   modalButtonsRow: {
     flexDirection: 'row',
     marginTop: 14,
   },
-  themeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 6,
-  },
-  themeOption: {
-    width: '100%',
-  },
-  themeSwatch: {
-    height: 44,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  themeSwatchLabel: {
-    fontWeight: '700',
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
   emptyBlocked: {
     fontSize: 13,
-    fontWeight: '400',
+    color: '#9E9E9E',
     marginVertical: 14,
     textAlign: 'center',
   },
@@ -656,11 +577,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
   },
   blockedName: {
     fontSize: 14,
     fontWeight: '600',
+    color: '#1A1A1A',
   },
 });

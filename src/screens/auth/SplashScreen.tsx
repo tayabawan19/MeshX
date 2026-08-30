@@ -5,22 +5,20 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MessageSquare } from 'lucide-react-native';
-import { useThemeStore } from '../../store/useThemeStore';
 
 interface SplashScreenProps {
   onFinish: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
-  const palette = useThemeStore((state) => state.palette);
-
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.9);
 
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 250 });
-    scale.value = withTiming(1, { duration: 250 });
+    opacity.value = withTiming(1, { duration: 300 });
+    scale.value = withTiming(1, { duration: 300 });
 
     const timer = setTimeout(() => {
       onFinish();
@@ -35,15 +33,20 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   }));
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}>
+    <LinearGradient
+      colors={['#8E0E2C', '#540F27', '#251025', '#160D1E']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0.85, y: 1 }}
+      style={styles.container}
+    >
       <Animated.View style={[styles.logoWrapper, logoAnimatedStyle]}>
-        <View style={[styles.emblemWrapper, { backgroundColor: palette.primary }]}>
-          <MessageSquare size={44} color="#FFFFFF" strokeWidth={2.2} />
+        <View style={styles.emblemWrapper}>
+          <MessageSquare size={46} color="#FFFFFF" strokeWidth={2.2} />
         </View>
-        <Text style={[styles.title, { color: palette.textPrimary }]}>MeshX</Text>
-        <Text style={[styles.tagline, { color: palette.textSecondary }]}>Connect & Chat</Text>
+        <Text style={styles.title}>MESHX</Text>
+        <Text style={styles.tagline}>Realtime Messaging</Text>
       </Animated.View>
-    </View>
+    </LinearGradient>
   );
 };
 
@@ -59,24 +62,30 @@ const styles = StyleSheet.create({
   emblemWrapper: {
     width: 88,
     height: 88,
-    borderRadius: 22,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: 2,
+    color: '#FFFFFF',
   },
   tagline: {
     fontSize: 14,
     fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.75)',
     marginTop: 4,
+    letterSpacing: 0.5,
   },
 });

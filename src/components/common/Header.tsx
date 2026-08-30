@@ -1,102 +1,122 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ArrowLeft } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useThemeStore } from '../../store/useThemeStore';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
   showBack?: boolean;
-  rightElement?: React.ReactNode;
   onBackPress?: () => void;
+  rightAction?: React.ReactNode;
+  transparent?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   subtitle,
   showBack = false,
-  rightElement,
   onBackPress,
+  rightAction,
+  transparent = false,
 }) => {
-  const navigation = useNavigation();
-  const palette = useThemeStore((state) => state.palette);
+  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
   const handleBack = () => {
+    triggerHaptic('light');
     if (onBackPress) {
       onBackPress();
-    } else if (navigation.canGoBack()) {
+    } else {
       navigation.goBack();
     }
   };
 
-  return (
+  const content = (
     <View
       style={[
-        styles.container,
+        styles.contentRow,
         {
           paddingTop: Math.max(insets.top, 12),
-          backgroundColor: palette.surfaceElevated,
-          borderBottomColor: palette.border,
         },
       ]}
     >
       <View style={styles.left}>
-        {showBack && (
-          <TouchableOpacity
-            onPress={handleBack}
-            style={[styles.backButton, { backgroundColor: palette.surfaceLight }]}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <ChevronLeft size={20} color={palette.textPrimary} />
+        {showBack ? (
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <ArrowLeft color="#FFFFFF" size={20} />
           </TouchableOpacity>
-        )}
-        <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: palette.textPrimary }]}>{title}</Text>
-          {subtitle && (
-            <Text style={[styles.subtitle, { color: palette.textSecondary }]}>{subtitle}</Text>
-          )}
+        ) : null}
+        <View>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          ) : null}
         </View>
       </View>
-      {rightElement && <View style={styles.right}>{rightElement}</View>}
+      {rightAction ? <View style={styles.right}>{rightAction}</View> : null}
     </View>
+  );
+
+  if (transparent) {
+    return <View style={styles.container}>{content}</View>;
+  }
+
+  return (
+    <LinearGradient
+      colors={['#8E0E2C', '#540F27', '#251025']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={styles.container}
+    >
+      {content}
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 12,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+    minHeight: 56,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   backButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
-  },
-  titleContainer: {
-    justifyContent: 'center',
+    marginRight: 12,
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#FFFFFF',
     letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 12,
-    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.75)',
     marginTop: 1,
   },
   right: {

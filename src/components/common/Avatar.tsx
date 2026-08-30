@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Image, StyleSheet, Text } from 'react-native';
 import { useThemeStore } from '../../store/useThemeStore';
+import { optimizeCloudinaryUrl } from '../../utils/imageOptimizer';
 
 interface AvatarProps {
   url?: string;
@@ -49,7 +50,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     >
       {url ? (
         <Image
-          source={{ uri: url }}
+          source={{ uri: optimizeCloudinaryUrl(url, 'avatar') }}
           style={{ width: imageSize, height: imageSize, borderRadius: imageSize / 2 }}
         />
       ) : (

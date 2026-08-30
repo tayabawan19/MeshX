@@ -96,6 +96,10 @@ export const initSocket = (token: string): Socket => {
     auth: { token },
     transports: ['websocket'],
     autoConnect: true,
+    reconnection: true,
+    reconnectionAttempts: 20,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
   });
   return socketInstance;
 };

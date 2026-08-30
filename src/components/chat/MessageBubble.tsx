@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Check, CheckCheck, Star } from 'lucide-react-native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { formatMessageTime } from '../../utils/dateUtils';
+import { optimizeCloudinaryUrl } from '../../utils/imageOptimizer';
 import { Message } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -98,7 +99,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
             {/* Media Rendering */}
             {message.type === 'image' && message.mediaUrl ? (
-              <Image source={{ uri: message.mediaUrl }} style={styles.mediaImage} resizeMode="cover" />
+              <Image source={{ uri: optimizeCloudinaryUrl(message.mediaUrl, 'thumbnail') }} style={styles.mediaImage} resizeMode="cover" />
             ) : null}
 
             {/* Message Text */}
@@ -123,7 +124,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
             {/* Media Rendering */}
             {message.type === 'image' && message.mediaUrl ? (
-              <Image source={{ uri: message.mediaUrl }} style={styles.mediaImage} resizeMode="cover" />
+              <Image source={{ uri: optimizeCloudinaryUrl(message.mediaUrl, 'thumbnail') }} style={styles.mediaImage} resizeMode="cover" />
             ) : null}
 
             {/* Message Text */}

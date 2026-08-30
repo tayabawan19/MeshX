@@ -241,6 +241,10 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
           keyExtractor={(item) => item.id || item._id || String(item.createdAt)}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          windowSize={10}
+          maxToRenderPerBatch={15}
+          initialNumToRender={20}
+          removeClippedSubviews={Platform.OS === 'android'}
           renderItem={({ item }) => {
             const isMe = (typeof item.senderId === 'string' ? item.senderId : item.senderId?._id) === currentUserId;
             const isSelected = selectedMessageIds.includes(item.id || item._id || '');

@@ -109,9 +109,11 @@ export const sendOtpEmail = async (toEmail: string, otpCode: string, name?: stri
 
   const htmlContent = buildOtpEmailHtml(recipientName, otpCode);
 
-  console.log(`\n==================================================`);
-  console.log(`[Brevo Email Service] OTP Generated for ${toEmail}: ${otpCode}`);
-  console.log(`==================================================\n`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`\n==================================================`);
+    console.log(`[Brevo Email Service - DEV ONLY] OTP Generated for ${toEmail}: ${otpCode}`);
+    console.log(`==================================================\n`);
+  }
 
   // 1. Try Nodemailer SMTP if BREVO_SMTP_KEY is present
   if (smtpKey) {

@@ -41,9 +41,11 @@ router.patch('/:chatId/archive', toggleArchiveChat as any);
 router.post('/direct', createOrGetDirectChat as any);
 router.post('/group', createGroupChat as any);
 
+import { validate, sendMessageSchema } from '../middleware/validate';
+
 // Messages
 router.get('/:chatId/messages', getMessages as any);
-router.post('/:chatId/messages', sendMessage as any);
+router.post('/:chatId/messages', validate(sendMessageSchema), sendMessage as any);
 router.delete('/:chatId/messages/:messageId/everyone', deleteMessageForEveryone as any);
 router.delete('/:chatId/messages/:messageId/me', deleteMessageForMe as any);
 router.patch('/:chatId/messages/:messageId', editMessage as any);

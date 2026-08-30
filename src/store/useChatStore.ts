@@ -50,7 +50,7 @@ interface ChatStoreState {
 
   fetchChats: () => Promise<void>;
   fetchArchivedChats: () => Promise<void>;
-  fetchMessages: (chatId: string) => Promise<void>;
+  fetchMessages: (chatId: string, before?: string) => Promise<boolean>;
   fetchContacts: () => Promise<void>;
   fetchStoriesFeed: () => Promise<void>;
   fetchMyStories: () => Promise<void>;
@@ -172,9 +172,12 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     }
   },
 
-  fetchMessages: async (chatId) => {
+  fetchMessages: async (chatId, before) => {
     try {
-      const res = await apiClient.get(`/chats/${chatId}/messages`);
+      const url = before
+        ? `/chats/${chatId}/messages?before=${before}&limit=30`
+        : `/chats/${chatId}/messages?limit=40`;
+      const res = await apiClient.get(url);
       if (res.data?.messages) {
         const decryptedMessages = res.data.messages.map((m: any) => ({
           ...m,
@@ -183,16 +186,34 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
           reactions: m.reactions || {},
           text: e2eeService.decryptMessage(m.text),
         }));
-        set((state) => ({
-          messages: {
-            ...state.messages,
-            [chatId]: decryptedMessages,
-          },
-        }));
+
+        set((state) => {
+          const currentList = state.messages[chatId] || [];
+          if (before) {
+            // Deduplicate and prepend older messages
+            const existingIds = new Set(currentList.map((m) => m.id || m._id));
+            const newOldMsgs = decryptedMessages.filter((m: any) => !existingIds.has(m.id || m._id));
+            return {
+              messages: {
+                ...state.messages,
+                [chatId]: [...newOldMsgs, ...currentList],
+              },
+            };
+          } else {
+            return {
+              messages: {
+                ...state.messages,
+                [chatId]: decryptedMessages,
+              },
+            };
+          }
+        });
+        return decryptedMessages.length > 0;
       }
     } catch (err) {
       console.warn('[FetchMessages Error]', err);
     }
+    return false;
   },
 
   fetchContacts: async () => {
@@ -925,6 +946,20 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
     socket.off('call_accepted');
     socket.off('call_declined');
     socket.off('call_ended');
+    socket.off('connect');
+    socket.off('reconnect');
+
+    const handleSyncOnConnect = () => {
+      get().fetchChats();
+      const currentActiveId = get().activeChatId;
+      if (currentActiveId) {
+        socket.emit('join_chat', currentActiveId);
+        get().fetchMessages(currentActiveId);
+      }
+    };
+
+    socket.on('connect', handleSyncOnConnect);
+    socket.on('reconnect', handleSyncOnConnect);
 
     socket.on('receive_message', (message: any) => {
       const cId = message.chatId;

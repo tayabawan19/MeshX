@@ -293,6 +293,7 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   {showPassword ? (
                     <Eye size={18} color="#8E0E2C" />
@@ -301,6 +302,26 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
                   )}
                 </TouchableOpacity>
               </View>
+              {!isLogin && password.length > 0 && (
+                <View style={styles.inlineValidationRow}>
+                  <Text
+                    style={[
+                      styles.inlineValidationText,
+                      password.length >= 8 ? styles.validText : styles.invalidText,
+                    ]}
+                  >
+                    {password.length >= 8 ? '✓ 8+ chars' : '• 8+ chars'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.inlineValidationText,
+                      /\d/.test(password) ? styles.validText : styles.invalidText,
+                    ]}
+                  >
+                    {/\d/.test(password) ? '✓ 1+ number' : '• 1+ number'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {!isLogin && (
@@ -319,6 +340,7 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
                   <TouchableOpacity
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                     style={styles.eyeBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     {showConfirmPassword ? (
                       <Eye size={18} color="#8E0E2C" />
@@ -327,6 +349,17 @@ export const AuthScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
                     )}
                   </TouchableOpacity>
                 </View>
+                {confirmPassword.length > 0 && (
+                  <Text
+                    style={[
+                      styles.inlineValidationText,
+                      confirmPassword === password ? styles.validText : styles.invalidText,
+                      { marginTop: 4 },
+                    ]}
+                  >
+                    {confirmPassword === password ? '✓ Passwords match' : '• Passwords do not match'}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -597,5 +630,20 @@ const styles = StyleSheet.create({
     color: '#212121',
     fontSize: 13,
     fontWeight: '800',
+  },
+  inlineValidationRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 6,
+  },
+  inlineValidationText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  validText: {
+    color: '#2E7D32',
+  },
+  invalidText: {
+    color: '#9E9E9E',
   },
 });

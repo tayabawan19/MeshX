@@ -26,6 +26,8 @@ export const ChatsListScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   const { user } = useAuthStore();
   const {
     chats,
+    contacts,
+    fetchContacts,
     fetchChats,
     archiveChat,
     deleteChat,
@@ -46,13 +48,14 @@ export const ChatsListScreen: React.FC<{ navigation: any }> = ({ navigation }) =
 
   useEffect(() => {
     fetchChats();
+    fetchContacts();
     fetchStoriesFeed();
     fetchMyStories();
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchChats(), fetchStoriesFeed(), fetchMyStories()]);
+    await Promise.all([fetchChats(), fetchContacts(), fetchStoriesFeed(), fetchMyStories()]);
     setRefreshing(false);
   };
 

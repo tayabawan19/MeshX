@@ -14,18 +14,41 @@ import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { triggerHaptic } from '../../utils/haptics';
 
 export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
-  const { title, avatar, bio, email, phone, chatId } = route.params || {};
+  const { title, avatar, bio, email, phone, chatId, userId } = route.params || {};
   const palette = useThemeStore((state) => state.palette);
-  const { startCall, muteChat } = useChatStore();
+  const { startCall, muteChat, contacts } = useChatStore();
 
   const [isMuted, setIsMuted] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
 
-  const sampleMedia = [
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=300&q=80',
-  ];
+  const targetUserId = userId || (typeof route.params?.user === 'object' ? route.params.user._id || route.params.user.id : null);
+  const contactFromStore = contacts.find((c) => (c._id || c.id) === targetUserId);
+
+  const [fetchedUser, setFetchedUser] = useState<any>(null);
+
+  React.useEffect(() => {
+    if (targetUserId) {
+      import('../../config/api').then(({ apiClient }) => {
+        apiClient.get(`/users/${targetUserId}`).then((res) => {
+          if (res.data?.user) setFetchedUser(res.data.user);
+        }).catch(() => {});
+      });
+    }
+  }, [targetUserId]);
+
+  const resolvedName =
+    fetchedUser?.name ||
+    (title && title !== 'Contact' ? title : null) ||
+    contactFromStore?.name ||
+    'User';
+
+  const resolvedAvatar =
+    fetchedUser?.avatarUrl ||
+    avatar ||
+    contactFromStore?.avatarUrl ||
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80';
+
+  const resolvedBio = fetchedUser?.bio || bio || 'Hey there! I am using MeshX.';
 
   const handleMuteToggle = (val: boolean) => {
     triggerHaptic('selection');
@@ -48,18 +71,18 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
         <View style={styles.avatarWrapper}>
           <Image
             source={{
-              uri: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+              uri: resolvedAvatar,
             }}
             style={styles.avatar}
           />
         </View>
 
-        <Text style={[styles.name, { color: palette.textPrimary }]}>{title || 'Contact'}</Text>
+        <Text style={[styles.name, { color: palette.textPrimary }]}>{resolvedName}</Text>
         <Text style={[styles.bio, { color: palette.textSecondary }]}>
-          {bio || 'Hey there! I am using MeshX.'}
+          {resolvedBio}
         </Text>
         <Text style={[styles.contactDetail, { color: palette.textMuted }]}>
-          {email || phone || ''}
+          {fetchedUser?.email || email || phone || ''}
         </Text>
 
         <View style={styles.actionRow}>
@@ -67,7 +90,7 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
             style={[styles.actionBtn, { backgroundColor: palette.surface, borderColor: palette.border }]}
             onPress={() => {
               triggerHaptic('selection');
-              startCall('peer', title || 'Contact', avatar || '', 'voice');
+              startCall('peer', resolvedName, resolvedAvatar, 'voice');
               navigation.navigate('CallModal');
             }}
           >
@@ -79,7 +102,7 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
             style={[styles.actionBtn, { backgroundColor: palette.surface, borderColor: palette.border }]}
             onPress={() => {
               triggerHaptic('selection');
-              startCall('peer', title || 'Contact', avatar || '', 'video');
+              startCall('peer', resolvedName, resolvedAvatar, 'video');
               navigation.navigate('CallModal');
             }}
           >

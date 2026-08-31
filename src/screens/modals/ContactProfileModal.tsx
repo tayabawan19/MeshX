@@ -28,12 +28,23 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({
 
   const [isMuted, setIsMuted] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [disappearingDuration, setDisappearingDuration] = useState<number | null>(null);
-  const [showDisappearingPicker, setShowDisappearingPicker] = useState(false);
+  const [fetchedUser, setFetchedUser] = useState<any>(null);
 
-  const contactUser = contacts.find((c) => (c._id || c.id || (c as any).userId) === userId) || {
+  useEffect(() => {
+    if (visible && userId) {
+      apiClient
+        .get(`/users/${userId}`)
+        .then((res) => {
+          if (res.data?.user) setFetchedUser(res.data.user);
+        })
+        .catch(() => {});
+    }
+  }, [visible, userId]);
+
+  const matchedContact = contacts.find((c) => (c._id || c.id || (c as any).userId) === userId);
+  const contactUser = fetchedUser || matchedContact || {
     _id: userId || 'peer',
-    name: 'Contact',
+    name: 'User',
     avatarUrl: '',
     bio: 'MeshX User',
     email: '',

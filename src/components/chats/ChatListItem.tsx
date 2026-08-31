@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   FadeIn,
@@ -10,6 +10,8 @@ import { BellOff } from 'lucide-react-native';
 import { Chat } from '../../types';
 import { Avatar } from '../common/Avatar';
 import { useThemeStore } from '../../store/useThemeStore';
+import { useChatStore } from '../../store/useChatStore';
+import { apiClient } from '../../config/api';
 import { formatChatTimestamp } from '../../utils/dateUtils';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -28,6 +30,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   onPress,
 }) => {
   const palette = useThemeStore((state) => state.palette);
+  const contacts = useChatStore((state) => state.contacts);
   const opacity = useSharedValue(1);
 
   const isGroup =
@@ -36,26 +39,80 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
       (!!chat.groupName &&
         chat.groupName !== 'Group' &&
         chat.groupName !== 'Group Chat'));
-  const recipient =
+
+  const recipientObj =
     chat.otherParticipant ||
     (chat.participantProfiles && chat.participantProfiles.length > 0
       ? chat.participantProfiles.find(
-          (p) => (p.id || p._id || (p as any).userId) !== currentUserId
+          (p) => (p.id || p._id || (p as any).userId)?.toString() !== currentUserId.toString()
         ) || chat.participantProfiles[0]
       : Array.isArray(chat.participants)
       ? (chat.participants.find(
           (p: any) =>
-            typeof p === 'object' && (p._id || p.id || p.userId) !== currentUserId
+            typeof p === 'object' &&
+            (p._id || p.id || p.userId)?.toString() !== currentUserId.toString()
         ) as any)
       : null);
 
+  const targetUserId =
+    recipientObj?.id ||
+    recipientObj?._id ||
+    (Array.isArray(chat.participants)
+      ? chat.participants.find(
+          (p: any) =>
+            (p?._id ? p._id.toString() : p?.toString()) !== currentUserId.toString()
+        )
+      : null);
+
+  const targetUserIdStr =
+    typeof targetUserId === 'object' ? targetUserId?._id || targetUserId?.id : targetUserId;
+
+  const contactFromStore = contacts.find(
+    (c) =>
+      (c._id ? c._id.toString() : c.id?.toString()) === targetUserIdStr?.toString()
+  );
+
+  const [peerName, setPeerName] = useState<string | null>(null);
+  const [peerAvatar, setPeerAvatar] = useState<string | null>(null);
+
+  const staticName =
+    (recipientObj?.name &&
+    recipientObj.name !== 'Contact' &&
+    recipientObj.name !== 'User' &&
+    recipientObj.name !== 'Direct Chat'
+      ? recipientObj.name
+      : null) ||
+    (contactFromStore?.name &&
+    contactFromStore.name !== 'Contact' &&
+    contactFromStore.name !== 'User'
+      ? contactFromStore.name
+      : null);
+
+  useEffect(() => {
+    if (!isGroup && targetUserIdStr && !staticName) {
+      apiClient
+        .get(`/users/${targetUserIdStr}`)
+        .then((res) => {
+          if (res.data?.user?.name) {
+            setPeerName(res.data.user.name);
+          }
+          if (res.data?.user?.avatarUrl) {
+            setPeerAvatar(res.data.user.avatarUrl);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isGroup, targetUserIdStr, staticName]);
+
   const displayName = isGroup
     ? chat.groupName || 'Group Chat'
-    : recipient?.name || 'Contact';
+    : peerName || staticName || 'User';
+
   const avatarUrl = isGroup
     ? chat.groupAvatar || (chat as any).groupAvatarUrl
-    : recipient?.avatarUrl;
-  const isOnline = !isGroup && !!recipient?.isOnline;
+    : peerAvatar || contactFromStore?.avatarUrl || recipientObj?.avatarUrl;
+
+  const isOnline = !isGroup && !!recipientObj?.isOnline;
 
   const unreadCount = Number(chat.unreadCount) || 0;
   const hasUnread = unreadCount > 0;

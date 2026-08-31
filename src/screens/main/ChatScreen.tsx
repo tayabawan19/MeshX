@@ -53,6 +53,8 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   const {
     chats,
     messages,
+    contacts,
+    fetchContacts,
     fetchMessages,
     sendMessage,
     typingMap,
@@ -93,22 +95,66 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
     otherParticipant?._id ||
     (typeof otherParticipant === 'string' ? otherParticipant : null);
 
-  const title =
-    (isGroup
-      ? chat?.groupName || initialTitle || 'Group Chat'
-      : initialTitle ||
-        (otherParticipant && typeof otherParticipant === 'object'
-          ? otherParticipant.name
-          : null) ||
-        chat?.otherParticipant?.name) || 'Chat';
+  const chatMessages = messages[chatId] || [];
+
+  const [fetchedPeerName, setFetchedPeerName] = useState<string | null>(null);
+  const [fetchedPeerAvatar, setFetchedPeerAvatar] = useState<string | null>(null);
+
+  // Find other participant's name from decrypted message sender metadata
+  const otherFromMessages = chatMessages.find(
+    (m: any) =>
+      typeof m.senderId === 'object' &&
+      (m.senderId._id ? m.senderId._id.toString() : m.senderId.id?.toString()) !== currentUserId.toString() &&
+      m.senderId.name
+  );
+
+  const contactFromStore = contacts.find(
+    (c) =>
+      (c._id ? c._id.toString() : c.id?.toString()) === recipientUserId?.toString()
+  );
+
+  useEffect(() => {
+    fetchContacts();
+    if (!isGroup && recipientUserId) {
+      apiClient
+        .get(`/users/${recipientUserId}`)
+        .then((res) => {
+          if (res.data?.user?.name) {
+            setFetchedPeerName(res.data.user.name);
+          }
+          if (res.data?.user?.avatarUrl) {
+            setFetchedPeerAvatar(res.data.user.avatarUrl);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isGroup, recipientUserId]);
+
+  const rawPeerName =
+    fetchedPeerName ||
+    (otherParticipant && typeof otherParticipant === 'object' && otherParticipant.name && otherParticipant.name !== 'Contact' && otherParticipant.name !== 'User'
+      ? otherParticipant.name
+      : null) ||
+    (contactFromStore?.name && contactFromStore.name !== 'Contact' ? contactFromStore.name : null) ||
+    (typeof (otherFromMessages?.senderId as any) === 'object' ? (otherFromMessages?.senderId as any)?.name : null) ||
+    (initialTitle && initialTitle !== 'Contact' && initialTitle !== 'Direct Chat' && initialTitle !== 'Chat' ? initialTitle : null) ||
+    (chat?.otherParticipant?.name && chat.otherParticipant.name !== 'Contact' ? chat.otherParticipant.name : null) ||
+    'Contact';
+
+  const title = isGroup ? chat?.groupName || initialTitle || 'Group Chat' : rawPeerName;
 
   const avatar =
     (isGroup
       ? chat?.groupAvatar || (chat as any)?.groupAvatarUrl || initialAvatar
-      : initialAvatar ||
+      : fetchedPeerAvatar ||
         (otherParticipant && typeof otherParticipant === 'object'
           ? otherParticipant.avatarUrl
           : null) ||
+        contactFromStore?.avatarUrl ||
+        (typeof (otherFromMessages?.senderId as any) === 'object'
+          ? (otherFromMessages?.senderId as any)?.avatarUrl
+          : null) ||
+        initialAvatar ||
         chat?.otherParticipant?.avatarUrl);
 
   const isOnline = !isGroup && (otherParticipant?.isOnline ?? true);
@@ -125,7 +171,6 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   const [showGroupDetailsModal, setShowGroupDetailsModal] = useState(false);
   const [showContactProfileModal, setShowContactProfileModal] = useState(false);
 
-  const chatMessages = messages[chatId] || [];
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {

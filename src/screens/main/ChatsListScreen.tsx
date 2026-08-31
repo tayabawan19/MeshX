@@ -68,12 +68,19 @@ export const ChatsListScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         (!!selectedChat?.groupName &&
           selectedChat.groupName !== 'Group' &&
           selectedChat.groupName !== 'Group Chat'));
+    const rawPeerName =
+      selectedChat?.otherParticipant?.name &&
+      selectedChat.otherParticipant.name !== 'Contact' &&
+      selectedChat.otherParticipant.name !== 'Direct Chat'
+        ? selectedChat.otherParticipant.name
+        : undefined;
+
     navigation.navigate('Chat', {
       chatId,
       isGroup,
       title: isGroup
         ? selectedChat?.groupName || 'Group Chat'
-        : selectedChat?.otherParticipant?.name || 'Contact',
+        : rawPeerName,
       avatar: isGroup
         ? selectedChat?.groupAvatar || (selectedChat as any)?.groupAvatarUrl
         : selectedChat?.otherParticipant?.avatarUrl,

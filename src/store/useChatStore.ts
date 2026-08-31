@@ -609,11 +609,14 @@ export const useChatStore = create<ChatStoreState>((set, get) => ({
   leaveGroup: async (chatId) => {
     try {
       await apiClient.post(`/chats/${chatId}/group/leave`);
-      set((state) => ({
-        chats: state.chats.filter((c) => c.chatId !== chatId && (c as any).id !== chatId),
-      }));
     } catch (e) {
       console.error('[LeaveGroup Error]', e);
+    } finally {
+      set((state) => ({
+        chats: state.chats.filter(
+          (c) => c.chatId !== chatId && (c as any).id !== chatId && (c as any)._id !== chatId
+        ),
+      }));
     }
   },
 

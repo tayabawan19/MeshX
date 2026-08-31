@@ -6,6 +6,14 @@ import { Platform } from 'react-native';
 const PROD_URL = 'https://meshx.onrender.com';
 
 const getBackendUrl = (): { apiUrl: string; socketUrl: string } => {
+  if (Platform.OS === 'web') {
+    const localUrl = 'http://localhost:5000';
+    return {
+      apiUrl: `${localUrl}/api`,
+      socketUrl: localUrl,
+    };
+  }
+
   if (__DEV__) {
     // In local development, prefer the Metro host URI / ADB reverse localhost / 10.0.2.2 for Android
     const hostUri = Constants.expoConfig?.hostUri;

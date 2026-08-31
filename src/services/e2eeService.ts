@@ -2,13 +2,28 @@ import * as SecureStore from 'expo-secure-store';
 import * as Crypto from 'expo-crypto';
 import nacl from 'tweetnacl';
 import { encodeBase64, decodeBase64, encodeUTF8, decodeUTF8 } from 'tweetnacl-util';
+import { Platform } from 'react-native';
 import { apiClient } from '../config/api';
 
-// Supply secure PRNG to tweetnacl in React Native
+// Supply secure PRNG to tweetnacl in React Native and Web
 nacl.setPRNG((x, n) => {
-  const randomBytes = Crypto.getRandomBytes(n);
-  for (let i = 0; i < n; i++) {
-    x[i] = randomBytes[i];
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    const bytes = new Uint8Array(n);
+    window.crypto.getRandomValues(bytes);
+    for (let i = 0; i < n; i++) {
+      x[i] = bytes[i];
+    }
+  } else {
+    try {
+      const randomBytes = Crypto.getRandomBytes(n);
+      for (let i = 0; i < n; i++) {
+        x[i] = randomBytes[i];
+      }
+    } catch (e) {
+      for (let i = 0; i < n; i++) {
+        x[i] = Math.floor(Math.random() * 256);
+      }
+    }
   }
 });
 
@@ -25,8 +40,13 @@ class E2EEService {
       let pubKeyBase64: string | null = null;
 
       try {
-        privKeyBase64 = await SecureStore.getItemAsync(SECURE_STORE_PRIVATE_KEY);
-        pubKeyBase64 = await SecureStore.getItemAsync(SECURE_STORE_PUBLIC_KEY);
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+          privKeyBase64 = localStorage.getItem(SECURE_STORE_PRIVATE_KEY);
+          pubKeyBase64 = localStorage.getItem(SECURE_STORE_PUBLIC_KEY);
+        } else {
+          privKeyBase64 = await SecureStore.getItemAsync(SECURE_STORE_PRIVATE_KEY);
+          pubKeyBase64 = await SecureStore.getItemAsync(SECURE_STORE_PUBLIC_KEY);
+        }
       } catch (e) {
         console.warn('[E2EE] SecureStore read fallback:', e);
       }
@@ -44,8 +64,13 @@ class E2EEService {
         const newPub = encodeBase64(newKeyPair.publicKey);
 
         try {
-          await SecureStore.setItemAsync(SECURE_STORE_PRIVATE_KEY, newPriv);
-          await SecureStore.setItemAsync(SECURE_STORE_PUBLIC_KEY, newPub);
+          if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+            localStorage.setItem(SECURE_STORE_PRIVATE_KEY, newPriv);
+            localStorage.setItem(SECURE_STORE_PUBLIC_KEY, newPub);
+          } else {
+            await SecureStore.setItemAsync(SECURE_STORE_PRIVATE_KEY, newPriv);
+            await SecureStore.setItemAsync(SECURE_STORE_PUBLIC_KEY, newPub);
+          }
         } catch (e) {
           console.warn('[E2EE] SecureStore write fallback:', e);
         }

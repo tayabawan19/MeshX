@@ -63,6 +63,13 @@ router.patch('/:chatId/group/info', updateGroupInfo as any);
 router.post('/:chatId/invite-link', getGroupInviteLink as any);
 router.post('/join/:inviteCode', joinGroupByInviteCode as any);
 
+// Compatibility aliases
+router.post('/:chatId/leave', leaveGroup as any);
+router.patch('/:chatId/group-info', updateGroupInfo as any);
+router.patch('/:chatId/settings', updateGroupSettings as any);
+router.post('/:chatId/members', addGroupMembers as any);
+router.delete('/:chatId/members/:memberId', removeGroupMember as any);
+
 // Themes & Settings
 router.put('/:chatId/theme', updateChatTheme as any);
 router.patch('/:chatId/theme', updateChatTheme as any);

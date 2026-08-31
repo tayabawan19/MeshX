@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { WifiOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,11 +9,30 @@ export const OfflineBanner: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      setIsOffline(state.isConnected === false || state.isInternetReachable === false);
-    });
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        const handleOnline = () => setIsOffline(false);
+        const handleOffline = () => setIsOffline(true);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        setIsOffline(typeof navigator !== 'undefined' && !navigator.onLine);
+        return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+        };
+      }
+      return;
+    }
 
-    return () => unsubscribe();
+    try {
+      const unsubscribe = NetInfo.addEventListener((state) => {
+        setIsOffline(state.isConnected === false || state.isInternetReachable === false);
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      // Fallback
+    }
   }, []);
 
   if (!isOffline) return null;

@@ -93,7 +93,17 @@ export const NewChatScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
     const uId = targetUser.id || targetUser._id || (targetUser as any).userId;
     try {
       const chatId = await createNewChat(uId);
-      navigation.replace('Chat', { chatId, title: targetUser.name, avatar: targetUser.avatarUrl });
+      if (chatId) {
+        navigation.replace('Chat', {
+          chatId,
+          title: targetUser.name,
+          avatar: targetUser.avatarUrl,
+          isGroup: false,
+          userId: uId,
+        });
+      } else {
+        Alert.alert('Error', 'Could not create chat session.');
+      }
     } catch (error) {
       Alert.alert('Error', 'Could not create chat session.');
     }

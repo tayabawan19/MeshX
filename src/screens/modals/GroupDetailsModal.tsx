@@ -36,8 +36,18 @@ interface GroupDetailsModalProps {
 export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onClose }) => {
   const palette = useThemeStore((state) => state.palette);
   const { user } = useAuthStore();
-  const { deleteChat, contacts } = useChatStore();
+  const {
+    deleteChat,
+    contacts,
+    leaveGroup,
+    updateGroupInfo,
+    updateGroupSettings,
+    getGroupInviteLink,
+    removeGroupMember,
+    addGroupMembers,
+  } = useChatStore();
 
+  const chatId = chat?.chatId || chat?.id || chat?._id;
   const currentUserId = user?.id || user?._id || 'usr_me';
   const isAdmin =
     chat?.groupAdmins?.includes(currentUserId) ||
@@ -62,10 +72,12 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onCl
   const handleSaveInfo = async () => {
     triggerHaptic('medium');
     try {
-      await apiClient.patch(`/chats/${chat.chatId || chat.id || chat._id}/group-info`, {
-        groupName,
-        groupDescription,
-      });
+      if (chatId) {
+        await updateGroupInfo(chatId, {
+          groupName,
+          groupDescription,
+        });
+      }
       setIsEditingInfo(false);
       triggerHaptic('success');
     } catch (err) {
@@ -77,9 +89,11 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onCl
     triggerHaptic('selection');
     setOnlyAdminsCanSend(val);
     try {
-      await apiClient.patch(`/chats/${chat.chatId || chat.id || chat._id}/settings`, {
-        onlyAdminsCanSend: val,
-      });
+      if (chatId) {
+        await updateGroupSettings(chatId, {
+          onlyAdminsCanSend: val,
+        });
+      }
     } catch (err) {
       console.error('Update settings error:', err);
     }
@@ -88,11 +102,13 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onCl
   const handleGenerateInviteLink = async () => {
     triggerHaptic('selection');
     try {
-      const res = await apiClient.post(`/chats/${chat.chatId || chat.id || chat._id}/invite-link`);
-      setInviteLink(res.data.inviteLink || `https://meshx.app/join/${chat.chatId || chat.id}`);
+      if (chatId) {
+        const code = await getGroupInviteLink(chatId);
+        setInviteLink(code ? `https://meshx.app/join/${code}` : `https://meshx.app/join/${chatId}`);
+      }
       triggerHaptic('success');
     } catch (err) {
-      setInviteLink(`https://meshx.app/join/${chat.chatId || chat.id}`);
+      setInviteLink(`https://meshx.app/join/${chatId}`);
     }
   };
 
@@ -105,7 +121,9 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onCl
         onPress: async () => {
           triggerHaptic('heavy');
           try {
-            await apiClient.delete(`/chats/${chat.chatId || chat.id || chat._id}/members/${memberId}`);
+            if (chatId) {
+              await removeGroupMember(chatId, memberId);
+            }
             triggerHaptic('success');
           } catch (err) {
             console.error('Remove member error:', err);
@@ -116,12 +134,10 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onCl
   };
 
   const handleAddMember = async () => {
-    if (!selectedContactToAdd) return;
+    if (!selectedContactToAdd || !chatId) return;
     triggerHaptic('selection');
     try {
-      await apiClient.post(`/chats/${chat.chatId || chat.id || chat._id}/members`, {
-        userId: selectedContactToAdd,
-      });
+      await addGroupMembers(chatId, [selectedContactToAdd]);
       setShowAddMemberModal(false);
       setSelectedContactToAdd(null);
       triggerHaptic('success');
@@ -139,7 +155,9 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onCl
         onPress: async () => {
           triggerHaptic('heavy');
           try {
-            await apiClient.post(`/chats/${chat.chatId || chat.id || chat._id}/leave`);
+            if (chatId) {
+              await leaveGroup(chatId);
+            }
             onClose();
           } catch (err) {
             console.error('Leave group error:', err);

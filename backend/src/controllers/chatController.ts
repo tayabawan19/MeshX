@@ -26,18 +26,29 @@ export const formatChatForUser = (chatDoc: any, currentUserId: string) => {
 
   if (chatObj.type === 'direct' && Array.isArray(chatObj.participants)) {
     const other = chatObj.participants.find(
-      (p: any) => (p?._id ? p._id.toString() : p?.toString()) !== currentUserId
+      (p: any) => (p?._id ? p._id.toString() : p?.toString()) !== currentUserId.toString()
     );
-    if (other && typeof other === 'object') {
-      chatObj.otherParticipant = {
-        _id: other._id?.toString() || other._id,
-        id: other._id?.toString() || other._id,
-        name: other.name || 'User',
-        avatarUrl: other.avatarUrl || '',
-        bio: other.bio || '',
-        isOnline: !!other.isOnline,
-        lastSeen: other.lastSeen,
-      };
+    if (other) {
+      if (typeof other === 'object') {
+        chatObj.otherParticipant = {
+          _id: other._id?.toString() || other._id,
+          id: other._id?.toString() || other._id,
+          name: other.name || 'User',
+          avatarUrl: other.avatarUrl || '',
+          bio: other.bio || '',
+          isOnline: !!other.isOnline,
+          lastSeen: other.lastSeen,
+        };
+      } else {
+        chatObj.otherParticipant = {
+          _id: other.toString(),
+          id: other.toString(),
+          name: 'Contact',
+          avatarUrl: '',
+          bio: '',
+          isOnline: false,
+        };
+      }
       chatObj.participantProfiles = [chatObj.otherParticipant];
     }
   } else if (chatObj.type === 'group' && Array.isArray(chatObj.participants)) {
@@ -655,7 +666,13 @@ export const addGroupMembers = async (req: AuthRequest, res: Response) => {
   try {
     const currentUserId = req.user?.userId;
     const { chatId } = req.params;
-    const { memberIds } = req.body;
+    const memberIds = Array.isArray(req.body.memberIds)
+      ? req.body.memberIds
+      : req.body.userId
+      ? [req.body.userId]
+      : req.body.memberId
+      ? [req.body.memberId]
+      : [];
 
     if (!Array.isArray(memberIds) || memberIds.length === 0) {
       return res.status(400).json({ error: 'memberIds array is required.' });
@@ -744,11 +761,28 @@ export const leaveGroup = async (req: AuthRequest, res: Response) => {
     const currentUserId = req.user?.userId;
     const { chatId } = req.params;
 
-    const chat = await Chat.findById(chatId);
-    if (!chat || chat.type !== 'group') return res.status(404).json({ error: 'Group not found.' });
+    if (!chatId || !mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(200).json({ success: true, message: 'Invalid group ID, removed locally.' });
+    }
 
-    chat.participants = chat.participants.filter((p: any) => p.toString() !== currentUserId);
-    chat.admins = chat.admins.filter((a: any) => a.toString() !== currentUserId);
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(200).json({ success: true, message: 'Group already removed.' });
+    }
+
+    chat.participants = chat.participants.filter(
+      (p: any) => (p._id ? p._id.toString() : p.toString()) !== currentUserId
+    );
+    chat.admins = chat.admins.filter(
+      (a: any) => (a._id ? a._id.toString() : a.toString()) !== currentUserId
+    );
+
+    // If no participants remain, remove the group entirely
+    if (chat.participants.length === 0) {
+      await Chat.findByIdAndDelete(chatId);
+      await Message.deleteMany({ chatId });
+      return res.status(200).json({ success: true, chatId });
+    }
 
     // If no admins left and participants remain, promote first participant
     if (chat.admins.length === 0 && chat.participants.length > 0) {

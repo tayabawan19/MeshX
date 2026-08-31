@@ -22,7 +22,7 @@ import {
   MoreVertical,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clipboard } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -40,7 +40,13 @@ import { triggerHaptic } from '../../utils/haptics';
 
 export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
-  const { chatId, title: initialTitle, avatar: initialAvatar, isGroup: initialIsGroup } = route.params || {};
+  const {
+    chatId,
+    title: initialTitle,
+    avatar: initialAvatar,
+    isGroup: initialIsGroup,
+    userId: initialUserId,
+  } = route.params || {};
 
   const { user } = useAuthStore();
   const { palette } = useThemeStore();
@@ -58,12 +64,41 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   } = useChatStore();
 
   const currentUserId = user?.id || user?._id || user?.userId || 'usr_me';
-  const chat = chats.find((c) => c.chatId === chatId || (c as any).id === chatId || (c as any)._id === chatId);
+  const chat = chats.find(
+    (c) => c.chatId === chatId || (c as any).id === chatId || (c as any)._id === chatId
+  );
 
-  const title = initialTitle || (chat?.type === 'group' ? chat.groupName : chat?.otherParticipant?.name) || 'Chat';
-  const avatar = initialAvatar || (chat?.type === 'group' ? (chat.groupAvatar || chat.groupAvatarUrl) : chat?.otherParticipant?.avatarUrl);
-  const isGroup = initialIsGroup || chat?.type === 'group';
-  const isOnline = !isGroup && (chat?.otherParticipant?.isOnline ?? true);
+  const isGroup = initialIsGroup !== undefined ? initialIsGroup : chat?.type === 'group';
+
+  const otherParticipant =
+    chat?.otherParticipant ||
+    (Array.isArray(chat?.participants)
+      ? (chat?.participants.find(
+          (p: any) =>
+            (p?._id ? p._id.toString() : p?.toString()) !== currentUserId.toString()
+        ) as any)
+      : null);
+
+  const recipientUserId =
+    initialUserId ||
+    otherParticipant?.id ||
+    otherParticipant?._id ||
+    (typeof otherParticipant === 'string' ? otherParticipant : null);
+
+  const title =
+    initialTitle ||
+    (isGroup
+      ? chat?.groupName || 'Group'
+      : (otherParticipant?.name || 'Contact')) ||
+    'Chat';
+
+  const avatar =
+    initialAvatar ||
+    (isGroup
+      ? chat?.groupAvatar || (chat as any)?.groupAvatarUrl
+      : otherParticipant?.avatarUrl);
+
+  const isOnline = !isGroup && (otherParticipant?.isOnline ?? true);
 
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const isSelectionMode = selectedMessageIds.length > 0;
@@ -131,7 +166,7 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
   const handleCopyMessage = async (text?: string) => {
     if (text) {
       try {
-        Clipboard.setString(text);
+        await Clipboard.setStringAsync(text);
         triggerHaptic('success');
       } catch (e) {}
     }
@@ -158,7 +193,7 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
     if (isGroup) {
       startGroupCall(chatId, title, callType);
     } else {
-      const peerId = chat?.otherParticipant?.id || chat?.otherParticipant?._id || 'peer_id';
+      const peerId = recipientUserId || chat?.otherParticipant?.id || chat?.otherParticipant?._id || 'peer_id';
       startCall(peerId, title, avatar || '', callType);
     }
     navigation.navigate('CallModal');
@@ -369,7 +404,7 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
       />
 
       <ContactProfileModal
-        userId={chat?.otherParticipant?.id || chat?.otherParticipant?._id || null}
+        userId={recipientUserId || null}
         chatId={chatId}
         onClose={() => setShowContactProfileModal(false)}
       />

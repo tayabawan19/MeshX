@@ -8,7 +8,7 @@ import { AuthRequest } from '../middleware/authMiddleware';
 import { getIO } from '../sockets/chatSocket';
 
 // Helper to format chat document for the requesting user
-export const formatChatForUser = (chatDoc: any, currentUserId: string) => {
+export const formatChatForUser = async (chatDoc: any, currentUserId: string) => {
   const chatObj = chatDoc.toObject ? chatDoc.toObject() : { ...chatDoc };
 
   let unreadCount = 0;
@@ -21,39 +21,49 @@ export const formatChatForUser = (chatDoc: any, currentUserId: string) => {
   }
   chatObj.unreadCount = unreadCount;
 
-  chatObj.isMuted = chatObj.mutedBy?.some((id: any) => id.toString() === currentUserId) || false;
-  chatObj.isArchived = chatObj.archivedBy?.some((id: any) => id.toString() === currentUserId) || false;
+  chatObj.isMuted = chatObj.mutedBy?.some((id: any) => id.toString() === currentUserId.toString()) || false;
+  chatObj.isArchived = chatObj.archivedBy?.some((id: any) => id.toString() === currentUserId.toString()) || false;
 
   if (chatObj.type === 'direct' && Array.isArray(chatObj.participants)) {
     const other = chatObj.participants.find(
       (p: any) => (p?._id ? p._id.toString() : p?.toString()) !== currentUserId.toString()
     );
     if (other) {
-      if (typeof other === 'object') {
-        chatObj.otherParticipant = {
-          _id: other._id?.toString() || other._id,
-          id: other._id?.toString() || other._id,
-          name: other.name || 'User',
-          avatarUrl: other.avatarUrl || '',
-          bio: other.bio || '',
-          isOnline: !!other.isOnline,
-          lastSeen: other.lastSeen,
-        };
-      } else {
-        chatObj.otherParticipant = {
-          _id: other.toString(),
-          id: other.toString(),
-          name: 'Contact',
-          avatarUrl: '',
-          bio: '',
-          isOnline: false,
-        };
+      const otherId = other?._id ? other._id.toString() : other.toString();
+      let otherName = other?.name;
+      let otherAvatar = other?.avatarUrl || '';
+      let otherBio = other?.bio || '';
+      let isOnline = !!other?.isOnline;
+      let lastSeen = other?.lastSeen;
+
+      // If other wasn't populated or name is missing, fetch user directly from DB
+      if (!otherName) {
+        try {
+          const userDoc = await User.findById(otherId).select('_id name avatarUrl bio isOnline lastSeen');
+          if (userDoc) {
+            otherName = userDoc.name;
+            otherAvatar = userDoc.avatarUrl || '';
+            otherBio = userDoc.bio || '';
+            isOnline = !!userDoc.isOnline;
+            lastSeen = userDoc.lastSeen;
+          }
+        } catch (e) {}
       }
+
+      chatObj.otherParticipant = {
+        _id: otherId,
+        id: otherId,
+        name: otherName || 'User',
+        avatarUrl: otherAvatar,
+        bio: otherBio,
+        isOnline,
+        lastSeen,
+      };
       chatObj.participantProfiles = [chatObj.otherParticipant];
     }
   } else if (chatObj.type === 'group' && Array.isArray(chatObj.participants)) {
     chatObj.participantProfiles = chatObj.participants
-      .filter((p: any) => typeof p === 'object')
+      .filter((p: any) => typeof p === 'object' && p?.name)
       .map((p: any) => ({
         _id: p._id?.toString() || p._id,
         id: p._id?.toString() || p._id,
@@ -76,20 +86,29 @@ export const getChats = async (req: AuthRequest, res: Response) => {
     if (!currentUserId) return res.status(401).json({ error: 'Unauthorized' });
 
     const isArchivedQuery = req.query.archived === 'true';
+    const userObjId = mongoose.Types.ObjectId.isValid(currentUserId)
+      ? new mongoose.Types.ObjectId(currentUserId)
+      : currentUserId;
 
-    const filter: any = { participants: currentUserId };
+    const query: any = {
+      $or: [
+        { participants: userObjId },
+        { participants: currentUserId },
+      ],
+    };
+
     if (isArchivedQuery) {
-      filter.archivedBy = currentUserId;
+      query.archivedBy = { $in: [userObjId, currentUserId] };
     } else {
-      filter.archivedBy = { $ne: currentUserId };
+      query.archivedBy = { $nin: [userObjId, currentUserId] };
     }
 
-    const rawChats = await Chat.find(filter)
+    const rawChats = await Chat.find(query)
       .populate('participants', '_id name avatarUrl bio isOnline lastSeen')
       .populate('admins', '_id name avatarUrl')
       .sort({ updatedAt: -1 });
 
-    const chats = rawChats.map((c) => formatChatForUser(c, currentUserId));
+    const chats = await Promise.all(rawChats.map((c) => formatChatForUser(c, currentUserId)));
 
     return res.status(200).json({ chats });
   } catch (error: any) {
@@ -104,15 +123,22 @@ export const getArchivedChats = async (req: AuthRequest, res: Response) => {
     const currentUserId = req.user?.userId;
     if (!currentUserId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const userObjId = mongoose.Types.ObjectId.isValid(currentUserId)
+      ? new mongoose.Types.ObjectId(currentUserId)
+      : currentUserId;
+
     const rawChats = await Chat.find({
-      participants: currentUserId,
-      archivedBy: currentUserId,
+      $or: [
+        { participants: userObjId },
+        { participants: currentUserId },
+      ],
+      archivedBy: { $in: [userObjId, currentUserId] },
     })
       .populate('participants', '_id name avatarUrl bio isOnline lastSeen')
       .populate('admins', '_id name avatarUrl')
       .sort({ updatedAt: -1 });
 
-    const chats = rawChats.map((c) => formatChatForUser(c, currentUserId));
+    const chats = await Promise.all(rawChats.map((c) => formatChatForUser(c, currentUserId)));
     return res.status(200).json({ chats });
   } catch (error: any) {
     console.error('Get archived chats error:', error);
@@ -177,15 +203,29 @@ export const createOrGetDirectChat = async (req: AuthRequest, res: Response) => 
       return res.status(403).json({ error: 'Cannot create chat with this user.' });
     }
 
+    const cObjId = mongoose.Types.ObjectId.isValid(currentUserId)
+      ? new mongoose.Types.ObjectId(currentUserId)
+      : currentUserId;
+    const oObjId = mongoose.Types.ObjectId.isValid(otherUserId)
+      ? new mongoose.Types.ObjectId(otherUserId)
+      : otherUserId;
+
     let chat = await Chat.findOne({
       type: 'direct',
-      participants: { $all: [currentUserId, otherUserId] },
+      participants: { $all: [cObjId, oObjId] },
     }).populate('participants', '_id name avatarUrl bio isOnline lastSeen');
+
+    if (!chat) {
+      chat = await Chat.findOne({
+        type: 'direct',
+        participants: { $all: [currentUserId, otherUserId] },
+      }).populate('participants', '_id name avatarUrl bio isOnline lastSeen');
+    }
 
     if (!chat) {
       chat = new Chat({
         type: 'direct',
-        participants: [currentUserId, otherUserId],
+        participants: [cObjId, oObjId],
         bubbleTheme: {
           sentGradient: ['#6366f1', '#8b5cf6'],
           receivedColor: '#1f2937',
@@ -196,16 +236,16 @@ export const createOrGetDirectChat = async (req: AuthRequest, res: Response) => 
       await chat.populate('participants', '_id name avatarUrl bio isOnline lastSeen');
     }
 
-    if (!currentUser.contacts.includes(otherUserId as any)) {
-      currentUser.contacts.push(otherUserId as any);
+    if (!currentUser.contacts.some((c: any) => c.toString() === otherUserId.toString())) {
+      currentUser.contacts.push(oObjId as any);
       await currentUser.save();
     }
-    if (!recipientUser.contacts.includes(currentUserId as any)) {
-      recipientUser.contacts.push(currentUserId as any);
+    if (!recipientUser.contacts.some((c: any) => c.toString() === currentUserId.toString())) {
+      recipientUser.contacts.push(cObjId as any);
       await recipientUser.save();
     }
 
-    const formattedChat = formatChatForUser(chat, currentUserId);
+    const formattedChat = await formatChatForUser(chat, currentUserId);
     return res.status(200).json({ chat: formattedChat });
   } catch (error: any) {
     console.error('Create or get direct chat error:', error);
@@ -259,7 +299,7 @@ export const createGroupChat = async (req: AuthRequest, res: Response) => {
     });
     await systemMsg.save();
 
-    const formattedGroup = formatChatForUser(groupChat, currentUserId);
+    const formattedGroup = await formatChatForUser(groupChat, currentUserId);
     return res.status(201).json({ chat: formattedGroup });
   } catch (error: any) {
     console.error('Create group chat error:', error);

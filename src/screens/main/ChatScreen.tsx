@@ -61,6 +61,7 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
     deleteForEveryone,
     deleteForMe,
     starMessage,
+    setActiveChatId,
   } = useChatStore();
 
   const currentUserId = user?.id || user?._id || user?.userId || 'usr_me';
@@ -129,8 +130,12 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
 
   useEffect(() => {
     if (chatId) {
+      setActiveChatId(chatId);
       fetchMessages(chatId);
     }
+    return () => {
+      setActiveChatId(null);
+    };
   }, [chatId]);
 
   const handleSendMessage = (

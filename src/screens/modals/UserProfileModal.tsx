@@ -12,6 +12,7 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { ClaySwitch } from '../../components/common/ClaySwitch';
 import { triggerHaptic } from '../../utils/haptics';
+import { apiClient } from '../../config/api';
 
 export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const { title, avatar, bio, email, phone, chatId, userId } = route.params || {};
@@ -28,11 +29,12 @@ export const UserProfileModal: React.FC<{ navigation: any; route: any }> = ({ na
 
   React.useEffect(() => {
     if (targetUserId) {
-      import('../../config/api').then(({ apiClient }) => {
-        apiClient.get(`/users/${targetUserId}`).then((res) => {
+      apiClient
+        .get(`/users/${targetUserId}`)
+        .then((res) => {
           if (res.data?.user) setFetchedUser(res.data.user);
-        }).catch(() => {});
-      });
+        })
+        .catch(() => {});
     }
   }, [targetUserId]);
 

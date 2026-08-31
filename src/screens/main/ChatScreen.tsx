@@ -37,6 +37,7 @@ import { GroupDetailsModal } from '../modals/GroupDetailsModal';
 import { ContactProfileModal } from '../modals/ContactProfileModal';
 import { Message } from '../../types';
 import { triggerHaptic } from '../../utils/haptics';
+import { apiClient } from '../../config/api';
 
 export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();

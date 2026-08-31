@@ -62,17 +62,21 @@ export const ChatsListScreen: React.FC<{ navigation: any }> = ({ navigation }) =
     const selectedChat = chats.find(
       (c) => c.chatId === chatId || (c as any).id === chatId || (c as any)._id === chatId
     );
+    const isGroup =
+      selectedChat?.type === 'group' &&
+      ((selectedChat?.participants?.length || 0) > 2 ||
+        (!!selectedChat?.groupName &&
+          selectedChat.groupName !== 'Group' &&
+          selectedChat.groupName !== 'Group Chat'));
     navigation.navigate('Chat', {
       chatId,
-      isGroup: selectedChat?.type === 'group',
-      title:
-        selectedChat?.type === 'group'
-          ? selectedChat.groupName
-          : selectedChat?.otherParticipant?.name,
-      avatar:
-        selectedChat?.type === 'group'
-          ? selectedChat.groupAvatar || (selectedChat as any).groupAvatarUrl
-          : selectedChat?.otherParticipant?.avatarUrl,
+      isGroup,
+      title: isGroup
+        ? selectedChat?.groupName || 'Group Chat'
+        : selectedChat?.otherParticipant?.name || 'Contact',
+      avatar: isGroup
+        ? selectedChat?.groupAvatar || (selectedChat as any)?.groupAvatarUrl
+        : selectedChat?.otherParticipant?.avatarUrl,
       userId: selectedChat?.otherParticipant?.id || selectedChat?.otherParticipant?._id,
     });
   };

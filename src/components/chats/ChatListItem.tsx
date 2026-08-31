@@ -30,7 +30,12 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
   const palette = useThemeStore((state) => state.palette);
   const opacity = useSharedValue(1);
 
-  const isGroup = chat.type === 'group';
+  const isGroup =
+    chat.type === 'group' &&
+    ((chat.participants?.length || 0) > 2 ||
+      (!!chat.groupName &&
+        chat.groupName !== 'Group' &&
+        chat.groupName !== 'Group Chat'));
   const recipient =
     chat.otherParticipant ||
     (chat.participantProfiles && chat.participantProfiles.length > 0
@@ -39,12 +44,17 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
         ) || chat.participantProfiles[0]
       : Array.isArray(chat.participants)
       ? (chat.participants.find(
-          (p: any) => typeof p === 'object' && (p._id || p.id || p.userId) !== currentUserId
+          (p: any) =>
+            typeof p === 'object' && (p._id || p.id || p.userId) !== currentUserId
         ) as any)
       : null);
 
-  const displayName = isGroup ? (chat.groupName || 'Group') : (recipient?.name || 'Direct Chat');
-  const avatarUrl = isGroup ? (chat.groupAvatar || chat.groupAvatarUrl) : recipient?.avatarUrl;
+  const displayName = isGroup
+    ? chat.groupName || 'Group Chat'
+    : recipient?.name || 'Contact';
+  const avatarUrl = isGroup
+    ? chat.groupAvatar || (chat as any).groupAvatarUrl
+    : recipient?.avatarUrl;
   const isOnline = !isGroup && !!recipient?.isOnline;
 
   const unreadCount = Number(chat.unreadCount) || 0;

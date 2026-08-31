@@ -68,7 +68,14 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
     (c) => c.chatId === chatId || (c as any).id === chatId || (c as any)._id === chatId
   );
 
-  const isGroup = initialIsGroup !== undefined ? initialIsGroup : chat?.type === 'group';
+  const isGroup =
+    initialIsGroup === true ||
+    (initialIsGroup !== false &&
+      chat?.type === 'group' &&
+      ((chat?.participants?.length || 0) > 2 ||
+        (!!chat?.groupName &&
+          chat.groupName !== 'Group' &&
+          chat.groupName !== 'Group Chat')));
 
   const otherParticipant =
     chat?.otherParticipant ||
@@ -86,17 +93,22 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
     (typeof otherParticipant === 'string' ? otherParticipant : null);
 
   const title =
-    initialTitle ||
     (isGroup
-      ? chat?.groupName || 'Group'
-      : (otherParticipant?.name || 'Contact')) ||
-    'Chat';
+      ? chat?.groupName || initialTitle || 'Group Chat'
+      : initialTitle ||
+        (otherParticipant && typeof otherParticipant === 'object'
+          ? otherParticipant.name
+          : null) ||
+        chat?.otherParticipant?.name) || 'Chat';
 
   const avatar =
-    initialAvatar ||
     (isGroup
-      ? chat?.groupAvatar || (chat as any)?.groupAvatarUrl
-      : otherParticipant?.avatarUrl);
+      ? chat?.groupAvatar || (chat as any)?.groupAvatarUrl || initialAvatar
+      : initialAvatar ||
+        (otherParticipant && typeof otherParticipant === 'object'
+          ? otherParticipant.avatarUrl
+          : null) ||
+        chat?.otherParticipant?.avatarUrl);
 
   const isOnline = !isGroup && (otherParticipant?.isOnline ?? true);
 

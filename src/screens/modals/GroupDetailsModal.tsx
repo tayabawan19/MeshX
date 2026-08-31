@@ -29,11 +29,12 @@ import { triggerHaptic } from '../../utils/haptics';
 import { apiClient } from '../../config/api';
 
 interface GroupDetailsModalProps {
+  visible: boolean;
   chat: any | null;
   onClose: () => void;
 }
 
-export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onClose }) => {
+export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ visible, chat, onClose }) => {
   const palette = useThemeStore((state) => state.palette);
   const { user } = useAuthStore();
   const {
@@ -167,10 +168,10 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({ chat, onCl
     ]);
   };
 
-  if (!chat) return null;
+  if (!visible || !chat) return null;
 
   return (
-    <Modal visible={!!chat} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible && !!chat} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
         <Header title="Group Info" showBack onBackPress={onClose} />
 

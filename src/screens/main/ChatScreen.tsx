@@ -411,11 +411,13 @@ export const ChatScreen: React.FC<{ navigation: any; route: any }> = ({ navigati
       />
 
       <GroupDetailsModal
+        visible={showGroupDetailsModal}
         chat={chat || null}
         onClose={() => setShowGroupDetailsModal(false)}
       />
 
       <ContactProfileModal
+        visible={showContactProfileModal}
         userId={recipientUserId || null}
         chatId={chatId}
         onClose={() => setShowContactProfileModal(false)}

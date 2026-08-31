@@ -11,12 +11,18 @@ import { triggerHaptic } from '../../utils/haptics';
 import { apiClient } from '../../config/api';
 
 interface ContactProfileModalProps {
+  visible: boolean;
   userId: string | null;
   chatId?: string;
   onClose: () => void;
 }
 
-export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId, chatId, onClose }) => {
+export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({
+  visible,
+  userId,
+  chatId,
+  onClose,
+}) => {
   const palette = useThemeStore((state) => state.palette);
   const { startCall, openMediaViewer, messages, chats, contacts } = useChatStore();
 
@@ -82,10 +88,10 @@ export const ContactProfileModal: React.FC<ContactProfileModalProps> = ({ userId
     }
   };
 
-  if (!userId) return null;
+  if (!visible || !userId) return null;
 
   return (
-    <Modal visible={!!userId} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible && !!userId} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
         <Header title="Contact Info" showBack onBackPress={onClose} />
 

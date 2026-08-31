@@ -40,58 +40,61 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
         chat.groupName !== 'Group' &&
         chat.groupName !== 'Group Chat'));
 
-  const recipientObj =
-    chat.otherParticipant ||
-    (chat.participantProfiles && chat.participantProfiles.length > 0
-      ? chat.participantProfiles.find(
-          (p) => (p.id || p._id || (p as any).userId)?.toString() !== currentUserId.toString()
-        ) || chat.participantProfiles[0]
-      : Array.isArray(chat.participants)
-      ? (chat.participants.find(
-          (p: any) =>
-            typeof p === 'object' &&
-            (p._id || p.id || p.userId)?.toString() !== currentUserId.toString()
-        ) as any)
+  const myId = (
+    currentUserId ||
+    (useAuthStore.getState().user as any)?._id ||
+    (useAuthStore.getState().user as any)?.id ||
+    (useAuthStore.getState().user as any)?.userId ||
+    ''
+  ).toString();
+
+  // Find the other participant from chat.participants
+  const peerParticipant = Array.isArray(chat.participants)
+    ? chat.participants.find((p: any) => {
+        const pId = (typeof p === 'object' ? p?._id || p?.id : p)?.toString();
+        return pId && pId !== myId;
+      })
+    : null;
+
+  const peerId =
+    (chat.otherParticipant && (chat.otherParticipant._id || chat.otherParticipant.id)) ||
+    (typeof peerParticipant === 'object'
+      ? peerParticipant?._id || peerParticipant?.id
+      : peerParticipant);
+
+  const peerIdStr = peerId ? peerId.toString() : null;
+
+  const matchedContact = contacts.find((c) => {
+    const cId = (c._id || c.id || (c as any).userId)?.toString();
+    return cId && cId === peerIdStr;
+  });
+
+  const staticName =
+    (chat.otherParticipant?.name &&
+    chat.otherParticipant.name !== 'Contact' &&
+    chat.otherParticipant.name !== 'User' &&
+    chat.otherParticipant.name !== 'Direct Chat'
+      ? chat.otherParticipant.name
+      : null) ||
+    (typeof peerParticipant === 'object' &&
+    peerParticipant?.name &&
+    peerParticipant.name !== 'Contact' &&
+    peerParticipant.name !== 'User'
+      ? peerParticipant.name
+      : null) ||
+    (matchedContact?.name &&
+    matchedContact.name !== 'Contact' &&
+    matchedContact.name !== 'User'
+      ? matchedContact.name
       : null);
-
-  const targetUserId =
-    recipientObj?.id ||
-    recipientObj?._id ||
-    (Array.isArray(chat.participants)
-      ? chat.participants.find(
-          (p: any) =>
-            (p?._id ? p._id.toString() : p?.toString()) !== currentUserId.toString()
-        )
-      : null);
-
-  const targetUserIdStr =
-    typeof targetUserId === 'object' ? targetUserId?._id || targetUserId?.id : targetUserId;
-
-  const contactFromStore = contacts.find(
-    (c) =>
-      (c._id ? c._id.toString() : c.id?.toString()) === targetUserIdStr?.toString()
-  );
 
   const [peerName, setPeerName] = useState<string | null>(null);
   const [peerAvatar, setPeerAvatar] = useState<string | null>(null);
 
-  const staticName =
-    (recipientObj?.name &&
-    recipientObj.name !== 'Contact' &&
-    recipientObj.name !== 'User' &&
-    recipientObj.name !== 'Direct Chat'
-      ? recipientObj.name
-      : null) ||
-    (contactFromStore?.name &&
-    contactFromStore.name !== 'Contact' &&
-    contactFromStore.name !== 'User'
-      ? contactFromStore.name
-      : null);
-
   useEffect(() => {
-    if (!isGroup && targetUserIdStr && !staticName) {
+    if (!isGroup && peerIdStr && !staticName) {
       apiClient
-        .get(`/users/${targetUserIdStr}`)
+        .get(`/users/${peerIdStr}`)
         .then((res) => {
           if (res.data?.user?.name) {
             setPeerName(res.data.user.name);
@@ -102,7 +105,7 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
         })
         .catch(() => {});
     }
-  }, [isGroup, targetUserIdStr, staticName]);
+  }, [isGroup, peerIdStr, staticName]);
 
   const displayName = isGroup
     ? chat.groupName || 'Group Chat'
@@ -110,9 +113,18 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
 
   const avatarUrl = isGroup
     ? chat.groupAvatar || (chat as any).groupAvatarUrl
-    : peerAvatar || contactFromStore?.avatarUrl || recipientObj?.avatarUrl;
+    : peerAvatar ||
+      chat.otherParticipant?.avatarUrl ||
+      (typeof peerParticipant === 'object' ? peerParticipant?.avatarUrl : null) ||
+      matchedContact?.avatarUrl;
 
-  const isOnline = !isGroup && !!recipientObj?.isOnline;
+  const isOnline =
+    !isGroup &&
+    !!(
+      chat.otherParticipant?.isOnline ||
+      (typeof peerParticipant === 'object' && peerParticipant?.isOnline) ||
+      matchedContact?.isOnline
+    );
 
   const unreadCount = Number(chat.unreadCount) || 0;
   const hasUnread = unreadCount > 0;

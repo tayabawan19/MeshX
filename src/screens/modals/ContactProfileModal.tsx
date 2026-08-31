@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import { Phone, Video, MessageSquare, BellOff, ShieldAlert, Clock } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
